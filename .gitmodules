@@ -1,0 +1,6 @@
+[submodule "third_party/pod_reflection"]
+	path = third_party/pod_reflection
+	url = git@github.com:ElDesalmado/pod_reflection.git
+[submodule "third_party/dhconstexpr_lib"]
+	path = third_party/dhconstexpr_lib
+	url = git@github.com:ElDesalmado/dhconstexpr_lib.git
