@@ -1,5 +1,10 @@
 #pragma once
 
+#ifndef _gl_traits_
+#define _gl_traits_
+#endif // !_gl_traits_
+
+
 #define GLM_FORCE_CTOR_INIT
 #define GLM_FORCE_XYZW_ONLY 
 #include "glm/glm.hpp"
@@ -12,6 +17,8 @@
 >
 #include "pod_reflection.hpp"
 #include "dhconstexpr_lib.hpp"
+
+
 #include <thread>
 #include <functional>
 
@@ -22,20 +29,6 @@
 template <typename ... Types>
 constexpr bool all_same_v = sizeof...(Types) ? (std::is_same_v<std::tuple_element_t<0, std::tuple<Types...>>, Types> && ...) : false;
 
-//wrapper to generate named "values" for functions
-//std::integral_constant<
-
-/*
-template <int gl_val>
-struct gl_value
-{
-    constexpr static int value = gl_val;
-    constexpr operator int() const
-    {
-        return value;
-    }
-};*/
-
 template <int gl_val>
 using gl_value = std::integral_constant<int, gl_val>;
 
@@ -43,6 +36,9 @@ using gl_value = std::integral_constant<int, gl_val>;
 #include <array>
 
 #include "glad/glad.h"
+
+#include "uniform_traits.hpp"
+
 
 typedef cexpr_generic_map<
     cexpr_pair<GLbyte, auto_t<GL_BYTE>>,
@@ -59,67 +55,13 @@ typedef cexpr_generic_map<
 gl_types_map;
 
 
-//struct to describe glUniform with 1 - 4 arguments
-template <typename cType, size_t elem, typename tuple = typename gen_tuple<cType, elem>::tuple>
-struct unif_info;
-
-struct UnifType
-{
-    enum type { def, vect, matrx };
-};
-
-typedef cexpr_generic_map <
-    cexpr_pair<unif_info<float, 1>, auto_t<&glUniform1f>>,
-    cexpr_pair<unif_info<float, 2>, auto_t<&glUniform2f>>,
-    cexpr_pair<unif_info<float, 3>, auto_t<&glUniform3f>>,
-    cexpr_pair<unif_info<float, 4>, auto_t<&glUniform4f>>,
-
-    cexpr_pair<unif_info<int, 1>, auto_t<&glUniform1i>>,
-    cexpr_pair<unif_info<int, 2>, auto_t<&glUniform2i>>,
-    cexpr_pair<unif_info<int, 3>, auto_t<&glUniform3i>>,
-    cexpr_pair<unif_info<int, 4>, auto_t<&glUniform4i>>,
-
-    cexpr_pair<unif_info<unsigned int, 1>, auto_t<&glUniform1ui>>,
-    cexpr_pair<unif_info<unsigned int, 2>, auto_t<&glUniform2ui>>,
-    cexpr_pair<unif_info<unsigned int, 3>, auto_t<&glUniform3ui>>,
-    cexpr_pair<unif_info<unsigned int, 4>, auto_t<&glUniform4ui>>,
-
-    cexpr_pair<glm::vec1, auto_t<&glUniform1fv>>,
-    cexpr_pair<glm::vec2, auto_t<&glUniform2fv>>,
-    cexpr_pair<glm::vec3, auto_t<&glUniform3fv>>,
-    cexpr_pair<glm::vec4, auto_t<&glUniform4fv>>,
-
-    cexpr_pair<glm::ivec1, auto_t<&glUniform1iv>>,
-    cexpr_pair<glm::ivec2, auto_t<&glUniform2iv>>,
-    cexpr_pair<glm::ivec3, auto_t<&glUniform3iv>>,
-    cexpr_pair<glm::ivec4, auto_t<&glUniform4iv>>,
-
-    cexpr_pair<glm::uvec1, auto_t<&glUniform1uiv>>,
-    cexpr_pair<glm::uvec2, auto_t<&glUniform2uiv>>,
-    cexpr_pair<glm::uvec3, auto_t<&glUniform3uiv>>,
-    cexpr_pair<glm::uvec4, auto_t<&glUniform4uiv>>,
-
-    cexpr_pair<glm::mat2, auto_t<&glUniformMatrix2fv>>,
-    cexpr_pair<glm::mat3, auto_t<&glUniformMatrix3fv>>,
-    cexpr_pair<glm::mat4, auto_t<&glUniformMatrix4fv>>,
-
-    cexpr_pair<glm::mat2x3, auto_t<&glUniformMatrix2x3fv>>,
-    cexpr_pair<glm::mat3x2, auto_t<&glUniformMatrix3x2fv>>,
-
-    cexpr_pair<glm::mat2x4, auto_t<&glUniformMatrix2x4fv>>,
-    cexpr_pair<glm::mat4x2, auto_t<&glUniformMatrix4x2fv>>,
-
-    cexpr_pair<glm::mat4x3, auto_t<&glUniformMatrix4x3fv>>,
-    cexpr_pair<glm::mat3x4, auto_t<&glUniformMatrix3x4fv>>
-
-> glUniformMap;
 
 
 template <auto target, class = typename decltype(target)>
-class glHandle;
+class gltHandle;
 
 template <auto target>
-class glHandle<target, typename decltype(target)>
+class gltHandle<target, typename decltype(target)>
 {
     //TODO: add Glsync handle type
     GLuint handle_;
@@ -128,22 +70,22 @@ public:
 
     using Target = typename decltype(target);
 
-    glHandle(GLuint handle)
+    gltHandle(GLuint handle)
         : handle_(handle)
     {
         //ownership?
         //handle = 0;
     }
 
-    glHandle(const glHandle<target>& other) = delete;
-    glHandle<target>& operator=(const glHandle<target>& other) = delete;
+    gltHandle(const gltHandle<target>& other) = delete;
+    gltHandle<target>& operator=(const gltHandle<target>& other) = delete;
 
-    glHandle(glHandle<target>&& other)
+    gltHandle(gltHandle<target>&& other)
         : handle_(other.handle_)
     {
         other.handle_ = 0;
     }
-    glHandle<target>& operator=(glHandle<target>&& other)
+    gltHandle<target>& operator=(gltHandle<target>&& other)
     {
         if (handle_)
             DestroyHandle();
@@ -151,12 +93,12 @@ public:
         other.handle_ = 0;
     }
 
-    bool operator==(const glHandle<target>& other) const
+    bool operator==(const gltHandle<target>& other) const
     {
         return handle_ == other.handle_;
     }
 
-    bool operator!=(const glHandle<target>& other) const
+    bool operator!=(const gltHandle<target>& other) const
     {
         return !operator==(other);
     }
@@ -176,7 +118,7 @@ public:
         return handle_;
     }
 
-    ~glHandle()
+    ~gltHandle()
     {
         if (handle_)
             DestroyHandle();
@@ -234,27 +176,27 @@ public:
     };
 private:
     template <Target target>
-    static const glHandle<target> *currentBuffer_ ;
+    static const gltHandle<target> *currentBuffer_ ;
 
 public:
 
     template <Target target>
-    static glHandle<target> GenBuffer()
+    static gltHandle<target> GenBuffer()
     {
         GLuint handle = 0;
         glGenBuffers(1, &handle);
         assert(handle && "Failed to generate buffer!");
-        return glHandle<target>(handle);
+        return gltHandle<target>(handle);
     }
 
     template <Target target>
-    static bool IsCurrentHandle(const glHandle<target>& handle)
+    static bool IsCurrentHandle(const gltHandle<target>& handle)
     {
         return currentBuffer_<target> ? *currentBuffer_<target> == handle : false;
     }
 
     template <Target target>
-    static void BindBuffer(const glHandle<target>& handle)
+    static void BindBuffer(const gltHandle<target>& handle)
     {
         glBindBuffer(target, handle);
         currentBuffer_<target> = &handle;
@@ -276,7 +218,7 @@ public:
 };
 
 template <buffer_traits::Target target>
-const glHandle<target> *buffer_traits::currentBuffer_ = nullptr;
+const gltHandle<target> *buffer_traits::currentBuffer_ = nullptr;
 
 struct frameBuffer_traits;          //-
 struct programm_traits;             //-
@@ -515,11 +457,11 @@ private:
 
 
     template <Target target>
-    static const glHandle<target> * currentTexture_;
+    static const gltHandle<target> * currentTexture_;
 
 	/*
 	template<Target target>
-	static std::array<const glHandle<target>*, max_gl_textures> currentTextures_;
+	static std::array<const gltHandle<target>*, max_gl_textures> currentTextures_;
 	*/
 
 	static std::array<std::pair<Target, const void*>, max_gl_textures> textureUnits_;
@@ -690,30 +632,30 @@ public:
         texture_wrap_t>;
 
     template <Target target>
-    static glHandle<target> GenTexture()
+    static gltHandle<target> GenTexture()
     {
         GLuint handle = 0;
         glGenTextures(1, &handle);
         assert(handle && "Failed to generate texture!");
-        return glHandle<target>(handle);
+        return gltHandle<target>(handle);
     }
 
     template <Target target, size_t ... indx>
-    static std::array<glHandle<target>, sizeof...(indx)> GenTextures(std::index_sequence<indx...>&&)
+    static std::array<gltHandle<target>, sizeof...(indx)> GenTextures(std::index_sequence<indx...>&&)
     {
         constexpr size_t sz = sizeof...(indx);
         GLuint handle[sz];
         glGenTextures(sz, handle);
         assert((handle[indx] && ...) && "Failed to generate texture");
 
-        return std::array<glHandle<target>, sz>{handle[indx] ...};
+        return std::array<gltHandle<target>, sz>{handle[indx] ...};
     }
 
 	//ISSUE
 	//TODO: is Texture Units array uniform for all targets???
 	/*
 	template <Target target>
-	static glHandle<target>* GetActiveTexture(size_t texUnit)
+	static gltHandle<target>* GetActiveTexture(size_t texUnit)
 	{
 		assert(texUnit < max_gl_textures && "Texture unit out of bounds!");
 		return currentTextures_[texUnit];
@@ -739,7 +681,7 @@ public:
 
 	//to currently active texture unit
     template <Target target>
-    static void BindTexture(const glHandle<target>& hTexture)
+    static void BindTexture(const gltHandle<target>& hTexture)
     {
         glBindTexture(target, hTexture);
         if (!hTexture)
@@ -751,7 +693,7 @@ public:
     }
 
 	template <Target target>
-	static void BindToUnit(const glHandle<target>& hTexture, size_t texUnit)
+	static void BindToUnit(const gltHandle<target>& hTexture, size_t texUnit)
 	{
 		ActiveTextue(texUnit);
 		BindTexture(hTexture);
@@ -761,7 +703,7 @@ public:
 
 	//temporary
 	template <Target texStorage, Target target>
-	static void TexImage2D(const glHandle<target>&, size_t detailLevel,
+	static void TexImage2D(const gltHandle<target>&, size_t detailLevel,
 		GLint internalFormat,
 		size_t width,
 		size_t height,
@@ -792,7 +734,7 @@ public:
 	//ISSUE
 	//TODO: check implementation!
     template <Target target>
-    static bool IsCurrentTexture(const glHandle<target>& hTexture)
+    static bool IsCurrentTexture(const gltHandle<target>& hTexture)
     {
 		std::pair<Target, const void*> curUnit = CurrentTexUnit();
 		if (!curUnit.second)
@@ -800,11 +742,11 @@ public:
 
 		if (curUnit.first != target)
 		{
-			assert(*(const glHandle<target>*)curUnit.second != hTexture &&
+			assert(*(const gltHandle<target>*)curUnit.second != hTexture &&
 				"IsCurrentTexture false output. Invalid target type returned!");
 			return false;
 		}
-		return *(const glHandle<target>*)curUnit.second == hTexture;
+		return *(const gltHandle<target>*)curUnit.second == hTexture;
 
 		/*
 		return currentTextures_<target>[texUnit] ?
@@ -824,11 +766,11 @@ public:
 };
 
 template <texture_traits::Target target>
-const glHandle<target> * texture_traits::currentTexture_ = nullptr;
+const gltHandle<target> * texture_traits::currentTexture_ = nullptr;
 
 /*
 template<texture_traits::Target target>
-std::array<const glHandle<target>*, texture_traits::max_gl_textures>
+std::array<const gltHandle<target>*, texture_traits::max_gl_textures>
 	texture_traits::currentTextures_{};
 	*/
 
@@ -836,156 +778,7 @@ struct transformFeedbacks_traits;   //-
 struct vertexArrays_traits;          //-
 
 
-////////////////////////////////////////////////////////////////
-//glUniform Wrappers
-////////////////////////////////////////////////////////////////
 
-//primary
-template <const char* uniformName, typename gltype>
-struct UnifDescr;
-
-//regular
-template <const char* uniformName, typename cType, size_t elems>
-struct UnifDescr<uniformName, unif_info<cType, elems>>
-{
-    constexpr static const char* name = uniformName;
-    typedef cType type;
-    constexpr static size_t count = elems;
-    constexpr static UnifType::type glm_type = UnifType::def;
-};
-
-//vectors
-template <const char* uniformName,
-    glm::length_t elems, typename cType, glm::qualifier Q>
-    struct UnifDescr<uniformName, glm::vec<elems, cType, Q>>
-{
-    constexpr static const char* name = uniformName;
-    typedef cType type;
-    constexpr static size_t count = elems;
-    constexpr static UnifType::type glm_type = UnifType::vect;
-};
-
-//matrices
-template <const char* uniformName,
-    glm::length_t C, glm::length_t R, typename cType, glm::qualifier Q>
-    struct UnifDescr<uniformName, glm::mat<C, R, cType, Q>>
-{
-    constexpr static const char* name = uniformName;
-    typedef cType type;
-    constexpr static size_t columns = C,
-        rows = R;
-    constexpr static UnifType::type glm_type = UnifType::matrx;
-};
-
-template <class>
-class tsUniform_impl;
-
-template <const char* unifromName, typename uniformSpec>
-class tsUniform_impl<UnifDescr<unifromName, uniformSpec>>;
-
-
-/*Here a trick is used: tuple in unif_info is generated as a default
-argument (tuple with "elems" number of cType template arguments)*/
-//specialization for regular uniform taking 1 to 4 arguments of type T
-template <const char* uniformName, typename cType, size_t elems, typename ... cTypes>
-class tsUniform_impl<UnifDescr<uniformName, unif_info<cType, elems, std::tuple<cTypes ...>>>>
-{
-    GLint handle_ = -1;
-
-public:
-
-    void Init(char_t<uniformName>&&, GLuint handleShaderProg)
-    {
-        //uniform name has to be a null terminated string
-        handle_ = glGetUniformLocation(handleShaderProg, uniformName);
-
-        //this is critical
-        assert(handle_ != -1 && "Failed to get uniform location!");
-    }
-
-    void UpdateUniform(char_t<uniformName>&&, cTypes ... args)
-    {
-        // find function pointer in the generic map
-        constexpr auto pUnifFunc = glUniformMap::found_pair<unif_info<cType, sizeof...(cTypes)>>::value::value;
-        (*pUnifFunc)(handle_, args...);
-    }
-
-};
-
-//specialization for vectors
-template <const char* uniformName, glm::length_t elems, typename cType, glm::qualifier Q>
-class tsUniform_impl<UnifDescr<uniformName, glm::vec<elems, cType, Q>>>
-{
-    GLint handle_ = -1;
-public:
-
-    void Init(char_t<uniformName>&&, GLuint handleShaderProg)
-    {
-        //uniform name has to be a null terminated string
-        handle_ = glGetUniformLocation(handleShaderProg, uniformName);
-
-        //this is critical
-        assert(handle_ != -1 && "Failed to get uniform location!");
-    }
-
-    //did not check. But assume that it works
-    void UpdateUniform(char_t<uniformName>&&, const glm::vec<elems, cType, Q>& vec)
-    {
-        constexpr //void(__stdcall *pUnifFunc)(GLint, GLsizei, GLboolean, const cType*) =
-            auto pUnifFunc =
-            glUniformMap::found_pair<glm::vec<elems, cType, Q>>::value::value;
-        (*pUnifFunc)(handle_, 1, glm::value_ptr(vec));
-    }
-};
-
-//specialization for matrices
-template <const char* uniformName, glm::length_t C, glm::length_t R, typename cType, glm::qualifier Q>
-class tsUniform_impl<UnifDescr<uniformName, glm::mat<C, R, cType, Q>>> 
-{
-    GLint handle_ = -1;
-
-public:
-
-    void Init(char_t<uniformName>&&, GLuint handleShaderProg)
-    {
-        //uniform name has to be a null terminated string
-        handle_ = glGetUniformLocation(handleShaderProg, uniformName);
-
-        //this is critical
-        assert(handle_ != -1 && "Failed to get uniform location!");
-    }
-
-    //works
-    void UpdateUniform(char_t<uniformName>&&, const glm::mat<C, R, cType, Q>& matrx, bool transpose = false)
-    {
-        constexpr //void(__stdcall *pUnifFunc)(GLint, GLsizei, GLboolean, const cType*) =
-            auto pUnifFunc =
-            glUniformMap::found_pair<glm::mat<C, R, cType, Q>>::value::value;
-        (*pUnifFunc)(handle_, 1, transpose, glm::value_ptr(matrx));
-    }
-};
-
-
-template <class ... glUniform_impls>
-struct tsUniformCollection_base : public glUniform_impls...
-{
-    using glUniform_impls::Init...;
-    using glUniform_impls::UpdateUniform...;
-};
-
-
-template <class>
-struct tsUniformCollection;
-
-template <class ... UnifDescrs>
-struct tsUniformCollection<std::tuple<UnifDescrs...>> : public tsUniformCollection_base<tsUniform_impl<UnifDescrs>...>
-{
-	//TODO: assert that provided UnifDescrs all have ::name
-    void InitAll(GLuint hShaderProg)
-    {
-        (Init(char_t<UnifDescrs::name>(), hShaderProg), ...);
-    }
-};
 
 
 
@@ -1003,9 +796,9 @@ class tsBuffer<target>
     static_assert(target != buffer_traits::element_array_buffer, "Element Array buffer target is not allowed, use corresponding tsBuffer specialization");
 
     //TODO: add support for multiple threads. Use static map or something
-    //static const glHandle<target> *currentBuffer_;
+    //static const gltHandle<target> *currentBuffer_;
 
-    glHandle<target> handle_ = buffer_traits::GenBuffer<target>();
+    gltHandle<target> handle_ = buffer_traits::GenBuffer<target>();
 
 public:
     //TODO: move semantics!
@@ -1039,7 +832,7 @@ public:
 
 //TODO: move to buffer_traits?
 //template <buffer_traits::Target target>
-//const glHandle<target> tsBuffer<target, void>::*currentBuffer_ = nullptr;
+//const gltHandle<target> tsBuffer<target, void>::*currentBuffer_ = nullptr;
 
 
 //TODO: move validation to vao_traits?
@@ -1063,7 +856,7 @@ constexpr bool all_valid_v = (vertex_attrib_validate<attribs>::valid && ...);
 template <class ... vaoAttribs>
 class tsBuffer<buffer_traits::array_buffer, std::tuple<vaoAttribs...>>// : public Buffer_base
 {
-    glHandle<buffer_traits::array_buffer> handle_ = buffer_traits::GenBuffer<buffer_traits::array_buffer>();
+    gltHandle<buffer_traits::array_buffer> handle_ = buffer_traits::GenBuffer<buffer_traits::array_buffer>();
 
     mutable size_t vertexesLoaded_ = 0;
 
@@ -1086,7 +879,7 @@ public:
 
     }
 
-    const glHandle<buffer_traits::array_buffer>& Handle() const
+    const gltHandle<buffer_traits::array_buffer>& Handle() const
     {
         return handle_;
     }
@@ -1103,7 +896,7 @@ class tsTexture : public texture_traits::DefinedTexParams_class<target>
 	static_assert(texture_traits::target_validate<target, texStorage>::value,
 		"Invalid texture storage!");
 
-    glHandle<target> handle_ = texture_traits::GenTexture<target>();
+    gltHandle<target> handle_ = texture_traits::GenTexture<target>();
 
 	mutable size_t texUnit_ = std::numeric_limits<size_t>::max();
 public:
@@ -1122,12 +915,12 @@ public:
 	template <class other>
 	tsTexture(other&&) = delete;
 
-    tsTexture(glHandle<target>&& handle)
+    tsTexture(gltHandle<target>&& handle)
         : texture_traits::glTexParam_class_base/*<target>*/(std::bind(&tsTexture<target, texStorage>::IsCurrent, this)),
         handle_(std::move(handle))
     {}
 
-	const glHandle<target>& GetHandle() const
+	const gltHandle<target>& GetHandle() const
 	{
 		return handle_;
 	}
@@ -1150,7 +943,7 @@ public:
     void UnBind()
     {
         assert(IsCurrent() && "Unbind texture wich is not currently active!");
-        texture_traits::BindToUnit(glHandle<target>(0), texUnit_);
+        texture_traits::BindToUnit(gltHandle<target>(0), texUnit_);
     }
 
     void GenerateMipMap()
@@ -1330,7 +1123,7 @@ typedef cexpr_generic_map<
 
 //This definition must go after all gl_traits and Target enums are registered in 
 template<auto target>
-void glHandle<target, typename decltype(target)>::DestroyHandle()
+void gltHandle<target, typename decltype(target)>::DestroyHandle()
 {
     constexpr auto pDestroy =
         gl_deleters::found_pair<decltype(target)>::value::value;
