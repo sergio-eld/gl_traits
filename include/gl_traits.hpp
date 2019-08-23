@@ -25,36 +25,16 @@
 //debug
 #include <iostream>
 
-//move to constexpr lib
-template <typename ... Types>
-constexpr bool all_same_v = sizeof...(Types) ? (std::is_same_v<std::tuple_element_t<0, std::tuple<Types...>>, Types> && ...) : false;
-
-template <int gl_val>
-using gl_value = std::integral_constant<int, gl_val>;
-
 #include <vector>
 #include <array>
 
 #include "glad/glad.h"
 
+#include "traits_common.hpp"
+
 #include "uniform_traits.hpp"
-
-
-typedef cexpr_generic_map<
-    cexpr_pair<GLbyte, auto_t<GL_BYTE>>,
-    cexpr_pair<GLubyte, auto_t<GL_UNSIGNED_BYTE>>,
-    cexpr_pair<GLshort, auto_t<GL_SHORT>>,
-    cexpr_pair<GLushort, auto_t<GL_UNSIGNED_SHORT>>,
-    cexpr_pair<GLint, auto_t<GL_INT>>,
-    cexpr_pair<GLuint, auto_t<GL_UNSIGNED_INT>>,
-    cexpr_pair<GLfixed, auto_t<GL_FIXED>>,
-    cexpr_pair<GLhalf, auto_t<GL_HALF_FLOAT>>,
-    cexpr_pair<GLfloat, auto_t<GL_FLOAT>>,
-    cexpr_pair<GLdouble, auto_t<GL_DOUBLE>>
->
-gl_types_map;
-
-
+#include "buffer_traits.hpp"
+#include "texture_traits.hpp"
 
 
 template <auto target, class = typename decltype(target)>
@@ -129,18 +109,7 @@ private:
 };
 
 
-//common gl traits
 
-//These wrappers serve to enforse usage of predefined parameters in functions that accept only curtain values
-struct gl_none : public gl_value<GL_NONE> {};
-struct gl_lequal : public gl_value<GL_LEQUAL> {};
-struct gl_gequal : public gl_value<GL_GEQUAL> {};
-struct gl_less : public gl_value<GL_LESS> {};
-struct gl_greater : public gl_value<GL_GREATER> {};
-struct gl_equal : public gl_value<GL_EQUAL> {};
-struct gl_notequal : public gl_value<GL_NOTEQUAL> {};
-struct gl_always : public gl_value<GL_ALWAYS> {};
-struct gl_never : public gl_value<GL_NEVER> {};
 
 
 class buffer_traits
@@ -787,13 +756,13 @@ struct vertexArrays_traits;          //-
 ///////////////////////////////////////////////////////////////////////////////////////
 
 template <buffer_traits::Target, class ... params>
-class tsBuffer;
+class gltBuffer;
 
 template <buffer_traits::Target target>
-class tsBuffer<target>
+class gltBuffer<target>
 {
-    static_assert(target != buffer_traits::array_buffer, "Array buffer target is not allowed, use corresponding tsBuffer specialization");
-    static_assert(target != buffer_traits::element_array_buffer, "Element Array buffer target is not allowed, use corresponding tsBuffer specialization");
+    static_assert(target != buffer_traits::array_buffer, "Array buffer target is not allowed, use corresponding gltBuffer specialization");
+    static_assert(target != buffer_traits::element_array_buffer, "Element Array buffer target is not allowed, use corresponding gltBuffer specialization");
 
     //TODO: add support for multiple threads. Use static map or something
     //static const gltHandle<target> *currentBuffer_;
@@ -823,7 +792,7 @@ public:
         return buffer_traits::IsCurrentHandle(handle);
     }
 
-    ~tsBuffer()
+    ~gltBuffer()
     {
         if (IsCurrent())
             UnBind();
@@ -832,7 +801,7 @@ public:
 
 //TODO: move to buffer_traits?
 //template <buffer_traits::Target target>
-//const gltHandle<target> tsBuffer<target, void>::*currentBuffer_ = nullptr;
+//const gltHandle<target> gltBuffer<target, void>::*currentBuffer_ = nullptr;
 
 
 //TODO: move validation to vao_traits?
@@ -854,7 +823,7 @@ constexpr bool all_valid_v = (vertex_attrib_validate<attribs>::valid && ...);
 
 //tracking of active array_buffer should be where? in VAO?
 template <class ... vaoAttribs>
-class tsBuffer<buffer_traits::array_buffer, std::tuple<vaoAttribs...>>// : public Buffer_base
+class gltBuffer<buffer_traits::array_buffer, std::tuple<vaoAttribs...>>// : public Buffer_base
 {
     gltHandle<buffer_traits::array_buffer> handle_ = buffer_traits::GenBuffer<buffer_traits::array_buffer>();
 
@@ -891,7 +860,7 @@ public:
 };
 
 template <texture_traits::Target target, texture_traits::Target texStorage = target>
-class tsTexture : public texture_traits::DefinedTexParams_class<target>
+class gltTexture : public texture_traits::DefinedTexParams_class<target>
 {
 	static_assert(texture_traits::target_validate<target, texStorage>::value,
 		"Invalid texture storage!");
@@ -901,22 +870,22 @@ class tsTexture : public texture_traits::DefinedTexParams_class<target>
 	mutable size_t texUnit_ = std::numeric_limits<size_t>::max();
 public:
 
-    tsTexture()
-        : texture_traits::glTexParam_class_base/*<target>*/(std::bind(&tsTexture<target, texStorage>::IsCurrent, this))
+    gltTexture()
+        : texture_traits::glTexParam_class_base/*<target>*/(std::bind(&gltTexture<target, texStorage>::IsCurrent, this))
     {
     }
 
     //to use when array of handles is created
 
 	template <class other>
-	tsTexture(other) = delete;
+	gltTexture(other) = delete;
 	template <class other>
-	tsTexture(const other&) = delete;
+	gltTexture(const other&) = delete;
 	template <class other>
-	tsTexture(other&&) = delete;
+	gltTexture(other&&) = delete;
 
-    tsTexture(gltHandle<target>&& handle)
-        : texture_traits::glTexParam_class_base/*<target>*/(std::bind(&tsTexture<target, texStorage>::IsCurrent, this)),
+    gltTexture(gltHandle<target>&& handle)
+        : texture_traits::glTexParam_class_base/*<target>*/(std::bind(&gltTexture<target, texStorage>::IsCurrent, this)),
         handle_(std::move(handle))
     {}
 
@@ -1040,18 +1009,18 @@ public:
 
 
 template <class>
-class tsVAO;
+class gltVAO;
 
 template <class ... vaoAttribs>
-class tsVAO<std::tuple<vaoAttribs...>> : public VAO_base, public vao_enabler<std::tuple<vaoAttribs...>>
+class gltVAO<std::tuple<vaoAttribs...>> : public VAO_base, public vao_enabler<std::tuple<vaoAttribs...>>
 {
     static_assert(all_valid_v<vaoAttribs...>, "Invalid VAO attributes!");
 public:
-    using VBO = tsBuffer<buffer_traits::array_buffer, std::tuple<vaoAttribs...>>;
+    using VBO = gltBuffer<buffer_traits::array_buffer, std::tuple<vaoAttribs...>>;
 
 private:
     VBO vbo_{};
-    //tsBuffer<buffer_traits //add ebo
+    //gltBuffer<buffer_traits //add ebo
     bool vboPending_ = true;
 
 public:

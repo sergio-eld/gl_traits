@@ -103,7 +103,6 @@ class gltUniform_impl;
 template <const char* unifromName, typename uniformSpec>
 class gltUniform_impl<gltUnifDescr<unifromName, uniformSpec>>;
 
-
 /*Here a trick is used: tuple in unif_info is generated as a default
 argument (tuple with "elems" number of cType template arguments)*/
 //specialization for regular uniform taking 1 to 4 arguments of type T
