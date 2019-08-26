@@ -2,6 +2,7 @@
 
 //common gl traits
 
+//gl types conversion
 typedef cexpr_generic_map<
 	cexpr_pair<GLbyte, auto_t<GL_BYTE>>,
 	cexpr_pair<GLubyte, auto_t<GL_UNSIGNED_BYTE>>,
@@ -16,8 +17,8 @@ typedef cexpr_generic_map<
 >
 gl_types_map;
 
-template <int gl_val>
-using gl_value = std::integral_constant<int, gl_val>;
+template <auto gl_val>
+using gl_value = std::integral_constant<decltype(gl_val), gl_val>;
 
 //These wrappers serve to enforse usage of predefined parameters in functions that accept only curtain values
 struct gl_none : public gl_value<GL_NONE> {};
@@ -30,3 +31,99 @@ struct gl_notequal : public gl_value<GL_NOTEQUAL> {};
 struct gl_always : public gl_value<GL_ALWAYS> {};
 struct gl_never : public gl_value<GL_NEVER> {};
 
+//targets forward declaration
+enum class glTargetBuf : int;
+enum class glTargetTex : int;
+enum class glTexParamName : int;
+
+//deleters map
+typedef cexpr_generic_map<
+	cexpr_pair<glTargetBuf, auto_t<&glDeleteBuffers>>,
+	// cexpr_pair<target_enum<frameBuffer_traits>,          auto_t<&glDeleteFramebuffers>>,
+	// cexpr_pair<target_enum<programm_traits>,             auto_t<&glDeleteProgram>>,
+	// cexpr_pair<target_enum<programPipelines_traits>,     auto_t<&glDeleteProgramPipelines>>,
+	// cexpr_pair<target_enum<renderBuffers_traits>,        auto_t<&glDeleteRenderbuffers>>,
+	//  cexpr_pair<target_enum<samplers_traits>,             auto_t<&glDeleteSamplers>>,
+	// cexpr_pair<target_enum<shader_traits>,               auto_t<&glDeleteShader>>,
+	// cexpr_pair<target_enum<sync_traits>,                 auto_t<&glDeleteSync>>,
+	cexpr_pair<glTargetTex, auto_t<&glDeleteTextures>>
+	//  cexpr_pair<target_enum<transformFeedbacks_traits>,   auto_t<&glDeleteTransformFeedbacks>>,
+	//  cexpr_pair<target_enum<vertexArrays_traits>,         auto_t<&glDeleteBuffers>>
+> gl_deleters;
+
+
+template <auto target, class = typename decltype(target)>
+class gltHandle;
+
+template <auto target>
+class gltHandle<target, typename decltype(target)>
+{
+	//TODO: add Glsync handle type
+	GLuint handle_;
+
+public:
+
+	using Target = typename decltype(target);
+
+	gltHandle(GLuint handle)
+		: handle_(handle)
+	{
+		//ownership?
+		//handle = 0;
+	}
+
+	gltHandle(const gltHandle<target>& other) = delete;
+	gltHandle<target>& operator=(const gltHandle<target>& other) = delete;
+
+	gltHandle(gltHandle<target>&& other)
+		: handle_(other.handle_)
+	{
+		other.handle_ = 0;
+	}
+	gltHandle<target>& operator=(gltHandle<target>&& other)
+	{
+		if (handle_)
+			DestroyHandle();
+		handle_ = other.handle_;
+		other.handle_ = 0;
+	}
+
+	bool operator==(const gltHandle<target>& other) const
+	{
+		return handle_ == other.handle_;
+	}
+
+	bool operator!=(const gltHandle<target>& other) const
+	{
+		return !operator==(other);
+	}
+
+	bool IsValid() const
+	{
+		return handle_;
+	}
+
+	bool operator!() const
+	{
+		return !IsValid();
+	}
+
+	constexpr operator GLuint() const
+	{
+		return handle_;
+	}
+
+	~gltHandle()
+	{
+		if (handle_)
+			DestroyHandle();
+	}
+
+private:
+	void DestroyHandle()
+	{
+		constexpr auto pDestroy =
+			gl_deleters::found_pair<decltype(target)>::value::value;
+		(*pDestroy)(1, &handle_);
+	}
+};

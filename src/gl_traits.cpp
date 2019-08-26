@@ -1,8 +1,8 @@
 #include "gl_traits.hpp"
 
-std::array<std::pair<texture_traits::Target, const void*>, texture_traits::max_gl_textures> 
-	texture_traits::textureUnits_{};
-size_t texture_traits::currentUnit_ = 0;
+std::array<std::pair<glTargetTex, const void*>, gltActiveTexture::max_gl_textures>
+	gltActiveTexture::textureUnits_{};
+size_t gltActiveTexture::currentUnit_ = 0;
 
 VAO_base::VAO_base()
 {
