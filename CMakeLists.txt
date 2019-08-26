@@ -26,6 +26,11 @@ message(STATUS "GLM included at ${GLM_INCLUDE_DIR}")
 add_library(${PROJECT_NAME}
 	STATIC
 	${gl_traits_INCLUDE_DIR}/gl_traits.hpp
+	${gl_traits_INCLUDE_DIR}/traits_common.hpp
+	${gl_traits_INCLUDE_DIR}/buffer_traits.hpp
+	${gl_traits_INCLUDE_DIR}/texture_traits.hpp
+	${gl_traits_INCLUDE_DIR}/uniform_traits.hpp
+
 	${gl_traits_INCLUDE_DIR}/glad/glad.h
 	src/gl_traits.cpp
 	src/glad/glad.c
