@@ -35,16 +35,21 @@ struct gl_never : public gl_value<GL_NEVER> {};
 enum class glTargetBuf : int;
 enum class glTargetTex : int;
 enum class glTexParamName : int;
+enum class glTargetShader : int;
+enum class glShaderProgram : int
+{
+	program
+};
 
 //deleters map
 typedef cexpr_generic_map<
 	cexpr_pair<glTargetBuf, auto_t<&glDeleteBuffers>>,
 	// cexpr_pair<target_enum<frameBuffer_traits>,          auto_t<&glDeleteFramebuffers>>,
-	// cexpr_pair<target_enum<programm_traits>,             auto_t<&glDeleteProgram>>,
+	cexpr_pair<glShaderProgram, auto_t<&glDeleteProgram>>,
 	// cexpr_pair<target_enum<programPipelines_traits>,     auto_t<&glDeleteProgramPipelines>>,
 	// cexpr_pair<target_enum<renderBuffers_traits>,        auto_t<&glDeleteRenderbuffers>>,
 	//  cexpr_pair<target_enum<samplers_traits>,             auto_t<&glDeleteSamplers>>,
-	// cexpr_pair<target_enum<shader_traits>,               auto_t<&glDeleteShader>>,
+	cexpr_pair<glTargetShader, auto_t<&glDeleteShader>>,
 	// cexpr_pair<target_enum<sync_traits>,                 auto_t<&glDeleteSync>>,
 	cexpr_pair<glTargetTex, auto_t<&glDeleteTextures>>
 	//  cexpr_pair<target_enum<transformFeedbacks_traits>,   auto_t<&glDeleteTransformFeedbacks>>,
@@ -124,6 +129,11 @@ private:
 	{
 		constexpr auto pDestroy =
 			gl_deleters::found_pair<decltype(target)>::value::value;
-		(*pDestroy)(1, &handle_);
+		constexpr size_t args = func_traits<std::remove_pointer_t<decltype(pDestroy)>(nullptr)>::args_count;
+		if constexpr (args == 1)
+			(*pDestroy)(handle_);
+		else 
+			(*pDestroy)(1, &handle_);
+
 	}
 };
