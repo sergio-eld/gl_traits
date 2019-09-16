@@ -64,12 +64,13 @@ template <auto target>
 class gltHandle<target, typename decltype(target)>
 {
 	//TODO: add Glsync handle type
-	GLuint handle_;
+	GLuint handle_ = 0;
 
 public:
 
 	using Target = typename decltype(target);
 
+	gltHandle() = default;
 	gltHandle(GLuint handle)
 		: handle_(handle)
 	{
@@ -91,6 +92,7 @@ public:
 			DestroyHandle();
 		handle_ = other.handle_;
 		other.handle_ = 0;
+		return *this;
 	}
 
 	bool operator==(const gltHandle<target>& other) const
@@ -105,7 +107,7 @@ public:
 
 	bool IsValid() const
 	{
-		return handle_;
+		return (bool)handle_;
 	}
 
 	bool operator!() const

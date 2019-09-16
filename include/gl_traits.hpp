@@ -4,6 +4,25 @@
 #define _gl_traits_
 #endif // !_gl_traits_
 
+//Testing
+#ifdef GL_TRAITS_DLL
+#define GLT_API __declspec(dllexport)
+//#define GLAD_GLAPI_EXPORT_BUILD
+//#define GLAD_GLAPI_EXPORT
+#else 
+#define GLT_API __declspec(dllimport)
+//#define GLAD_GLAPI_EXPORT
+#endif // !GL_TRAITS_DLL
+
+
+//add #ifdef for debug build
+#include <iostream>
+#define DEBUG_START {
+#define DEBUG_END }
+
+#include "glad/glad.h"
+/////////
+
 
 #define GLM_FORCE_CTOR_INIT
 #define GLM_FORCE_XYZW_ONLY 
@@ -28,10 +47,8 @@
 #include <vector>
 #include <array>
 
-#include "glad/glad.h"
 
-/*
-*/
+
 
 #include "traits_common.hpp"
 
@@ -46,7 +63,7 @@ struct programPipelines_traits;     //-
 struct queries_traits;              //-
 struct renderBuffers_traits;        //-
 struct samplers_traits;             //-
-struct shader_traits;               //-
+class shader_traits;               //-
 struct sync_traits;                 //-
 
 struct primitive_traits
@@ -75,7 +92,26 @@ struct primitive_traits
 
 };
 
+/*
+struct GLT_API DebugMessageInfo
+{
+	GLenum source,
+		type;
+	GLuint id;
+	GLenum severity;
+	std::string message;
+};*/
 
+struct GLT_API gl_debug
+{
+	static void MessageCallback(GLenum source,
+		GLenum type,
+		GLuint id,
+		GLenum severity,
+		GLsizei length,
+		const GLchar* message,
+		const void* userParam);
+};
 
 /*
 template<texture_traits::Target target>
@@ -95,6 +131,47 @@ struct vertexArrays_traits;          //-
 //classes 
 ///////////////////////////////////////////////////////////////////////////////////////
 
+enum class glCapability : int
+{
+	gl_blend = GL_BLEND,
+	gl_clip_distance0 = GL_CLIP_DISTANCE0,
+	gl_color_logic_op = GL_COLOR_LOGIC_OP,
+	gl_cull_face = GL_CULL_FACE,
+	gl_debug_output = GL_DEBUG_OUTPUT,
+	gl_debug_output_synchronous = GL_DEBUG_OUTPUT_SYNCHRONOUS,
+	gl_depth_clamp = GL_DEPTH_CLAMP,
+	gl_depth_test = GL_DEPTH_TEST,
+	gl_dither = GL_DITHER,
+	gl_framebuffer_srgb = GL_FRAMEBUFFER_SRGB,
+	gl_line_smooth = GL_LINE_SMOOTH,
+	gl_multisample = GL_MULTISAMPLE,
+	gl_polygon_offset_line = GL_POLYGON_OFFSET_LINE,
+	gl_polygon_smooth = GL_POLYGON_SMOOTH,
+	gl_primitive_restart = GL_PRIMITIVE_RESTART,
+	gl_primitive_restart_fixed_index = GL_PRIMITIVE_RESTART_FIXED_INDEX,
+	gl_rasterizer_discard = GL_RASTERIZER_DISCARD,
+	gl_sample_alpha_to_coverage = GL_SAMPLE_ALPHA_TO_COVERAGE,
+	gl_sample_alpha_to_one = GL_SAMPLE_ALPHA_TO_ONE,
+	gl_sample_coverage = GL_SAMPLE_COVERAGE,
+	gl_sample_shading = GL_SAMPLE_SHADING,
+	gl_sample_mask = GL_SAMPLE_MASK,
+	gl_scissor_test = GL_SCISSOR_TEST,
+	gl_stencil_test = GL_STENCIL_TEST,
+	gl_texture_cube_map_seamless = GL_TEXTURE_CUBE_MAP_SEAMLESS,
+	gl_program_point_size = GL_PROGRAM_POINT_SIZE
+};
+
+struct GLT_API gl_state
+{
+	template <class ... glCapabilities>
+	static void Enable(glCapabilities ... caps)
+	{
+		static_assert((std::is_same_v<glCapability, glCapabilities> && ...),
+			"Only glCapability is accepted");
+		//static assert caps to be unique
+		(glEnable((GLenum)caps), ...);
+	}
+};
 
 //shaders
 
@@ -108,49 +185,50 @@ enum class glTargetShader : int
 	gl_fragment_shader = GL_FRAGMENT_SHADER
 };
 
-
-struct shader_traits
+class GLT_API shader_traits
 {
+	static GLuint GenShaderPrivate(glTargetShader target);
+	static bool CompileStatusPrivate(GLuint handle);
+	static bool CompileShaderPrivate(GLuint handle, const std::string& source);
+	static void AttachShaderPrivate(GLuint prog, GLuint shader);
+
+	static std::string ShaderInfoLogPrivate(GLuint shader);
+
+public:
+
+	static gltHandle<glShaderProgram::program> GenProgram();
+	static void LinkProgram(const gltHandle<glShaderProgram::program>& prog);
+	static bool LinkStatus(const gltHandle<glShaderProgram::program>& prog);
+
 	template <glTargetShader target>
 	static gltHandle<target> GenShader()
 	{
-		return glCreateShader((GLenum)target);
-	}
-
-	static gltHandle<glShaderProgram::program> GenProgram()
-	{
-		return glCreateProgram();
+		return GenShaderPrivate(target);
 	}
 
 	template <glTargetShader target>
 	static bool CompileStatus(const gltHandle<target>& handle)
 	{
-		int success;
-		glGetShaderiv(handle, GL_COMPILE_STATUS, &success);
-		return (bool)success;
+		return CompileStatusPrivate(handle);
 	}
 
-	static bool LinkStatus(const gltHandle<glShaderProgram::program>& prog)
+	template <glTargetShader target>
+	static std::string ShaderInfoLog(const gltHandle<target>& handle)
 	{
-		int success = 0;
-		glGetProgramiv(prog, GL_LINK_STATUS, &success);
-		return (bool)success;
+		return ShaderInfoLogPrivate(handle);
 	}
+
 
 	template <glTargetShader target>
 	static bool CompileShader(const gltHandle<target>& handle, const std::string& source)
 	{
-		const char* c_src = source.c_str();
-		glShaderSource(handle, 1, &c_src, 0);
-		glCompileShader(handle);
-
-		return CompileStatus(handle);
+		return CompileShaderPrivate(handle, source);
 	}
 
 	template <glTargetShader target>
 	static void AttachShader(const gltHandle<glShaderProgram::program>& prog, const gltHandle<target>& handleShader)
 	{
-		glAttachShader(prog, handleShader);
+		AttachShaderPrivate(prog, handleShader);
 	}
 
 };
@@ -170,13 +248,27 @@ public:
 	gltShader(const std::string& sourceCode)
 		: compiled_(shader_traits::CompileShader(handle_, sourceCode))
 	{
+		if (!compiled_)
+		{
+			std::string errorMsg = shader_traits::ShaderInfoLog(handle_);
+			DEBUG_START
+				std::cout << errorMsg << std::endl;
+			DEBUG_END
+		}
 		assert(compiled_ && "Failed to compile shader!");
+		
 	}
 
 	void Compile(const std::string& source)
 	{
 		compiled_ = shader_traits::CompileShader(handle_, source);
-		assert(compiled_ && "Failed to compile shader!");
+		if (!compiled_)
+		{
+			std::string errorMsg = shader_traits::ShaderInfoLog(handle_);
+			DEBUG_START
+				std::cout << errorMsg << std::endl;
+			DEBUG_END
+		}
 	}
 
 	bool IsValid() const
@@ -184,15 +276,27 @@ public:
 		return compiled_;
 	}
 
+	const gltHandle<target>& Handle() const
+	{
+		return handle_;
+	}
+
+	constexpr operator const gltHandle<target>&() const
+	{
+		return handle_;
+	}
 };
 
+template <class UniformCollection>
+class gltShaderProgram;
 
 //TODO: add input layout traits
-template <class UniformCollection>
-class gltShaderProgram
+template <class ... unifDescrs>
+class gltShaderProgram<gltUniformCollection<std::tuple<unifDescrs...>>>
 {
-	gltHandle<glShaderProgram::program> handle_ = shader_traits::GenProgram();
-
+	using glUniforms = gltUniformCollection<std::tuple<unifDescrs...>>;
+	gltHandle<glShaderProgram::program> handle_;
+	glUniforms uniforms_;
 
 	//TODO: remove in release?
 	bool attachedVertex_ = false;
@@ -206,20 +310,51 @@ public:
 	{}
 
 	template <glTargetShader ... shaders>
-	gltShaderProgram(const gltShader<glTargetShader::gl_vertex_shader>& vShader,
+	gltShaderProgram(gltHandle<glShaderProgram::program>&& handle,
+		const gltShader<glTargetShader::gl_vertex_shader>& vShader,
 		const gltShader<glTargetShader::gl_fragment_shader>& fShader, 
 		const gltShader<shaders>& ... otherShaders)
-		: attachedVertex_(true),
+		: handle_(std::move(handle)),
+		attachedVertex_(true),
 		attachedFragment_(true)
 	{
 		AttachShaders(vShader, fShader, otherShaders...);
-		linked_ = shader_traits::LinkStatus(handle_);
+		Link();
 	}
 
-	template <glTargetShader ... shaders>
-	void AttachShaders(const gltShader<shaders>& ... shaders)
+	void ResetHandle(gltHandle<glShaderProgram::program>&& handle)
 	{
-		(shader_traits::AttachShader(handle_, shaders), ...);
+		handle_ = std::move(handle);
+	}
+
+	template <glTargetShader ... shTarget>
+	void AttachShaders(const gltShader<shTarget>& ... shaders)
+	{
+		(shader_traits::AttachShader<shTarget>(handle_, shaders), ...);
+		attachedVertex_ = true;
+		attachedFragment_ = true;
+	}
+
+	void Link()
+	{
+		assert(attachedVertex_ && attachedFragment_ &&
+			"At least vertex and fragment shaders must be attached!");
+		shader_traits::LinkProgram(handle_);
+		linked_ = shader_traits::LinkStatus(handle_);
+		uniforms_.InitAll(handle_);
+	}
+
+	bool Linked() const
+	{
+		return linked_;
+	}
+
+	const glUniforms& Uniforms() const
+	{
+		return uniforms_;
 	}
 
 };
+
+
+//#include "glt_definitions.hpp"
