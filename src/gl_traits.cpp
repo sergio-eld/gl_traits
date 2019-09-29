@@ -4,6 +4,10 @@ std::array<std::pair<glTargetTex, const void*>, gltActiveTexture::max_gl_texture
 	gltActiveTexture::textureUnits_{};
 size_t gltActiveTexture::currentUnit_ = 0;
 
+
+const gltHandle<glVertexArrayObj::vao> *buffer_traits::currentVAO_ = nullptr;
+
+/*
 VAO_base::VAO_base()
 {
     glGenVertexArrays(1, &handle_);
@@ -51,7 +55,7 @@ VAO_base::~VAO_base()
 }
 
 GLuint VAO_base::vaoCurrent_ = 0;
-
+*/
 
 //templates instantiations
 

@@ -40,10 +40,15 @@ enum class glShaderProgram : int
 {
 	program
 };
+enum class glVertexArrayObj : int
+{
+    vao
+};
 
 //deleters map
 typedef cexpr_generic_map<
 	cexpr_pair<glTargetBuf, auto_t<&glDeleteBuffers>>,
+    cexpr_pair<glVertexArrayObj, auto_t<&glDeleteVertexArrays>>,
 	// cexpr_pair<target_enum<frameBuffer_traits>,          auto_t<&glDeleteFramebuffers>>,
 	cexpr_pair<glShaderProgram, auto_t<&glDeleteProgram>>,
 	// cexpr_pair<target_enum<programPipelines_traits>,     auto_t<&glDeleteProgramPipelines>>,

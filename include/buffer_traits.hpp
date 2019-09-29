@@ -18,7 +18,7 @@ enum class glTargetBuf : int
 	uniform_buffer = GL_UNIFORM_BUFFER
 };
 
-class buffer_traits
+class GLT_API buffer_traits
 {
 public:
 
@@ -36,7 +36,7 @@ public:
 private:
 	template <glTargetBuf target>
 	static const gltHandle<target> *currentBuffer_;
-
+    static const gltHandle<glVertexArrayObj::vao> *currentVAO_;
 public:
 
 	template <glTargetBuf target>
@@ -47,6 +47,14 @@ public:
 		assert(handle && "Failed to generate buffer!");
 		return gltHandle<target>(handle);
 	}
+
+    static gltHandle<glVertexArrayObj::vao> GenVAO()
+    {
+        GLuint vao;
+        glGenVertexArrays(1, &vao);
+        assert(vao && "Failed to generate VAO");
+        return gltHandle<glVertexArrayObj::vao>(vao);
+    }
 
 	template <glTargetBuf target>
 	static bool IsCurrentHandle(const gltHandle<target>& handle)
@@ -60,6 +68,18 @@ public:
 		glBindBuffer((int)target, handle);
 		currentBuffer_<target> = &handle;
 	}
+
+    static void BindVAO(const gltHandle<glVertexArrayObj::vao>& handle)
+    {
+        assert(handle.IsValid() && "Binding invalid VAO");
+        glBindVertexArray(handle);
+        currentVAO_ = &handle;
+    }
+
+    static bool IsCurrentVAO(const gltHandle<glVertexArrayObj::vao>& handle)
+    {
+        return currentVAO_ ? *currentVAO_ == handle : false;
+    }
 
 	//TODO: restrict usage for array_buffer
 	template<size_t sz, typename dataType>
@@ -92,10 +112,15 @@ class gltBuffer<target>
 	//TODO: add support for multiple threads. Use static map or something
 	//static const gltHandle<target> *currentBuffer_;
 
-	gltHandle<target> handle_ = buffer_traits::GenBuffer<target>();
+    gltHandle<target> handle_;// = buffer_traits::GenBuffer<target>();
 
 public:
 	//TODO: move semantics!
+    gltBuffer() = default;
+
+    gltBuffer(gltHandle<target>&& handle)
+        : handle_(std::move(handle))
+    {}
 
 	void Bind()
 	{
@@ -150,7 +175,7 @@ constexpr bool all_valid_v = (vertex_attrib_validate<attribs>::valid && ...);
 template <class ... vaoAttribs>
 class gltBuffer<glTargetBuf::array_buffer, std::tuple<vaoAttribs...>>// : public Buffer_base
 {
-	gltHandle<glTargetBuf::array_buffer> handle_ = buffer_traits::GenBuffer<glTargetBuf::array_buffer>();
+    gltHandle<glTargetBuf::array_buffer> handle_;// = buffer_traits::GenBuffer<glTargetBuf::array_buffer>();
 
 	mutable size_t verticesLoaded_ = 0;
 
@@ -159,6 +184,18 @@ public:
 	//this somehow makes the compiler angry!
 	//static_assert((vertex_attrib_validate<vaoAttribs>::valid && ...), "Invalid VAO attributes!");
 	static_assert(all_valid_v<vaoAttribs...>, "Invalid VAO attributes!");
+
+    gltBuffer()
+    {}
+
+    gltBuffer(gltHandle<glTargetBuf::array_buffer>&& handle)
+        : handle_(std::move(handle))
+    {}
+
+    void Init(gltHandle<glTargetBuf::array_buffer>&& handle)
+    {
+        handle_ = std::move(handle);
+    }
 
 	template <class vertexInfo>
 	void BufferData(const std::vector<vertexInfo>& vertexes, buffer_traits::Usage usage) const
@@ -178,6 +215,11 @@ public:
 		return handle_;
 	}
 
+    operator const gltHandle<glTargetBuf::array_buffer>&() const
+    {
+        return handle_;
+    }
+
 	size_t VerticesLoaded() const
 	{
 		return verticesLoaded_;
@@ -187,7 +229,7 @@ public:
 
 
 
-
+/*
 class VAO_base
 {
 	static GLuint vaoCurrent_;
@@ -210,6 +252,7 @@ public:
 
 	~VAO_base();
 };
+*/
 
 template <typename>
 class vao_enabler;
@@ -277,13 +320,14 @@ template <class>
 class gltVAO;
 
 template <class ... vaoAttribs>
-class gltVAO<std::tuple<vaoAttribs...>> : public VAO_base, public vao_enabler<std::tuple<vaoAttribs...>>
+class gltVAO<std::tuple<vaoAttribs...>> : /*public VAO_base,*/ public vao_enabler<std::tuple<vaoAttribs...>>
 {
 	static_assert(all_valid_v<vaoAttribs...>, "Invalid VAO attributes!");
 public:
 	using VBO = gltBuffer<glTargetBuf::array_buffer, std::tuple<vaoAttribs...>>;
 
 private:
+    gltHandle<glVertexArrayObj::vao> handle_;
 	VBO vbo_{};
 	//gltBuffer<buffer_traits //add ebo
 	bool vboPending_ = true;
@@ -293,10 +337,32 @@ public:
 	using vao_enabler<std::tuple<vaoAttribs...>>::VertexAttribPointers;
 	using vao_enabler<std::tuple<vaoAttribs...>>::EnableVertexAttributes;
 
+    gltVAO(gltHandle<glVertexArrayObj::vao>&& handle)
+        : handle_(std::move(handle)),
+        vbo_(buffer_traits::GenBuffer<glTargetBuf::array_buffer>()),
+        vboPending_(true)
+    {
+
+    }
+
+    gltVAO() = default;
+
+    void Init(gltHandle<glVertexArrayObj::vao>&& handle)
+    {
+        handle_ = std::move(handle);
+        vbo_.Init(buffer_traits::GenBuffer<glTargetBuf::array_buffer>());
+    }
+
 	const VBO& GetVBO() const
 	{
 		return vbo_;
 	}
+
+    bool IsCurrent() const
+    {
+        return buffer_traits::IsCurrentVAO(handle_);
+    }
+   
 
 	void AssignVBO(VBO&& vbo)
 	{
@@ -309,9 +375,9 @@ public:
 		buffer_traits::BindBuffer<glTargetBuf::array_buffer>(vbo_.Handle());
 	}
 
-	void Bind() override
+	void Bind()
 	{
-		VAO_base::Bind();
+        buffer_traits::BindVAO(handle_);
 		if (vboPending_)
 		{
 			buffer_traits::BindBuffer<glTargetBuf::array_buffer>(vbo_.Handle());
