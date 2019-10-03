@@ -38,6 +38,9 @@ add_library(${PROJECT_NAME}
 		src/glad.c
 
 		src/shader_traits.cpp
+		
+		# TODO: create separated object for testing
+		src/assertions.cpp
 	)
 	
 target_link_libraries(${PROJECT_NAME}
@@ -56,3 +59,48 @@ target_include_directories(${PROJECT_NAME}
 	PRIVATE
 		/src
 	)
+	
+# sandbox
+add_library(gl_static
+	STATIC
+		$<TARGET_OBJECTS:gl_traits>
+	)
+
+target_compile_definitions(gl_static
+	PUBLIC
+		GL_TRAITS_STATIC
+	)	
+
+target_link_libraries(gl_static
+	PUBLIC
+		gl_traits
+	)
+
+
+add_executable(sb_vbos_test
+	sandbox/vbos_test.cpp
+	)
+
+target_link_directories(sb_vbos_test
+	PRIVATE
+		sandbox/libs
+	)
+
+target_link_libraries(sb_vbos_test
+	PRIVATE
+		gl_static
+		glfw3/glfw3dll
+	)
+	
+target_include_directories(sb_vbos_test
+	PRIVATE
+		sandbox
+		glfw
+	)	
+
+add_custom_command(TARGET sb_vbos_test PRE_BUILD
+	COMMAND ${CMAKE_COMMAND} -E  copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/sandbox/shaders $<TARGET_FILE_DIR:sb_vbos_test>
+	COMMAND ${CMAKE_COMMAND} -E  copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/sandbox/resources $<TARGET_FILE_DIR:sb_vbos_test>/resources
+
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/sandbox/libs/glfw3/glfw3.dll $<TARGET_FILE_DIR:sb_vbos_test>
+	)	

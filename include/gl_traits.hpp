@@ -5,6 +5,13 @@
 #endif // !_gl_traits_
 
 //Testing
+
+#ifndef GL_TRAITS_EXPORT
+#define GLT_API
+#endif
+
+/*
+#ifndef GL_TRAITS_STATIC
 #ifdef GL_TRAITS_DLL
 #define GLT_API __declspec(dllexport)
 //#define GLAD_GLAPI_EXPORT_BUILD
@@ -13,7 +20,10 @@
 #define GLT_API __declspec(dllimport)
 //#define GLAD_GLAPI_EXPORT
 #endif // !GL_TRAITS_DLL
-
+#else
+#define GLT_API
+#endif
+*/
 
 //add #ifdef for debug build
 #include <iostream>
@@ -24,19 +34,7 @@
 /////////
 
 
-#define GLM_FORCE_CTOR_INIT
-#define GLM_FORCE_XYZW_ONLY 
-#include "glm/glm.hpp"
-#include "glm/gtc/matrix_transform.hpp"
-#include "glm/gtc/type_ptr.hpp"
-
-
-#define POD_EXTENDS std::tuple<glm::vec1, glm::vec2, glm::vec3, glm::vec4, \
-                               glm::uvec1, glm::uvec2, glm::uvec3, glm::uvec4 \
->
-#include "pod_reflection.hpp"
 #include "dhconstexpr_lib.hpp"
-
 
 #include <thread>
 #include <functional>
@@ -46,9 +44,6 @@
 
 #include <vector>
 #include <array>
-
-
-
 
 #include "traits_common.hpp"
 
