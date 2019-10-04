@@ -5,7 +5,7 @@ std::array<std::pair<glTargetTex, const void*>, gltActiveTexture::max_gl_texture
 size_t gltActiveTexture::currentUnit_ = 0;
 
 
-const gltHandle<glVAO::vao> *buffer_traits::currentVAO_ = nullptr;
+const gltHandle<glVAO::vao> *glt_buffers::currentVAO_ = nullptr;
 
 /*
 VAO_base::VAO_base()

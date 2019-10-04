@@ -1,5 +1,4 @@
-﻿#include <Windows.h>
-
+﻿
 
 #define GL_TRAITS_STATIC
 #include "gl_traits.hpp"
@@ -19,18 +18,7 @@
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
 
-std::string GetFullPath(const std::string pathRelative)
-{
-	std::string full_exe_path;
 
-	char buffer[MAX_PATH];
-	auto dir = GetModuleFileName(NULL, buffer, MAX_PATH);
-	std::string::size_type pos = std::string(buffer).find_last_of("\\/");
-	full_exe_path = std::string(buffer, 0, pos + 1);
-
-
-	return full_exe_path + pathRelative;
-}
 
 // settings
 const unsigned int SCR_WIDTH = 800;
@@ -182,38 +170,35 @@ int main()
 		0.0f, 1.0f
 	};
 
-	// TODO: add queries of active buffer to buffer_traits
+	// TODO: add queries of active buffer to glt_buffers
 	GLint res;
 	glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &res);
 
 	// batched typesafe vbo (use case 2.1)
 	glVBO<glm::vec3, glm::vec2> batchedVBO{
-		buffer_traits::GenBuffer<glTargetBuf::array_buffer>() };
+		glt_buffers::GenBuffer<glTargetBuf::array_buffer>() };
 
 	batchedVBO.Bind();
-	batchedVBO.AllocateMemory(36, 36, glBufferUse::static_draw);
+	batchedVBO.AllocateMemory(36, 36, gltBufUse::static_draw);
 
 	size_t offset1 = batchedVBO.GetOffset<1>();
 	batchedVBO.BufferData<0>(glm_cube_positions());
 	batchedVBO.BufferData<1>(glm_cube_texCoords());
 
-	// use case 2.1
-	gltHandle<glVAO::vao> vao_t = buffer_traits::GenVAO();
-	buffer_traits::BindVAO(vao_t);
+	// use case (batched buffers)
+	gltHandle<glVAO::vao> vao_t = glt_buffers::GenVAO();
+	glt_buffers::BindVAO(vao_t);
 	
 	// position attribute
-	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, /*3 * sizeof(float)*/0, (void*)0);
-	//glEnableVertexAttribArray(0);
-	buffer_traits::VertexAttribPointer(glm::vec3(), vao_t, 0, 0, 0);
-	buffer_traits::EnableVertexAttribArray(vao_t, 0);
+
+	glt_buffers::VertexAttribPointer(glm::vec3(), vao_t, 0, 0, 0);
+	glt_buffers::EnableVertexAttribArray(vao_t, 0);
 
 	// texture coord attribute
-	//glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, /*2 * sizeof(float)*/0, (void*)sizeof(vertices));
-	//glEnableVertexAttribArray(1);
-	buffer_traits::VertexAttribPointer(glm::vec2(), vao_t, 1, 0, sizeof(vertices));
-	buffer_traits::EnableVertexAttribArray(vao_t, 1);
-	buffer_traits::VertexAttribPointer(attr_compound<glm::vec3, glm::vec2>(), vao_t, 0, 0,
-		std::make_tuple(false, false));
+	glt_buffers::VertexAttribPointer(glm::vec2(), vao_t, 1, 0, sizeof(vertices));
+	glt_buffers::EnableVertexAttribArray(vao_t, 1);
+	//glt_buffers::VertexAttribPointer(glslt_compound<glm::vec3, glm::vec2>(), vao_t, 0, 0,
+	//	std::make_tuple(false, false));
 
 
 	// load and create a texture 
