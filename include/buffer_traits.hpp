@@ -2,6 +2,44 @@
 
 // 
 /*
+OpenGL:
+
+Shader source contains:
+- layout of named attributes with (not necessarily) defined locations
+- named uniforms
+
+Buffers can store arrays of attributes:
+- array of compounds (several attributes per array element)
+- several batched arrays of attributes (one attribute per array element) in one VBO
+- one batched attribute array in one VBO
+- first - compound, followed by multiple batched atribute arrays
+
+Each attribute/variable has a glsl Type, unifroms also have a name;
+
+Goal: 
+1. Provide typesafe info about Vertex Buffer Object:
+	a. types of attributes stored
+	b. order of attributes stored
+	c. if the first attribute is compound (several attributes per array element)
+	d. (maybe) specific info about the attribute variable name
+	e. (maybe) specific info about the attribute location number
+
+Comment on "1.d.". Name is needed to check the attribute location when
+VBO is passed to a Shader object to upload data. Would be completely typesafe
+in case Shader classes will be generated at precompile step from shader source file.
+
+Comment of "1.e". Not typesafe 
+
+Cases:
+- VBO of unnamed attributes
+	glVBO<glm::Vec3, glm::Vec3, int, int>
+
+- VBO with first compound maybe followed by several unnamed attributes
+	glVBO<comp_attr<glm::Vec3, glm::Vec2>, int, int>
+
+- VBO with named attributes
+	glVBO<glslt<glm::Vec3, gl_pos>, glslt<glm::Vec2, gl_tex>> (gl_pos = "pos", gl_tex = "tex")
+	glVBO<comp_attr<glslt<glm::Vec3, gl_pos>, glslt<glm::Vec2, gl_tex>>>
 
 TODO: define all attribute validations here (at the beginning)
 */
@@ -15,25 +53,29 @@ struct glslt
 };
 
 template <class ... vAttribs>
-using glslt_compound = std::tuple<vAttribs...>;
+using comp_attr = std::tuple<vAttribs...>;
 
 template <class T>
-struct is_named_attr : std::bool_constant<false>
-{
-	// workaround for attribute traits
-	using type = typename T;
-};
+struct is_named_attr : std::bool_constant<false> {};
 
 template <class T, const char * glslName>
-struct is_named_attr<glslt<T, glslName>> : std::bool_constant<true>
-{
-	// workaround for attribute traits
-	using type = typename T;
-};
+struct is_named_attr<glslt<T, glslName>> : std::bool_constant<true> {};
 
 template <class T>
 constexpr inline bool is_named_attr_v = is_named_attr<T>();
 
+template <class T>
+struct is_compound_attr : std::bool_constant<false> {};
+
+template <class ... T>
+struct is_compound_attr<comp_attr<T...>> : std::bool_constant<true> {};
+
+// matrices are compound
+template<glm::length_t C, glm::length_t R, typename T, glm::qualifier Q>
+struct is_compound_attr<glm::mat<C, R, T, Q>> : std::bool_constant<true> {};
+
+template <class T>
+constexpr inline bool is_compound_attr_v = is_compound_attr<T>();
 
 
 // TODO: specialization for glm matrix?
@@ -41,7 +83,7 @@ template <class vAttrib>
 struct attrib_traits
 {
 	// TODO: check if template parameter is valid  
-	constexpr static bool is_compound = false;
+	//constexpr static bool is_compound = false;
 	constexpr static size_t stride = sizeof(vAttrib);
 	constexpr static size_t numAttribs = 1;
 	using base_attribs = typename std::tuple<vAttrib>;
@@ -49,9 +91,9 @@ struct attrib_traits
 };
 
 template <class ... vAttribs>
-struct attrib_traits<glslt_compound<vAttribs...>>
+struct attrib_traits<comp_attr<vAttribs...>>
 {
-	constexpr static bool is_compound = true;
+	//constexpr static bool is_compound = true;
 	constexpr static size_t stride = sum<sizeof(vAttribs)...>;
 	constexpr static size_t numAttribs = sizeof...(vAttribs);
 	using base_attribs = typename std::tuple<vAttribs...>;
@@ -230,14 +272,14 @@ public:
 	struct compound_attrib_pointer_;
 
 	template <class ... Attribs, size_t ... indxs>
-	struct compound_attrib_pointer_<glslt_compound<Attribs...>, std::index_sequence<indxs...>>
+	struct compound_attrib_pointer_<comp_attr<Attribs...>, std::index_sequence<indxs...>>
 	{
 		static void VertexAttribPointer(const gltHandle<glVAO::vao>& handle,
 			//size_t firstIndx,		// compounds starts from 0 by default
 			//size_t offsetBytes,	// offset is calculated from compound types
 			const std::tuple<to_type<bool, Attribs>...>& normalize)
 		{
-			constexpr size_t stride = attrib_traits<glslt_compound<Attribs...>>::stride;
+			constexpr size_t stride = attrib_traits<comp_attr<Attribs...>>::stride;
 			using tuple = typename std::tuple<Attribs...>;
 
 			(glVertexAttribPointer((GLuint)indxs,
@@ -253,7 +295,7 @@ public:
 
 	// TODO: think of a better way to pass normalized parameters
 	template <typename ... Attribs>
-	static void VertexAttribPointer(glslt_compound<Attribs...>&& tag, const gltHandle<glVAO::vao>& handle,
+	static void VertexAttribPointer(comp_attr<Attribs...>&& tag, const gltHandle<glVAO::vao>& handle,
 		//size_t firstIndx,		// compounds starts from 0 by default
 		//size_t offsetBytes,	// offset is calculated from compound types
 		const std::tuple<to_type<bool, Attribs>...>& normalize)
@@ -261,7 +303,7 @@ public:
 		bool is_current = IsCurrentVAO(handle);
 		assert(is_current && "Setting attribute pointer for non-active VAO");
 
-		compound_attrib_pointer_<glslt_compound<Attribs...>>::VertexAttribPointer(handle,
+		compound_attrib_pointer_<comp_attr<Attribs...>>::VertexAttribPointer(handle,
 			//indx, offsetBytes, 
 			normalize);
 	}
@@ -482,11 +524,11 @@ struct all_equivalent : std::bool_constant<false>
 
 template <class ... attribs,
 	class ... user_attribs>
-	struct all_equivalent<glslt_compound<attribs...>, std::tuple<user_attribs...>>
+	struct all_equivalent<comp_attr<attribs...>, std::tuple<user_attribs...>>
 	: std::bool_constant<(is_equivalent<attribs, user_attribs>() && ...)>
 {
 	static_assert(sizeof...(attribs) == sizeof...(user_attribs), "Numbers of attribs provided mismatch");
-	static_assert(!std::conjunction_v<std::bool_constant<attrib_traits<attribs>::is_compound>...>,
+	static_assert(!std::conjunction_v<is_compound_attr<attribs>...>,
 		"Nested compound attributes are not allowed!");
 };
 
@@ -507,7 +549,7 @@ constexpr bool is_equivalent()
 		else
 			return false;
 	}
-	else if constexpr (attrib_traits<attrib_class>::is_compound)
+	else if constexpr (is_compound_attr_v<attrib_class>)
 	{
 		if constexpr (attrib_traits<attrib_class>::numAttribs != refl_traits<user_defined>::fields_count())
 			return false;
@@ -526,6 +568,7 @@ constexpr bool is_equivalent()
 template <class attrib_class, class user_defined>
 constexpr inline bool is_equivalent_v = is_equivalent<attrib_class, user_defined>();
 
+/*
 template <class ... attributes>
 class valid_attr_collection;
 
@@ -534,7 +577,7 @@ class valid_attr_collection<>
 {
 public:
 	constexpr static bool value = false,
-		has_compounds = false,
+//		has_compounds = false,
 		has_named = false;
 	constexpr static size_t num_elements = 0,
 		num_compounds = 0;
@@ -542,9 +585,7 @@ public:
 	constexpr static std::index_sequence<> invalid_elems = std::index_sequence<>();
 };
 
-/* Rules:
-- Each one must qualify as a valid attribute
-*/
+
 template <class first, class ... attributes>
 class valid_attr_collection<first, attributes...>
 {
@@ -559,7 +600,8 @@ class valid_attr_collection<first, attributes...>
 		}
 		else
 		{
-			return !dh_disjunction<attrib_traits<attributes>::is_compound...>;
+			//return !dh_disjunction<attrib_traits<attributes>::is_compound...>;
+			return true;
 		}
 	}
 
@@ -567,8 +609,8 @@ public:
 
 	// invalid if any of 
 	constexpr static bool value = GetValue(),
-		has_compounds = dh_disjunction<attrib_traits<first>::is_compound,
-		attrib_traits<attributes>::is_compound...>,
+//		has_compounds = dh_disjunction<attrib_traits<first>::is_compound,
+//		attrib_traits<attributes>::is_compound...>,
 		has_named = false;// dh_disjunction < attrib_traits<first>::
 
 	constexpr static size_t num_elements = 1 + sizeof...(attributes),
@@ -581,6 +623,7 @@ public:
 
 template <class ... attribs>
 constexpr inline bool valid_attr_collection_v = valid_attr_collection<attribs...>::value;
+*/
 
 /*
 VBO can store only ONE compound instance, and it must be at the beginning,
@@ -597,14 +640,14 @@ TODO: validate attributes' collection
 template <class ... attribs>
 class glVBO : public vbo_allocator<glTargetBuf::array_buffer, attribs...>
 {
-	static_assert(valid_attr_collection_v<attribs...>, "Inavlid attributes collection!");
+//	static_assert(valid_attr_collection_v<attribs...>, "Inavlid attributes collection!");
 	using vboalloc = vbo_allocator<glTargetBuf::array_buffer, attribs...>;
 
 	gltHandle<glTargetBuf::array_buffer> handle_;
 
 public:
 
-	constexpr static bool has_named_attribs = dh_disjunction<is_named_attr_v<attribs>...>;
+//	constexpr static bool has_named_attribs = dh_disjunction<is_named_attr_v<attribs>...>;
 
 
 	template <size_t attribIndx>
@@ -673,7 +716,7 @@ public:
 };
 
 template <class ... attribs>
-using glVBOCompound = glVBO<glslt_compound<attribs...>>;
+using glVBOCompound = glVBO<comp_attr<attribs...>>;
 
 
 // One VBO can continiously store as many attributes as needed. Each attribute can store no more than 4 components

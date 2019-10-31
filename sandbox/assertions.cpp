@@ -39,33 +39,33 @@ void assert_all()
 
 	sizeof(glm::vec4);
 
-	attrib_traits<glm::vec4>::is_compound;
-	attrib_traits<glm::vec4>::stride;
+	is_compound_attr_v<glm::vec4>;
+	//attrib_traits<glm::vec4>::stride;
 
-	attrib_traits<glslt_compound<glm::vec3, glm::vec2>>::is_compound;
-	attrib_traits<glslt_compound<glm::vec3, glm::vec2>>::stride;
+	is_compound_attr_v<comp_attr<glm::vec3, glm::vec2>>;
+	//attrib_traits<comp_attr<glm::vec3, glm::vec2>>::stride;
 
 	refl_traits<glm::vec4>::fields_count();
 	refl_traits<glm::mat4>::fields_count();
 	refl_traits<glm::vec4>::field_types;
 
 	static_assert(!all_equivalent_v<glm::vec4, float>);
-	static_assert(all_equivalent_v<glslt_compound<glm::vec3, glm::vec2>,
+	static_assert(all_equivalent_v<comp_attr<glm::vec3, glm::vec2>,
 		refl_traits<vertex>::field_types>);
 
 	static_assert(is_equivalent_v<glm::vec4, glm::vec4>);
 	static_assert(!is_equivalent_v<glm::vec4, glm::vec3>);
 
 	// check compound class against user-defined compount class
-	static_assert(is_equivalent_v<glslt_compound<glm::vec3, glm::vec2>, vertex>);
-	static_assert(!is_equivalent_v<glslt_compound<glm::vec3, glm::vec2>,
-		glslt_compound<glm::vec3>>);
+	static_assert(is_equivalent_v<comp_attr<glm::vec3, glm::vec2>, vertex>);
+	static_assert(!is_equivalent_v<comp_attr<glm::vec3, glm::vec2>,
+		comp_attr<glm::vec3>>);
 
 	static_assert(is_named_attr_v<attr_aPos>);
 	static_assert(!is_named_attr_v<glm::vec3>);
 	constexpr const char* name = attr_aPos::name;
 
-	using compound_attr = glslt_compound<glm::vec3, 
+	using compound_attr = comp_attr<glm::vec3, 
 		glm::vec2, glm::vec2>;
 
 	using tuple2 = std::tuple<bool, size_t, char, char, glm::vec3>;
@@ -77,8 +77,8 @@ void assert_all()
 	static_assert(get_offset<1, compound_attr>::value == sizeof(glm::vec3));
 	static_assert(get_offset<2, compound_attr>::value == sizeof(glm::vec3) + sizeof(glm::vec2));
 
-	valid_attr_collection<compound_attr, compound_attr>::has_compounds;
-
+//	valid_attr_collection<compound_attr, compound_attr>::has_compounds;
+	/*
 	static_assert(dh_conjunction<true, true, true>);
 	static_assert(!dh_conjunction<true, false, true>);
 	static_assert(dh_disjunction<false, false, true>);
@@ -89,9 +89,9 @@ void assert_all()
 	static_assert(!valid_attr_collection_v<compound_attr, compound_attr>);
 	static_assert(!valid_attr_collection_v<glm::vec3, compound_attr>);
 	static_assert(valid_attr_collection_v<glm::vec3>);
-	static_assert(valid_attr_collection_v<compound_attr, glm::vec3>);
+	static_assert(valid_attr_collection_v<compound_attr, glm::vec3>);*/
 
-	static_assert(!str_equal(aPos, aTex));
+//	static_assert(!str_equal(aPos, aTex));
 
 }
 
