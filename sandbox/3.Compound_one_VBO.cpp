@@ -2,6 +2,7 @@
 
 int main()
 {
+
 	std::cout << path.generic_string() << std::endl;
 	SmartGLFW glfw{ 3, 3 };
 	SmartGLFWwindow window{ SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL" };

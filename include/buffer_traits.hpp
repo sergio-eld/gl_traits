@@ -28,7 +28,33 @@ Comment on "1.d.". Name is needed to check the attribute location when
 VBO is passed to a Shader object to upload data. Would be completely typesafe
 in case Shader classes will be generated at precompile step from shader source file.
 
-Comment of "1.e". Not typesafe 
+Comment of "1.e". Not typesafe
+
+2. Accept containers with continious data to buffers:
+    a. having the same type as template arguments
+        glt_VBO<glm::Vec3> vbo;
+        ...
+        std::vector<glm::Vec3> data;
+        vbo.Load(data);
+
+    b. having type equivalent to that of template arguments
+    (check using pod_reflection lib)
+
+        struct Vertex
+        {
+            glm::Vec3 pos, 
+                texture;
+        }
+        ...
+        std::vector<Vertex> data;
+        glt_VBO<glm::Vec3, glm::Vec2> vbo;
+        vbo.Load(data);
+
+    c. for buffers with multiple attributes provide location index 
+    or deduce:
+        - explicitly passing the index number
+        - if attribute type is unique
+        - for named may use tag dispatching
 
 Cases:
 - VBO of unnamed attributes
@@ -77,6 +103,42 @@ struct is_compound_attr<glm::mat<C, R, T, Q>> : std::bool_constant<true> {};
 template <class T>
 constexpr inline bool is_compound_attr_v = is_compound_attr<T>();
 
+///////////////////////////
+//What is this for?
+///////////////////////////
+
+// this does not consider padding for types less than 4 bytes
+template <size_t indx, class tuple, class seq = indx_seq<indx>>
+struct get_offset;
+
+template <typename ... attribs>
+struct get_offset<0, std::tuple<attribs...>, std::index_sequence<>>
+{
+    constexpr static size_t value = 0;
+};
+
+template <class tuple>
+struct tuple_size;
+
+template <class ... types>
+struct tuple_size<std::tuple<types...>>
+{
+    constexpr static size_t value = sum<sizeof(types)...>;
+};
+
+template <class tuple>
+constexpr inline size_t tuple_size_v = tuple_size<tuple>::value;
+
+template <size_t indx, class ... attribs, size_t ... i>
+struct get_offset<indx, std::tuple<attribs...>, std::index_sequence<i...>>
+{
+    constexpr static size_t value = sum<sizeof(nth_type<i, attribs...>) ...>;
+};
+
+template <size_t indx, class tuple>
+constexpr inline size_t get_offset_v = get_offset<indx, tuple>::value;
+
+///////////////////////////
 
 // TODO: specialization for glm matrix?
 template <class vAttrib>
@@ -133,36 +195,7 @@ enum class gltBufUse : unsigned int
 	dynamic_copy = GL_DYNAMIC_COPY
 };
 
-// this does not consider padding for types less than 4 bytes
-template <size_t indx, class tuple, class seq = indx_seq<indx>>
-struct get_offset;
 
-template <typename ... attribs>
-struct get_offset<0, std::tuple<attribs...>, std::index_sequence<>>
-{
-	constexpr static size_t value = 0;
-};
-
-template <class tuple>
-struct tuple_size;
-
-template <class ... types>
-struct tuple_size<std::tuple<types...>>
-{
-	constexpr static size_t value = sum<sizeof(types)...>;
-};
-
-template <class tuple>
-constexpr inline size_t tuple_size_v = tuple_size<tuple>::value;
-
-template <size_t indx, class ... attribs, size_t ... i>
-struct get_offset<indx, std::tuple<attribs...>, std::index_sequence<i...>>
-{
-	constexpr static size_t value = sum<sizeof(nth_type<i, attribs...>) ...>;
-};
-
-template <size_t indx, class tuple>
-constexpr inline size_t get_offset_v = get_offset<indx, tuple>::value;
 
 class GLT_API glt_buffers
 {
