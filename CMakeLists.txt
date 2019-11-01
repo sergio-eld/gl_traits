@@ -5,37 +5,35 @@ project(gl_traits LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-set(gl_traits_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+# Substitute with find_package?
 add_subdirectory(third_party/pod_reflection)
 add_subdirectory(third_party/dhconstexpr_lib)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
-set(GLM_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
+# TODO: check if glad was generated with EXPORT
+find_package(glad REQUIRED)
+message(STATUS "glad found: ${glad_FOUND}")
 find_package(OpenGL REQUIRED)
+message(STATUS "OpenGL found: ${OpenGL_FOUND}")
 message(STATUS ${OPENGL_LIBRARIES})
 
-find_package(GLM REQUIRED)
-message(STATUS "GLM included at ${GLM_INCLUDE_DIR}")
+find_package(glm REQUIRED)
+message(STATUS "glm found: ${glm_FOUND}")
 
 add_library(${PROJECT_NAME}
 	OBJECT
-		${gl_traits_INCLUDE_DIR}/gl_traits.hpp
-		${gl_traits_INCLUDE_DIR}/traits_common.hpp
-		${gl_traits_INCLUDE_DIR}/buffer_traits.hpp
-		${gl_traits_INCLUDE_DIR}/texture_traits.hpp
-		${gl_traits_INCLUDE_DIR}/uniform_traits.hpp
-		${gl_traits_INCLUDE_DIR}/glt_definitions.hpp
+		include/gl_traits.hpp
+		include/traits_common.hpp
+		include/buffer_traits.hpp
+		include/texture_traits.hpp
+		include/uniform_traits.hpp
+		include/glt_definitions.hpp
 
-
-		#${gl_traits_INCLUDE_DIR}/glad/glad.h
 		src/gl_traits.cpp
-		src/glad.c
 
 		src/shader_traits.cpp
 	)
@@ -44,31 +42,36 @@ target_link_libraries(${PROJECT_NAME}
 	PUBLIC
 		pod_reflection
 		dhconstexpr_lib
-		${GLM}
+		
+		glm
+		glad::glad
 
 	PRIVATE
 		${OPENGL_LIBRARIES}
 	)
 	
+# add INTERFACE_INCLUDE_DIRECTORIES
 target_include_directories(${PROJECT_NAME}
 	PUBLIC
-		${gl_traits_INCLUDE_DIR}
+		$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
 	PRIVATE
-		/src
+		$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
 	)
 	
+# move to subdir
 # sandbox
+find_package(glfw3 REQUIRED)
+message(STATUS "glfw3 found: ${glfw3_FOUND}")
+
+find_package(PlatformPath REQUIRED)
+message(STATUS "PlatformPath found: ${PlatformPath_FOUND}")
+
 add_library(gl_sandbox
 	STATIC
 		$<TARGET_OBJECTS:gl_traits>
 		sandbox/assertions.cpp
 		sandbox/helpers.hpp
 		sandbox/helpers.cpp
-	)
-
-target_link_directories(gl_sandbox
-	PUBLIC
-		sandbox/libs
 	)
 
 target_compile_definitions(gl_sandbox
@@ -79,20 +82,20 @@ target_compile_definitions(gl_sandbox
 target_link_libraries(gl_sandbox
 	PUBLIC
 		gl_traits
-		glfw3/glfw3dll
+		glfw
+		PlatformPath
 	)
 	
 target_include_directories(gl_sandbox
 	PUBLIC
 		sandbox
-		glfw
 	)
 
 # VBO cases
 
-set(VBO_USE_CASES
-	"1.Batched_2_dif_VBO"
-	"2.Batched_2_one_VBO"
+set(VBO_USE_CASES 
+	"1.Batched_2_dif_VBO" 
+	"2.Batched_2_one_VBO" 
 	"3.Compound_one_VBO"
 	#"4.Batched_Compound_2_dif_VBO"
 	#"5.Batched_Compound_one_VBO" not possible. Compund must go first and be the only one
@@ -111,8 +114,8 @@ endforeach()
 	
 
 add_custom_command(TARGET gl_sandbox PRE_BUILD
-	COMMAND ${CMAKE_COMMAND} -E  copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/sandbox/shaders $<TARGET_FILE_DIR:gl_sandbox>
-	COMMAND ${CMAKE_COMMAND} -E  copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/sandbox/resources $<TARGET_FILE_DIR:gl_sandbox>/resources
+	COMMAND ${CMAKE_COMMAND} -E  copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/sandbox/shaders $<TARGET_PROPERTY:gl_sandbox,RUNTIME_OUTPUT_DIRECTORY>
+	COMMAND ${CMAKE_COMMAND} -E  copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/sandbox/resources $<TARGET_PROPERTY:gl_sandbox,RUNTIME_OUTPUT_DIRECTORY>/resources
 
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/sandbox/libs/glfw3/glfw3.dll $<TARGET_FILE_DIR:gl_sandbox>
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:glfw> $<TARGET_PROPERTY:gl_sandbox,RUNTIME_OUTPUT_DIRECTORY>
 	)	

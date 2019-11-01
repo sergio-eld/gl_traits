@@ -22,12 +22,12 @@ int main()
 
 	auto vertexes = cube_vertexes();
 
-	using vertex_attr = glslt_compound<glm::vec3, glm::vec2>;
+	using vertex_attr = comp_attr<glm::vec3, glm::vec2>;
 
 	glVBOCompound<glm::vec3, glm::vec2> vboVertexes{
 		glt_buffers::GenBuffer<glTargetBuf::array_buffer>() };
 
-	glVBOCompound<glm::vec3, glm::vec2>::has_named_attribs;
+	//glVBOCompound<glm::vec3, glm::vec2>::has_named_attribs;
 
 	vboVertexes.Bind();
 	vboVertexes.AllocateMemory(vertexes.size(), gltBufUse::static_draw);
