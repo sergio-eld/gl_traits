@@ -58,64 +58,12 @@ target_include_directories(${PROJECT_NAME}
 		$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
 	)
 	
-# move to subdir
-# sandbox
-find_package(glfw3 REQUIRED)
-message(STATUS "glfw3 found: ${glfw3_FOUND}")
+add_subdirectory(sandbox)
 
-find_package(PlatformPath REQUIRED)
-message(STATUS "PlatformPath found: ${PlatformPath_FOUND}")
 
-add_library(gl_sandbox
-	STATIC
-		$<TARGET_OBJECTS:gl_traits>
-		sandbox/assertions.cpp
-		sandbox/helpers.hpp
-		sandbox/helpers.cpp
-	)
 
-target_compile_definitions(gl_sandbox
-	PUBLIC
-	#	GL_TRAITS_STATIC
-	)	
-
-target_link_libraries(gl_sandbox
-	PUBLIC
-		gl_traits
-		glfw
-		PlatformPath
-	)
-	
-target_include_directories(gl_sandbox
-	PUBLIC
-		sandbox
-	)
-
-# VBO cases
-
-set(VBO_USE_CASES 
-	"1.Batched_2_dif_VBO" 
-	"2.Batched_2_one_VBO" 
-	"3.Compound_one_VBO"
-	#"4.Batched_Compound_2_dif_VBO"
-	#"5.Batched_Compound_one_VBO" not possible. Compund must go first and be the only one
-)
-
-foreach(USE_CASE ${VBO_USE_CASES})
-	add_executable(${USE_CASE}
-		sandbox/${USE_CASE}.cpp
-	)
-	
-target_link_libraries(${USE_CASE}
-	PRIVATE
-		gl_sandbox
-	)
-endforeach()
 	
 
-add_custom_command(TARGET gl_sandbox PRE_BUILD
-	COMMAND ${CMAKE_COMMAND} -E  copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/sandbox/shaders $<TARGET_PROPERTY:gl_sandbox,RUNTIME_OUTPUT_DIRECTORY>
-	COMMAND ${CMAKE_COMMAND} -E  copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/sandbox/resources $<TARGET_PROPERTY:gl_sandbox,RUNTIME_OUTPUT_DIRECTORY>/resources
 
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:glfw> $<TARGET_PROPERTY:gl_sandbox,RUNTIME_OUTPUT_DIRECTORY>
-	)	
+
+
