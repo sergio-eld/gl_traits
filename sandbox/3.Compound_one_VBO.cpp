@@ -31,7 +31,7 @@ int main()
 	//glVBOCompound<glm::vec3, glm::vec2>::has_named_attribs;
 
 	vboVertexes.Bind();
-	vboVertexes.AllocateMemory(vertexes.size(), gltBufUse::static_draw);
+	vboVertexes.AllocateMemory(vertexes.size(), glBufUse::static_draw);
 	vboVertexes.BufferData<0>(vertexes);
 
 	glt_buffers::VertexAttribPointer(vertex_attr(), vao, /*0, 0,*/ std::make_tuple(false, false));

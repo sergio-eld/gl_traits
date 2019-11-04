@@ -24,7 +24,7 @@ int main()
 		glt_buffers::GenBuffer<glTargetBuf::array_buffer>() };
 
 	vbo.Bind();
-	vbo.AllocateMemory(positions.size(), texCoords.size(), gltBufUse::static_draw);
+	vbo.AllocateMemory(positions.size(), texCoords.size(), glBufUse::static_draw);
 	vbo.BufferData<0>(positions);
 	vbo.BufferData<1>(texCoords);
 

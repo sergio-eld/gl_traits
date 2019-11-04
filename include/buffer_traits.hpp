@@ -70,6 +70,8 @@ Cases:
 TODO: define all attribute validations here (at the beginning)
 */
 
+#include "gltEnums.hpp"
+
 
 template <class T, const char * glslName>
 struct glslt
@@ -164,43 +166,12 @@ struct attrib_traits<comp_attr<vAttribs...>>
 
 
 
-enum class glTargetBuf : unsigned int 
-{
-	array_buffer = GL_ARRAY_BUFFER,
-	atomic_counter_buffer = GL_ATOMIC_COUNTER_BUFFER,
-	copy_read_buffer = GL_COPY_READ_BUFFER,
-	copy_write_buffer = GL_COPY_WRITE_BUFFER,
-	dispatch_indirect_buffer = GL_DISPATCH_INDIRECT_BUFFER,
-	draw_indirect_buffer = GL_DRAW_INDIRECT_BUFFER,
-	element_array_buffer = GL_ELEMENT_ARRAY_BUFFER,
-	pixel_pack_buffer = GL_PIXEL_PACK_BUFFER,
-	pixel_unpack_buffer = GL_PIXEL_UNPACK_BUFFER,
-	query_buffer = GL_QUERY_BUFFER,
-	shader_storage_buffer = GL_SHADER_STORAGE_BUFFER,
-	texture_buffer = GL_TEXTURE_BUFFER,
-	transform_feedback_buffer = GL_TRANSFORM_FEEDBACK_BUFFER,
-	uniform_buffer = GL_UNIFORM_BUFFER
-};
-
-enum class gltBufUse : unsigned int
-{
-	stream_draw = GL_STREAM_DRAW,
-	stream_read = GL_STREAM_READ,
-	stream_copy = GL_STREAM_COPY,
-	static_draw = GL_STATIC_DRAW,
-	static_read = GL_STATIC_READ,
-	static_copy = GL_STATIC_COPY,
-	dynamic_draw = GL_DYNAMIC_DRAW,
-	dynamic_read = GL_DYNAMIC_READ,
-	dynamic_copy = GL_DYNAMIC_COPY
-};
-
-
-
 class GLT_API glt_buffers
 {
 	template <glTargetBuf target>
 	static const gltHandle<target> *currentBuffer_;
+
+    // separate to another class ?
     static const gltHandle<glVAO::vao> *currentVAO_;
 
 public:
@@ -227,41 +198,38 @@ public:
 		currentBuffer_<target> = &handle;
 	}
 
-    static void BindVAO(const gltHandle<glVAO::vao>& handle)
-    {
-        assert(handle.IsValid() && "Binding invalid VAO");
-        glBindVertexArray(handle);
-        currentVAO_ = &handle;
-    }
-
-
-
 	template <glTargetBuf target>
-	static void AllocateBuffer(const gltHandle<target>& handle, size_t size, gltBufUse usage)
+	static void AllocateBuffer(const gltHandle<target>& handle, size_t sizeBytes, glBufUse usage)
 	{
 		assert(IsCurrentBuffer(handle) && "Allocating memory for non-active buffer!");
-		glBufferData((GLenum)target, size, nullptr, (GLenum)usage);
+		glBufferData((GLenum)target, sizeBytes, nullptr, (GLenum)usage);
 	}
 
+
+    // raw, type-independent members, doesnt track allocated memory ranges
 	template <glTargetBuf target, typename dataType>
 	static void BufferSubData(const gltHandle<target>& handle, size_t offset, const std::vector<dataType>& data)
 	{
-		// static check for container to store sequenced data?
 		glBufferSubData((GLenum)target, (GLintptr)offset, sizeof(dataType) * data.size(), data.data());
 	}
 
 	//TODO: restrict usage for array_buffer
 	template<size_t sz, typename dataType>
-	static void BufferData(glTargetBuf target, const dataType(&data)[sz], gltBufUse usage)
+	static void BufferData(glTargetBuf target, const dataType(&data)[sz], glBufUse usage)
 	{
 		glBufferData(target, sizeof(data), data, usage);
 	}
 
 	template <class dataType>
-	static void BufferData(glTargetBuf target, const std::vector<dataType>& data, gltBufUse usage)
+	static void BufferData(glTargetBuf target, const std::vector<dataType>& data, glBufUse usage)
 	{
 		glBufferData((GLenum)target, data.size() * sizeof(dataType), data.data(), (GLenum)usage);
 	}
+
+
+    //////////////////////////////////////////////////////
+    //VAO move to VAO class
+    //////////////////////////////////////////////////////
 
 	static gltHandle<glVAO::vao> GenVAO()
 	{
@@ -270,6 +238,13 @@ public:
 		assert(vao && "Failed to generate VAO");
 		return gltHandle<glVAO::vao>(vao);
 	}
+
+    static void BindVAO(const gltHandle<glVAO::vao>& handle)
+    {
+        assert(handle.IsValid() && "Binding invalid VAO");
+        glBindVertexArray(handle);
+        currentVAO_ = &handle;
+    }
 
 	static bool IsCurrentVAO(const gltHandle<glVAO::vao>& handle)
 	{
@@ -293,12 +268,14 @@ public:
 		bool is_current = IsCurrentVAO(handle);
 		assert(is_current && "Setting attribute pointer for non-active VAO");
 
+        /*
 		glVertexAttribPointer((GLuint)indx,				// attribute index
 			(GLint)glenum_from_type<Attrib>::nComponents,	// attribute's components
 			glenum_from_type_v<Attrib>,						// OpenGL type
 			normalize,
 			0,							// stride. 0 if Attrib is not compound (tightly packed)
 			(void*)offsetBytes);
+            */
 	}
 
 	template <class compound, class = indx_seq<attrib_traits<compound>::numAttribs>>
@@ -315,12 +292,14 @@ public:
 			constexpr size_t stride = attrib_traits<comp_attr<Attribs...>>::stride;
 			using tuple = typename std::tuple<Attribs...>;
 
+            /*
 			(glVertexAttribPointer((GLuint)indxs,
 				(GLint)glenum_from_type<Attribs>::nComponents,
 				glenum_from_type_v<Attribs>,
 				std::get<indxs>(normalize),
 				stride,
 				(void*)get_offset_v<indxs, tuple>), ...);
+                */
 		}
 	};
 
@@ -454,12 +433,12 @@ class glVBO;
 
 
 
-
+// not only for vertex buffer I suppose
 template <glTargetBuf target, class ... attribs>
 class vbo_allocator
 {
 	const gltHandle<target> *handle_;
-	gltBufUse usage_;
+	glBufUse usage_;
 
 	std::array<size_t, sizeof...(attribs)> instancesAllocated_;
 
@@ -468,7 +447,7 @@ public:
 		: handle_(handle)
 	{}
 
-	void AllocateMemory(to_type<size_t, attribs> ... attribInstances, gltBufUse usage)
+	void AllocateMemory(to_type<size_t, attribs> ... attribInstances, glBufUse usage)
 	{
 		size_t totalSize = TotalSize(attribInstances...);
 		glt_buffers::AllocateBuffer(*handle_, totalSize, usage);
@@ -481,7 +460,7 @@ public:
 		return instancesAllocated_[attribNum];
 	}
 
-	gltBufUse Usage() const
+	glBufUse Usage() const
 	{
 		return usage_;
 	}
@@ -780,7 +759,7 @@ public:
     }
 
 	template <class vertexInfo>
-	void BufferData(const std::vector<vertexInfo>& vertexes, gltBufUse usage)
+	void BufferData(const std::vector<vertexInfo>& vertexes, glBufUse usage)
 	{
 		// TODO: compare is_equivalent. glm::vec4 is equivalent to float[4] or std::array<float, 4>
 

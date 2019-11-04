@@ -1,5 +1,7 @@
 ﻿#include "gl_traits.hpp"
 
+#include "gltEnums.hpp"
+
 struct vertex
 {
 	glm::vec3 posCoords;
@@ -15,6 +17,27 @@ using attr_aTex = typename glslt<glm::vec2, aTex>;
 
 void assert_all()
 {
+    // asserting c to gl types convertions
+    static_assert(c_to_gl_v<GLbyte> == (glType)GL_BYTE);
+    static_assert(c_to_gl_v<GLubyte> == (glType)GL_UNSIGNED_BYTE);
+    static_assert(c_to_gl_v<GLshort> == (glType)GL_SHORT);
+    static_assert(c_to_gl_v<GLushort> == (glType)GL_UNSIGNED_SHORT);
+    static_assert(c_to_gl_v<GLint> == (glType)GL_INT);
+    static_assert(c_to_gl_v<GLuint> == (glType)GL_UNSIGNED_INT);
+    //static_assert(c_to_gl_v<GLfixed> == GL_FIXED);
+    //static_assert(c_to_gl_v<GLhalf> == GL_HALF_FLOAT);
+    static_assert(c_to_gl_v<GLfloat> == (glType)GL_FLOAT);
+    static_assert(c_to_gl_v<GLdouble> == (glType)GL_DOUBLE);
+
+    std::is_same_v<GLint, GLfixed>;
+    std::is_same_v<GLushort, GLhalf>;
+
+    gl_deleter2<&glDeleteBuffers>();
+    gl_deleter2<&glDeleteTextures> {};
+    gl_deleter1<&glDeleteShader> {};
+    gl_deleter1<&glDeleteProgram> {};
+    gl_deleter2<&glDeleteVertexArrays> {};
+
 	valid_user_attribclass<vertex>();
 	valid_user_attribclass<glm::vec2>();
 
@@ -26,6 +49,7 @@ void assert_all()
 	static_assert(!all_glm_v<std::tuple<glm::vec3, float>>);
 	static_assert(all_glm_v<std::tuple<glm::vec3, glm::mat3>>);
 
+    /*
 	glenum_from_type<float>::value;
 	glenum_from_type<glm::vec4>::value;
 	glenum_from_type<glm::vec4>::nComponents;
@@ -36,6 +60,7 @@ void assert_all()
 	glenum_from_type<glm::uvec4>::nComponents;
 	glenum_from_type<glm::fmat3>::value;
 	glenum_from_type<glm::fmat4>::nComponents;
+    */
 
 	sizeof(glm::vec4);
 

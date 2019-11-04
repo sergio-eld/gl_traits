@@ -1,5 +1,7 @@
 #include "gl_traits.hpp"
 
+/*
+
 GLuint shader_traits::GenShaderPrivate(glTargetShader target)
 {
 	return glCreateShader((GLenum)target);
@@ -51,3 +53,4 @@ bool shader_traits::LinkStatus(const gltHandle<glShaderProgram::program>& prog)
 	glGetProgramiv(prog, GL_LINK_STATUS, &success);
 	return (bool)success;
 }
+*/

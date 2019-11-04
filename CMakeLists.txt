@@ -27,6 +27,10 @@ message(STATUS "glm found: ${glm_FOUND}")
 add_library(${PROJECT_NAME}
 	OBJECT
 		include/gl_traits.hpp
+		
+		include/gltEnums.hpp
+		include/gltHandle.hpp
+		
 		include/traits_common.hpp
 		include/buffer_traits.hpp
 		include/texture_traits.hpp

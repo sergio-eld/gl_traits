@@ -31,14 +31,14 @@ int main()
 		glt_buffers::GenBuffer<glTargetBuf::array_buffer>() };
 
 	vboPositions.Bind();
-	vboPositions.AllocateMemory(positions.size(), gltBufUse::static_draw);
+	vboPositions.AllocateMemory(positions.size(), glBufUse::static_draw);
 	vboPositions.BufferData<0>(positions);
 
 	glt_buffers::VertexAttribPointer(glm::vec3(), vao, 0, 0);
 	glt_buffers::EnableVertexAttribArray(vao, 0);
 
 	vboTextures.Bind();
-	vboTextures.AllocateMemory(texCoords.size(), gltBufUse::static_draw);
+	vboTextures.AllocateMemory(texCoords.size(), glBufUse::static_draw);
 	vboTextures.BufferData<0>(texCoords);
 
 	glt_buffers::VertexAttribPointer(glm::vec2(), vao, 1, 0);

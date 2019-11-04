@@ -1,42 +1,7 @@
 #pragma once
 
-enum class glTargetTex : int
-{
-	//for glBindTexture
-	texture_1d = GL_TEXTURE_1D,							//+
-	texture_2d = GL_TEXTURE_2D,							//+
-	texture_3d = GL_TEXTURE_3D,							//+
-	texture_1d_array = GL_TEXTURE_1D_ARRAY,				//+
-	texture_2d_array = GL_TEXTURE_2D_ARRAY,				//+
-	texture_rectangle = GL_TEXTURE_RECTANGLE,			//+	
-	texture_cube_map = GL_TEXTURE_CUBE_MAP,				//?
-	texture_cube_map_array = GL_TEXTURE_CUBE_MAP_ARRAY,	//??
-	texture_buffer = GL_TEXTURE_BUFFER,					//??
-	texture_2d_multisample = GL_TEXTURE_2D_MULTISAMPLE,				//+
-	texture_2d_multisample_array = GL_TEXTURE_2D_MULTISAMPLE_ARRAY,	//+
-
-
-	proxy_texture_1d = GL_PROXY_TEXTURE_1D,  //glTexImage1D
-
-	proxy_texture_2d = GL_PROXY_TEXTURE_2D, //glTexImage2D
-	proxy_texture_1d_array = GL_PROXY_TEXTURE_1D_ARRAY,
-	proxy_texture_rectangle = GL_PROXY_TEXTURE_RECTANGLE,
-	texture_cube_map_positive_x = GL_TEXTURE_CUBE_MAP_POSITIVE_X,
-	texture_cube_map_negative_x = GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
-	texture_cube_map_positive_y = GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
-	texture_cube_map_negative_y = GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
-	texture_cube_map_positive_z = GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
-	texture_cube_map_negative_z = GL_TEXTURE_CUBE_MAP_NEGATIVE_Z,
-	proxy_texture_cube_map = GL_PROXY_TEXTURE_CUBE_MAP,
-
-	proxy_texture_2d_multisample = GL_PROXY_TEXTURE_2D_MULTISAMPLE,	//glTexImage2DMultisample
-
-	proxy_texture_3d = GL_PROXY_TEXTURE_3D,
-	proxy_texture_2d_array = GL_PROXY_TEXTURE_2D_ARRAY,
-
-	proxy_texture_2d_multisample_array = GL_PROXY_TEXTURE_2D_MULTISAMPLE_ARRAY
-};
-
+template <int i>
+using gl_value = std::integral_constant<int, i>;
 
 //pnames
 struct gl_depth_stencil_texture_mode : public gl_value<GL_DEPTH_STENCIL_TEXTURE_MODE> {};
@@ -144,6 +109,7 @@ public:
 
 };
 
+  /*
 class gltTexParam_traits
 {
 	// Targets validation 
@@ -213,7 +179,7 @@ class gltTexParam_traits
 	// values validation
 	using values_depth_stencil_texture_mode = std::tuple<gl_depth_component,
 		gl_stencil_components>;
-
+  
 	using values_texture_compare_func = std::tuple<gl_lequal,
 		gl_gequal,
 		gl_less,
@@ -412,7 +378,7 @@ public:
 		GLint internalFormat,
 		size_t width,
 		size_t height,
-		GLint border /*= 0*/,
+		GLint border ,
 		GLenum format,
 		GLenum type,
 		const GLvoid * data)
@@ -507,3 +473,4 @@ public:
 		texture_traits::GenerateMipMap<target>();
 	}
 };
+*/

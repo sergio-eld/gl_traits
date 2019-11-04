@@ -10,28 +10,23 @@
 #define GLT_API
 #endif
 
-/*
-#ifndef GL_TRAITS_STATIC
-#ifdef GL_TRAITS_DLL
-#define GLT_API __declspec(dllexport)
-//#define GLAD_GLAPI_EXPORT_BUILD
-//#define GLAD_GLAPI_EXPORT
-#else 
-#define GLT_API __declspec(dllimport)
-//#define GLAD_GLAPI_EXPORT
-#endif // !GL_TRAITS_DLL
-#else
-#define GLT_API
-#endif
-*/
 
 //add #ifdef for debug build
 #include <iostream>
 #define DEBUG_START {
 #define DEBUG_END }
 
-#include "glad/glad.h"
+//#include "glad/glad.h"
 /////////
+
+/////////////////////////
+//restructurised
+/////////////////////////
+
+#include "gltEnums.hpp"     // includes glad
+#include "gltHandle.hpp"    // includes gltEnums
+
+/////////////////////////
 
 
 #include "dhconstexpr_lib.hpp"
@@ -87,15 +82,6 @@ struct primitive_traits
 
 };
 
-/*
-struct GLT_API DebugMessageInfo
-{
-	GLenum source,
-		type;
-	GLuint id;
-	GLenum severity;
-	std::string message;
-};*/
 
 struct GLT_API gl_debug
 {
@@ -108,11 +94,6 @@ struct GLT_API gl_debug
 		const void* userParam);
 };
 
-/*
-template<texture_traits::Target target>
-std::array<const gltHandle<target>*, texture_traits::max_gl_textures>
-	texture_traits::currentTextures_{};
-	*/
 
 struct transformFeedbacks_traits;   //-
 struct vertexArrays_traits;          //-
@@ -126,35 +107,7 @@ struct vertexArrays_traits;          //-
 //classes 
 ///////////////////////////////////////////////////////////////////////////////////////
 
-enum class glCapability : int
-{
-	gl_blend = GL_BLEND,
-	gl_clip_distance0 = GL_CLIP_DISTANCE0,
-	gl_color_logic_op = GL_COLOR_LOGIC_OP,
-	gl_cull_face = GL_CULL_FACE,
-	gl_debug_output = GL_DEBUG_OUTPUT,
-	gl_debug_output_synchronous = GL_DEBUG_OUTPUT_SYNCHRONOUS,
-	gl_depth_clamp = GL_DEPTH_CLAMP,
-	gl_depth_test = GL_DEPTH_TEST,
-	gl_dither = GL_DITHER,
-	gl_framebuffer_srgb = GL_FRAMEBUFFER_SRGB,
-	gl_line_smooth = GL_LINE_SMOOTH,
-	gl_multisample = GL_MULTISAMPLE,
-	gl_polygon_offset_line = GL_POLYGON_OFFSET_LINE,
-	gl_polygon_smooth = GL_POLYGON_SMOOTH,
-	gl_primitive_restart = GL_PRIMITIVE_RESTART,
-	gl_primitive_restart_fixed_index = GL_PRIMITIVE_RESTART_FIXED_INDEX,
-	gl_rasterizer_discard = GL_RASTERIZER_DISCARD,
-	gl_sample_alpha_to_coverage = GL_SAMPLE_ALPHA_TO_COVERAGE,
-	gl_sample_alpha_to_one = GL_SAMPLE_ALPHA_TO_ONE,
-	gl_sample_coverage = GL_SAMPLE_COVERAGE,
-	gl_sample_shading = GL_SAMPLE_SHADING,
-	gl_sample_mask = GL_SAMPLE_MASK,
-	gl_scissor_test = GL_SCISSOR_TEST,
-	gl_stencil_test = GL_STENCIL_TEST,
-	gl_texture_cube_map_seamless = GL_TEXTURE_CUBE_MAP_SEAMLESS,
-	gl_program_point_size = GL_PROGRAM_POINT_SIZE
-};
+
 
 struct GLT_API gl_state
 {
@@ -170,16 +123,8 @@ struct GLT_API gl_state
 
 //shaders
 
-enum class glTargetShader : int
-{
-	gl_compute_shader = GL_COMPUTE_SHADER,
-	gl_vertex_shader = GL_VERTEX_SHADER,
-	gl_tess_control_shader = GL_TESS_CONTROL_SHADER,
-	gl_tess_evaluation_shader = GL_TESS_EVALUATION_SHADER,
-	gl_geometry_shader = GL_GEOMETRY_SHADER,
-	gl_fragment_shader = GL_FRAGMENT_SHADER
-};
 
+/*
 class GLT_API shader_traits
 {
 	static GLuint GenShaderPrivate(glTargetShader target);
@@ -282,6 +227,7 @@ public:
 	}
 };
 
+
 template <class UniformCollection>
 class gltShaderProgram;
 
@@ -351,5 +297,5 @@ public:
 
 };
 
-
+*/
 //#include "glt_definitions.hpp"
