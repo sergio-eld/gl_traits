@@ -32,11 +32,7 @@ void assert_all()
     std::is_same_v<GLint, GLfixed>;
     std::is_same_v<GLushort, GLhalf>;
 
-    gl_deleter2<&glDeleteBuffers>();
-    gl_deleter2<&glDeleteTextures> {};
-    gl_deleter1<&glDeleteShader> {};
-    gl_deleter1<&glDeleteProgram> {};
-    gl_deleter2<&glDeleteVertexArrays> {};
+
 
 	valid_user_attribclass<vertex>();
 	valid_user_attribclass<glm::vec2>();

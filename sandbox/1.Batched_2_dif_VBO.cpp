@@ -3,6 +3,7 @@
 
 int main()
 {
+    
 	std::cout << path.generic_string() << std::endl;
 	SmartGLFW glfw{ 3, 3 };
 	SmartGLFWwindow window{ SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL" };
@@ -18,17 +19,17 @@ int main()
 	Shader ourShader{ (path.generic_string() + "vshader.vs").c_str(),
 		(path.generic_string() + "fshader.fs").c_str() };
 	
-	gltHandle<glVAO::vao> vao{ glt_buffers::GenVAO() };
+	gltHandle<glVertexArrayTarget::vao> vao{ glt_buffers::GenVAO() };
 	glt_buffers::BindVAO(vao);
 
 	auto positions = glm_cube_positions();
 	auto texCoords = glm_cube_texCoords();
 
 	glVBO<glm::vec3> vboPositions{
-		glt_buffers::GenBuffer<glTargetBuf::array_buffer>() };
+		glt_buffers::GenBuffer<glBufferTarget::array_buffer>() };
 
 	glVBO<glm::vec2> vboTextures{
-		glt_buffers::GenBuffer<glTargetBuf::array_buffer>() };
+		glt_buffers::GenBuffer<glBufferTarget::array_buffer>() };
 
 	vboPositions.Bind();
 	vboPositions.AllocateMemory(positions.size(), glBufUse::static_draw);
@@ -144,7 +145,7 @@ int main()
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
-
+    
 	return 0;
 
 }

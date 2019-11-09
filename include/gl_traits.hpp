@@ -29,7 +29,7 @@
 /////////////////////////
 
 
-#include "dhconstexpr_lib.hpp"
+//#include "dhconstexpr_lib.hpp"
 
 #include <thread>
 #include <functional>
@@ -40,11 +40,11 @@
 #include <vector>
 #include <array>
 
-#include "traits_common.hpp"
+//#include "traits_common.hpp"
 
-#include "uniform_traits.hpp"
-#include "buffer_traits.hpp"
-#include "texture_traits.hpp"
+//#include "uniform_traits.hpp"
+//#include "buffer_traits.hpp"
+//#include "texture_traits.hpp"
 
 
 struct frameBuffer_traits;          //-
@@ -127,7 +127,7 @@ struct GLT_API gl_state
 /*
 class GLT_API shader_traits
 {
-	static GLuint GenShaderPrivate(glTargetShader target);
+	static GLuint GenShaderPrivate(glShaderTarget target);
 	static bool CompileStatusPrivate(GLuint handle);
 	static bool CompileShaderPrivate(GLuint handle, const std::string& source);
 	static void AttachShaderPrivate(GLuint prog, GLuint shader);
@@ -136,37 +136,37 @@ class GLT_API shader_traits
 
 public:
 
-	static gltHandle<glShaderProgram::program> GenProgram();
-	static void LinkProgram(const gltHandle<glShaderProgram::program>& prog);
-	static bool LinkStatus(const gltHandle<glShaderProgram::program>& prog);
+	static gltHandle<glProgramTarget::program> GenProgram();
+	static void LinkProgram(const gltHandle<glProgramTarget::program>& prog);
+	static bool LinkStatus(const gltHandle<glProgramTarget::program>& prog);
 
-	template <glTargetShader target>
+	template <glShaderTarget target>
 	static gltHandle<target> GenShader()
 	{
 		return GenShaderPrivate(target);
 	}
 
-	template <glTargetShader target>
+	template <glShaderTarget target>
 	static bool CompileStatus(const gltHandle<target>& handle)
 	{
 		return CompileStatusPrivate(handle);
 	}
 
-	template <glTargetShader target>
+	template <glShaderTarget target>
 	static std::string ShaderInfoLog(const gltHandle<target>& handle)
 	{
 		return ShaderInfoLogPrivate(handle);
 	}
 
 
-	template <glTargetShader target>
+	template <glShaderTarget target>
 	static bool CompileShader(const gltHandle<target>& handle, const std::string& source)
 	{
 		return CompileShaderPrivate(handle, source);
 	}
 
-	template <glTargetShader target>
-	static void AttachShader(const gltHandle<glShaderProgram::program>& prog, const gltHandle<target>& handleShader)
+	template <glShaderTarget target>
+	static void AttachShader(const gltHandle<glProgramTarget::program>& prog, const gltHandle<target>& handleShader)
 	{
 		AttachShaderPrivate(prog, handleShader);
 	}
@@ -174,7 +174,7 @@ public:
 };
 
 
-template <glTargetShader target>
+template <glShaderTarget target>
 class gltShader
 {
 	gltHandle<target> handle_ = shader_traits::GenShader<target>();
@@ -236,7 +236,7 @@ template <class ... unifDescrs>
 class gltShaderProgram<gltUniformCollection<std::tuple<unifDescrs...>>>
 {
 	using glUniforms = gltUniformCollection<std::tuple<unifDescrs...>>;
-	gltHandle<glShaderProgram::program> handle_;
+	gltHandle<glProgramTarget::program> handle_;
 	glUniforms uniforms_;
 
 	//TODO: remove in release?
@@ -250,10 +250,10 @@ public:
 	gltShaderProgram()
 	{}
 
-	template <glTargetShader ... shaders>
-	gltShaderProgram(gltHandle<glShaderProgram::program>&& handle,
-		const gltShader<glTargetShader::gl_vertex_shader>& vShader,
-		const gltShader<glTargetShader::gl_fragment_shader>& fShader, 
+	template <glShaderTarget ... shaders>
+	gltShaderProgram(gltHandle<glProgramTarget::program>&& handle,
+		const gltShader<glShaderTarget::gl_vertex_shader>& vShader,
+		const gltShader<glShaderTarget::gl_fragment_shader>& fShader, 
 		const gltShader<shaders>& ... otherShaders)
 		: handle_(std::move(handle)),
 		attachedVertex_(true),
@@ -263,12 +263,12 @@ public:
 		Link();
 	}
 
-	void ResetHandle(gltHandle<glShaderProgram::program>&& handle)
+	void ResetHandle(gltHandle<glProgramTarget::program>&& handle)
 	{
 		handle_ = std::move(handle);
 	}
 
-	template <glTargetShader ... shTarget>
+	template <glShaderTarget ... shTarget>
 	void AttachShaders(const gltShader<shTarget>& ... shaders)
 	{
 		(shader_traits::AttachShader<shTarget>(handle_, shaders), ...);

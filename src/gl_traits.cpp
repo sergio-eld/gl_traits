@@ -2,11 +2,11 @@
 
 // 
 
-const gltHandle<glVAO::vao> *glt_buffers::currentVAO_ = nullptr;
+//const gltHandle<glVertexArrayTarget::vao> *glt_buffers::currentVAO_ = nullptr;
 
 /*
 
-std::array<std::pair<glTargetTex, const void*>, gltActiveTexture::max_gl_textures>
+std::array<std::pair<glTextureTarget, const void*>, gltActiveTexture::max_gl_textures>
 	gltActiveTexture::textureUnits_{};
 size_t gltActiveTexture::currentUnit_ = 0;
 

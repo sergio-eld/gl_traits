@@ -11,7 +11,7 @@ message(STATUS "PlatformPath found: ${PlatformPath_FOUND}")
 add_library(gl_sandbox
 	STATIC
 		$<TARGET_OBJECTS:gl_traits>
-		assertions.cpp
+		# assertions.cpp
 		helpers.hpp
 		helpers.cpp
 	)
@@ -31,10 +31,10 @@ target_include_directories(gl_sandbox
 # VBO cases
 
 set(VBO_USE_CASES 
-	"1.Batched_2_dif_VBO" 
-	"2.Batched_2_one_VBO" 
-	"3.Compound_one_VBO"
-	#"4.Batched_Compound_2_dif_VBO"
+	"handles_tests"
+	#"1.Batched_2_dif_VBO" 
+	#"2.Batched_2_one_VBO" 
+	#"3.Compound_one_VBO"
 )
 
 foreach(USE_CASE ${VBO_USE_CASES})

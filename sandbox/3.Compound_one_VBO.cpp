@@ -2,7 +2,7 @@
 
 int main()
 {
-
+    
 	std::cout << path.generic_string() << std::endl;
 	SmartGLFW glfw{ 3, 3 };
 	SmartGLFWwindow window{ SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL" };
@@ -18,7 +18,7 @@ int main()
 	Shader ourShader{ (path.generic_string() + "vshader.vs").c_str(),
 		(path.generic_string() + "fshader.fs").c_str() };
 
-	gltHandle<glVAO::vao> vao{ glt_buffers::GenVAO() };
+	gltHandle<glVertexArrayTarget::vao> vao{ glt_buffers::GenVAO() };
 	glt_buffers::BindVAO(vao);
 
 	auto vertexes = cube_vertexes();
@@ -26,7 +26,7 @@ int main()
 	using vertex_attr = comp_attr<glm::vec3, glm::vec2>;
 
 	glVBOCompound<glm::vec3, glm::vec2> vboVertexes{
-		glt_buffers::GenBuffer<glTargetBuf::array_buffer>() };
+		glt_buffers::GenBuffer<glBufferTarget::array_buffer>() };
 
 	//glVBOCompound<glm::vec3, glm::vec2>::has_named_attribs;
 
@@ -34,7 +34,7 @@ int main()
 	vboVertexes.AllocateMemory(vertexes.size(), glBufUse::static_draw);
 	vboVertexes.BufferData<0>(vertexes);
 
-	glt_buffers::VertexAttribPointer(vertex_attr(), vao, /*0, 0,*/ std::make_tuple(false, false));
+	glt_buffers::VertexAttribPointer(vertex_attr(), vao, std::make_tuple(false, false));
 
 	glt_buffers::EnableVertexAttribArray(vao, 0);
 	glt_buffers::EnableVertexAttribArray(vao, 1);
@@ -138,7 +138,7 @@ int main()
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
-
+    
 	return 0;
 
 }

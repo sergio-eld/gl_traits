@@ -4,6 +4,8 @@
 
 #include "glad/glad.h"
 
+#include "glm/glm.hpp"
+
 #include <type_traits>
 
 // gl-type conversion
@@ -21,27 +23,99 @@ enum class glType : int
     gl_double = GL_DOUBLE
 };
 
-template <typename cType>
-struct c_to_gl;
 
-template <> struct c_to_gl<GLbyte> : std::integral_constant<glType, glType::gl_byte> {};
-template <> struct c_to_gl<GLubyte> : std::integral_constant<glType, glType::gl_unsigned_byte> {};
-template <> struct c_to_gl<GLshort> : std::integral_constant<glType, glType::gl_short> {};
-template <> struct c_to_gl<GLushort> : std::integral_constant<glType, glType::gl_unsigned_short> {};
-template <> struct c_to_gl<GLint> : std::integral_constant<glType, glType::gl_int> {};
-template <> struct c_to_gl<GLuint> : std::integral_constant<glType, glType::gl_unsigned_int> {};
-//template <> struct c_to_gl<GLfixed> : std::integral_constant<int, GL_FIXED> {};
-//template <> struct c_to_gl<GLhalf> : std::integral_constant<int, GL_HALF_FLOAT> {};
-template <> struct c_to_gl<GLfloat> : std::integral_constant<glType, glType::gl_float> {};
-template <> struct c_to_gl<GLdouble> : std::integral_constant<glType, glType::gl_double> {};
 
-// TODO: add glm types recognition
+/*
+OpenGl has similar pipelines for using various objects:
+1. Gen/Create
+2. Bind/Use
+3. Delete
 
-template <typename cType>
-constexpr inline glType c_to_gl_v = c_to_gl<cType>::value;
+void glGenBuffers           (GLsizei, GLuint*)      void glDeleteBuffers            (GLsizei, const GLuint*)     void glBindBuffer      (GLenum, GLuint)
+void glGenTextures          (GLsizei, GLuint*)      void glDeleteTextures           (GLsizei, const GLuint*)     void glBindTexture     (GLenum, GLuint)
+void glGenFramebuffers      (GLsizei, GLuint*)      void glDeleteFramebuffers       (GLsizei, const GLuint*)     void glBindFramebuffer (GLenum, GLuint)
+void glGenSamplers          (GLsizei, GLuint*)      void glDeleteSamplers           (GLsizei, const GLuint*)     void glBindSampler     (GLuint, GLuint)
+
+void glGenVertexArrays      (GLsizei, GLuint*)      void glDeleteVertexArrays       (GLsizei, const GLuint*)     void glBindVertexArray (GLuint)
+
+
+void glGenRenderbuffers     (GLsizei, GLuint*)      void glDeleteRenderbuffers      (GLsizei, const GLuint*)     none ??
+
+void glGenProgramPipelines  (GLsizei, GLuint*)      void glDeleteProgramPipelines   (GLsizei, const GLuint*)     void glBindProgramPipeline(GLuint)              
+void glGenQueries           (GLsizei, GLuint*)      void glDeleteQueries            (GLsizei, const GLuint*)     none ??                                         
+void glGenTransformFeedbacks(GLsizei, GLuint*)      void glDeleteTransformFeedbacks (GLsizei, const GLuint*)     void glBindTransformFeedback(GLuint)            
+
+GLuint glCreateProgram      (void)                  void glDeleteProgram            (GLuint)
+GLuint glCreateShader       (GLenum)                void glDeleteShader             (GLuint)
+
+*/
+
+enum class glBufferTarget : int;
+enum class glFrameBufferTarget : int;
+enum class glTextureTarget : int;
+enum class glShaderTarget : int;
+
+enum class glTransformFeedBackTarget : int; // GL_TRANSFORM_FEEDBACK only
+enum class glQueryTarget : int;             // used in glBeginQuery
+
+
+// types only to be used as a paramaeter for gltHandle<T>, to find allocator and deleter functions 
+enum class glProgramTarget : int;           // empty
+
+enum class glVertexArrayTarget : int;       // empty
+enum class glProgramPipeLineTarget : int;   // empty
+enum class glRenderBufferTarget : int;      // empty
+enum class glSamplerTarget : int;           // empty
+
+// map for gl allocators
+template <typename glObjType>
+struct pp_gl_allocator;
+
+template <> struct pp_gl_allocator<glBufferTarget> :            std::integral_constant<void(APIENTRYP *)(GLsizei, GLuint*), &glGenBuffers> {};
+template <> struct pp_gl_allocator<glFrameBufferTarget> :       std::integral_constant<void(APIENTRYP *)(GLsizei, GLuint*), &glGenFramebuffers> {};
+template <> struct pp_gl_allocator<glTextureTarget> :           std::integral_constant<void(APIENTRYP *)(GLsizei, GLuint*), &glGenTextures> {};
+template <> struct pp_gl_allocator<glVertexArrayTarget> :       std::integral_constant<void(APIENTRYP *)(GLsizei, GLuint*), &glGenVertexArrays> {};
+
+template <> struct pp_gl_allocator<glTransformFeedBackTarget> : std::integral_constant<void(APIENTRYP *)(GLsizei, GLuint*), &glGenTransformFeedbacks> {};
+template <> struct pp_gl_allocator<glQueryTarget> :             std::integral_constant<void(APIENTRYP *)(GLsizei, GLuint*), &glGenQueries> {};
+
+template <> struct pp_gl_allocator<glProgramPipeLineTarget> :   std::integral_constant<void(APIENTRYP *)(GLsizei, GLuint*), &glGenProgramPipelines> {};
+template <> struct pp_gl_allocator<glRenderBufferTarget> :      std::integral_constant<void(APIENTRYP *)(GLsizei, GLuint*), &glGenRenderbuffers> {};
+template <> struct pp_gl_allocator<glSamplerTarget> :           std::integral_constant<void(APIENTRYP *)(GLsizei, GLuint*), &glGenSamplers> {};
+
+template <> struct pp_gl_allocator<glProgramTarget> :           std::integral_constant<GLuint(APIENTRYP *)(void), &glCreateProgram> {};
+
+// takes argument 
+template <> struct pp_gl_allocator<glShaderTarget> : std::integral_constant<GLuint(APIENTRYP *)(GLenum), &glCreateShader> {};
+
+template <typename glObjType>
+constexpr inline auto pp_gl_allocator_v = pp_gl_allocator<glObjType>::value;
+
+// map for gl deleters
+template <typename glObjType>
+struct pp_gl_deleter;
+
+template <> struct pp_gl_deleter<glBufferTarget> :              std::integral_constant<void(APIENTRYP *)(GLsizei, const GLuint*), &glDeleteBuffers> {};
+template <> struct pp_gl_deleter<glFrameBufferTarget> :         std::integral_constant<void(APIENTRYP *)(GLsizei, const GLuint*), &glDeleteFramebuffers> {};
+template <> struct pp_gl_deleter<glTextureTarget> :             std::integral_constant<void(APIENTRYP *)(GLsizei, const GLuint*), &glDeleteTextures> {};
+template <> struct pp_gl_deleter<glVertexArrayTarget> :         std::integral_constant<void(APIENTRYP *)(GLsizei, const GLuint*), &glDeleteVertexArrays> {};
+
+template <> struct pp_gl_deleter<glTransformFeedBackTarget> :   std::integral_constant<void(APIENTRYP *)(GLsizei, const GLuint*), &glDeleteTransformFeedbacks> {};
+template <> struct pp_gl_deleter<glQueryTarget> :               std::integral_constant<void(APIENTRYP *)(GLsizei, const GLuint*), &glDeleteQueries> {};
+
+template <> struct pp_gl_deleter<glProgramPipeLineTarget> :     std::integral_constant<void(APIENTRYP *)(GLsizei, const GLuint*), &glDeleteProgramPipelines> {};
+template <> struct pp_gl_deleter<glRenderBufferTarget> :        std::integral_constant<void(APIENTRYP *)(GLsizei, const GLuint*), &glDeleteRenderbuffers> {};
+template <> struct pp_gl_deleter<glSamplerTarget> :             std::integral_constant<void(APIENTRYP *)(GLsizei, const GLuint*), &glDeleteSamplers> {};
+
+
+template <> struct pp_gl_deleter<glShaderTarget> :              std::integral_constant<void(APIENTRYP *)(GLuint), &glDeleteShader> {};
+template <> struct pp_gl_deleter<glProgramTarget> :             std::integral_constant<void(APIENTRYP *)(GLuint), &glDeleteProgram> {};
+
+template <typename glObjType>
+constexpr inline auto pp_gl_deleter_v = pp_gl_deleter<glObjType>::value;
 
 // buffer targets // remove underscore later
-enum class glTargetBuf : int
+enum class glBufferTarget : int
 {
     array_buffer = GL_ARRAY_BUFFER,
     atomic_counter_buffer = GL_ATOMIC_COUNTER_BUFFER,
@@ -74,7 +148,7 @@ enum class glBufUse : int
 
 
 // texture targets // remove underscore
-enum class glTargetTex : int
+enum class glTextureTarget : int
 {
     //for glBindTexture
     texture_1d = GL_TEXTURE_1D,							//+
@@ -112,7 +186,7 @@ enum class glTargetTex : int
 };
 
 
-enum class glTargetShader : int
+enum class glShaderTarget : int
 {
     compute_shader = GL_COMPUTE_SHADER,
     vertex_shader = GL_VERTEX_SHADER,
@@ -122,66 +196,6 @@ enum class glTargetShader : int
     fragment_shader = GL_FRAGMENT_SHADER
 };
 
-// helper enums to retrieve deleter functions
-enum class glShaderProgram : int
-{
-    program
-};
-
-enum class glVAO : int
-{
-    vao
-};
-
-// deleters map
-/* class specialization doesn't work somehow 
-template <auto>
-struct gl_deleter;
-*/
-
-using pptr_array_deleter = void(__stdcall **)(GLsizei, const GLuint*);
-using pptr_single_deleter = void(__stdcall **)(GLuint);
-
-template <pptr_array_deleter pDelFunc>//<auto pDelFunc>
-struct gl_deleter2
-{
-    void operator()(GLuint rawHandle)
-    {
-        assert(*pDelFunc && "Pointers to OpenGL deleter functions have not been initialiized!");
-        if (!*pDelFunc)
-            terminate();
-        (*pDelFunc)(1, &rawHandle);
-    }
-};
-
-template <pptr_single_deleter pDelFunc>//<auto pDelFunc>
-struct gl_deleter1
-{
-    void operator()(GLuint rawHandle)
-    {
-        assert(*pDelFunc && "Pointers to OpenGL deleter functions have not been initialiized!");
-        if (!*pDelFunc)
-            terminate();
-        (*pDelFunc)(rawHandle);
-    }
-};
-
-template <typename T>
-struct handle_deleter;
-template <> struct handle_deleter<glTargetBuf> :           gl_deleter2<&glDeleteBuffers> {}; 
-template <> struct handle_deleter<glTargetTex> :           gl_deleter2<&glDeleteTextures> {};
-template <> struct handle_deleter<glTargetShader> :        gl_deleter1<&glDeleteShader> {}; 
-template <> struct handle_deleter<glShaderProgram> :       gl_deleter1<&glDeleteProgram> {};
-template <> struct handle_deleter<glVAO> :                 gl_deleter2<&glDeleteVertexArrays> {};
-/* implement later
-template <> struct handle_deleter<glTargetBuf> :            std::integral_constant<decltype(&glDeleteBuffers), &glDeleteBuffers> {};
-template <> struct handle_deleter<glTargetBuf> :            std::integral_constant<decltype(&glDeleteBuffers), &glDeleteBuffers> {};
-template <> struct handle_deleter<glTargetBuf> :            std::integral_constant<decltype(&glDeleteBuffers), &glDeleteBuffers> {};
-template <> struct handle_deleter<glTargetBuf> :            std::integral_constant<decltype(&glDeleteBuffers), &glDeleteBuffers> {};
-template <> struct handle_deleter<glTargetBuf> :            std::integral_constant<decltype(&glDeleteBuffers), &glDeleteBuffers> {};
-template <> struct handle_deleter<glTargetBuf> :            std::integral_constant<decltype(&glDeleteBuffers), &glDeleteBuffers> {};
-template <> struct handle_deleter<glTargetBuf> :            std::integral_constant<decltype(&glDeleteBuffers), &glDeleteBuffers> {};
-*/
 
 // glEnable arguments
 enum class glCapability : int
@@ -213,3 +227,32 @@ enum class glCapability : int
     texture_cube_map_seamless = GL_TEXTURE_CUBE_MAP_SEAMLESS,
     program_point_size = GL_PROGRAM_POINT_SIZE
 };
+
+template <typename cType>
+struct c_to_gl;
+
+template <> struct c_to_gl<GLbyte> : std::integral_constant<glType, glType::gl_byte> {};
+template <> struct c_to_gl<GLubyte> : std::integral_constant<glType, glType::gl_unsigned_byte> {};
+template <> struct c_to_gl<GLshort> : std::integral_constant<glType, glType::gl_short> {};
+template <> struct c_to_gl<GLushort> : std::integral_constant<glType, glType::gl_unsigned_short> {};
+template <> struct c_to_gl<GLint> : std::integral_constant<glType, glType::gl_int> {};
+template <> struct c_to_gl<GLuint> : std::integral_constant<glType, glType::gl_unsigned_int> {};
+//template <> struct c_to_gl<GLfixed> : std::integral_constant<int, GL_FIXED> {};
+//template <> struct c_to_gl<GLhalf> : std::integral_constant<int, GL_HALF_FLOAT> {};
+template <> struct c_to_gl<GLfloat> : std::integral_constant<glType, glType::gl_float> {};
+template <> struct c_to_gl<GLdouble> : std::integral_constant<glType, glType::gl_double> {};
+
+// TODO: add glm types recognition
+template <typename cType>
+constexpr inline glType c_to_gl_v = c_to_gl<cType>::value;
+
+
+// map for binding functions
+template <typename glObjType>
+struct pp_gl_binder;
+
+template <> struct pp_gl_binder<glBufferTarget> : std::integral_constant<void(APIENTRYP *)(GLenum, GLuint), &glBindBuffer> {};
+template <> struct pp_gl_binder<glTextureTarget> : std::integral_constant<void(APIENTRYP *)(GLenum, GLuint), &glBindTexture> {};
+template <> struct pp_gl_binder<glShaderTarget> : std::integral_constant<void(APIENTRYP *)(GLuint), &glDeleteShader> {};
+template <> struct pp_gl_binder<glProgramTarget> : std::integral_constant<void(APIENTRYP *)(GLuint), &glDeleteProgram> {};
+template <> struct pp_gl_binder<glVertexArrayTarget> : std::integral_constant<void(APIENTRYP *)(GLuint), &glBindVertexArray> {};
