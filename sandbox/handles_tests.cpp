@@ -1,33 +1,16 @@
 ﻿
 #include "helpers.hpp"
 
-template <auto ...>
-struct str;
-
-template <int a>
-struct str<a>
-{
-    void invoke() const
-    {
-        std::cout << "int" << std::endl;
-    }
-};
-
-template <bool b, int a>
-struct str<b, a>
-{
-    void invoke() const
-    {
-        std::cout << b << " " << a << std::endl;
-    }
-};
-
+/* Check for correctness: 
+- handle allocations
+- handle bindings
+*/
 
 template <typename T>
 int CheckHandle()
 {
-    gltHandle<T> h1 = handle_allocator<T>::Allocate();
-    gltHandle<T> h2 = handle_allocator<T>::Allocate();
+    gltHandle<T> h1 = gltAllocator<T>::Allocate();
+    gltHandle<T> h2 = gltAllocator<T>::Allocate();
 
     if (handle_accessor<T>()(h1) != 1 ||
         handle_accessor<T>()(h2) != 2)
@@ -42,10 +25,23 @@ int CheckHandles()
     return (CheckHandle<T>() + ...);
 }
 
+
+struct abc
+{
+    int a;
+};
+
 int main()
 {
-    str<6>().invoke();
-    str<false, 16>().invoke();
+    std::is_constructible_v<abc, int>;
+    std::is_trivially_constructible_v<abc, int>;
+    std::is_pod_v<abc>;
+    std::is_aggregate_v<abc>;
+
+    sizeof(abc);
+    abc a{ 4 };
+    int& b = reinterpret_cast<int&>(a);
+
 
     SmartGLFW sglfw{4, 4};
     SmartGLFWwindow window{ SCR_WIDTH, SCR_HEIGHT, "testing buffers" };
@@ -65,7 +61,19 @@ int main()
         glSamplerTarget,
         glProgramTarget>();
 
+    auto namedbufferdata = &glNamedBufferData;
+
     // TODO: add glShaderTarget test;
+
+    gltHandle<glBufferTarget> hBuf = gltAllocator<glBufferTarget>::Allocate();
+    //gl_current_object_base<glBufferTarget, glBufferTarget::array_buffer>::Bind(tag<glBufferTarget::array_buffer>(), hBuf);
+    gl_current_object_base<glBufferTarget, glBufferTarget::array_buffer>::binding;
+
+    has_gl_binding_v<glBufferTarget::array_buffer>;
+    get_binding_v<glBufferTarget::array_buffer>;
+
+    gl_current_object<glBufferTargetList>::Bind(tag<glBufferTarget::array_buffer>(), hBuf);
+    gl_current_object<glBufferTargetList>::IsCurrent(tag<glBufferTarget::array_buffer>(), hBuf);
 
     return res;
 }

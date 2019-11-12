@@ -3,7 +3,7 @@
 #include "gltEnums.hpp"
 
 template <typename>//auto target, typename = decltype(target)>
-struct handle_allocator;
+struct gltAllocator;
 
 template <typename eTargetType>//auto target>
 struct handle_accessor;
@@ -14,7 +14,7 @@ class gltHandle//<target, typename decltype(target)>
     //TODO: add Glsync handle type
     GLuint handle_;// = 0;
 
-    friend struct handle_allocator<eTargetType>;
+    friend struct gltAllocator<eTargetType>;
     friend struct handle_accessor<eTargetType>;
 
 public:
@@ -37,6 +37,16 @@ public:
         handle_ = other.handle_;
         other.handle_ = 0;
         return *this;
+    }
+
+    bool operator==(GLuint raw_handle) const
+    {
+        return handle_ == raw_handle;
+    }
+
+    bool operator!=(GLuint raw_handle) const
+    {
+        return !operator==(raw_handle);
     }
 
     bool operator==(const gltHandle<eTargetType>& other) const
@@ -96,7 +106,7 @@ protected:
 };
 
 template <typename eTargetType>
-struct handle_allocator
+struct gltAllocator
 {
     // retrieve pointer to allocator function pointer
     constexpr static auto ppAllocFunc = pp_gl_allocator<eTargetType>::value;
@@ -139,7 +149,7 @@ struct handle_allocator
 };
 
 template <>
-struct handle_allocator<glShaderTarget>
+struct gltAllocator<glShaderTarget>
 {
     constexpr static auto ppAllocFunc = pp_gl_allocator_v<glShaderTarget>;
 
@@ -169,22 +179,180 @@ struct handle_accessor
     }
 };
 
+template <auto>
+struct tag
+{};
 
-template <auto target>
-class check_current_handle
+template <typename eTargetType, eTargetType target>
+class gl_current_object_base
 {
-    // makes no sence since objects are allowed to be moved. Need to checkusing GLuint
-    // static const gltHandle<eTargetType> * current_handle_;
     static GLuint raw_handle_;
 
+    static_assert(has_func_bind_v<eTargetType>, "Typename doesn't have a glBind function");
+
+    // property cannot be retrieved using glGet(..._BINDING)
+    static_assert(has_gl_binding_v<target>, "Target can not be bound");
 public:
 
-    static void SetCurrentHandle(const gltHandle<decltype(target)>& handle)
+    constexpr static auto ppBindFunc = pp_gl_binder_v<eTargetType>;
+    constexpr static auto binding = get_binding_v<target>;
+
+    static void Bind(tag<target>, const gltHandle<eTargetType>& handle)
     {
-       // glBindBuffer()
-        raw_handle_ = handle;
+        assert(*ppBindFunc && "OpenGL Bind function has not been initialized!");
+
+        (*ppBindFunc)((GLenum)target, handle_accessor<eTargetType>()(handle));
+        raw_handle_ = handle_accessor<eTargetType>()(handle);
+    }
+
+    static void UnBind(tag<target>)
+    {
+        assert(*ppBindFunc && "OpenGL Bind function has not been initialized!");
+
+        (*ppBindFunc)((GLenum)target, handle_accessor<eTargetType>()(handle));
+        raw_handle_ = handle_accessor<eTargetType>()(handle);
+    }
+
+    static bool IsCurrent(tag<target>, const gltHandle<eTargetType>& handle)
+    {
+        // TODO: assert that returned by glGet object is equal to raw_handle_;
+        // TODO: make an independent wrapper
+        GLint res = 0;
+        glGetIntegerv((GLenum)binding, &res);
+        assert(res == raw_handle_);
+
+        return handle == raw_handle_;
     }
 };
 
-// template <typename eTargetType, eTargetType target>
-// const gltHandle<eTargetType> * check_current_handle<eTargetType, target>::current_handle_ = nullptr;
+template <typename eTargetType, eTargetType target>
+GLuint gl_current_object_base<eTargetType, target>::raw_handle_ = 0;
+
+template <typename ... gl_cur_obj>
+struct gl_current_object_collection : gl_cur_obj...
+{
+    using gl_cur_obj::Bind...;
+    using gl_cur_obj::UnBind...;
+    using gl_cur_obj::IsCurrent...;
+
+};
+
+template <typename>
+class gl_current_object;
+
+template <typename eTargetType, eTargetType ... vals>
+class gl_current_object<std::integer_sequence<eTargetType, vals...>> :
+    public gl_current_object_collection<gl_current_object_base<eTargetType, vals> ...>
+{
+
+};
+
+/*
+OpenGL:
+
+Shader source contains:
+- layout of named attributes with (not necessarily) defined locations
+- named uniforms
+
+Buffers can store arrays of attributes:
+
+- one batched attribute array in one VBO (one attribute per array element)
+- array of compounds (several attributes per array element)
+- several batched arrays of attributes  in one VBO
+- first - compound, followed by multiple batched atribute arrays
+
+Each attribute/variable has a glsl Type and a name;
+
+Goal:
+1. Provide type info about Buffer Object's data:
+    a. types of attributes stored (Type, Batched/Compound)
+    b. order of attributes stored
+    c. if the first array is compound
+    d. (maybe) specific info about the attribute variable name
+    e. (maybe) specific info about the attribute location number
+
+Comment on "1.d.". Name is needed to check the attribute location when
+VBO is passed to a Shader object to upload data. Would be completely typesafe
+in case Shader classes will be generated at precompile step from shader source file.
+
+Comment of "1.e". Not typesafe
+
+2. Accept containers with continious data to buffers:
+    a. having the same type as template arguments
+        glt_VBO<glm::Vec3> vbo;
+        ...
+        std::vector<glm::Vec3> data;
+        vbo.Load(data);
+
+    b. having type equivalent to that of template arguments
+    (check using pod_reflection lib)
+
+        struct Vertex
+        {
+            glm::Vec3 pos,
+                texture;
+        }
+        ...
+        std::vector<Vertex> data;
+        glt_VBO<glm::Vec3, glm::Vec2> vbo;
+        vbo.Load(data);
+
+    c. for buffers with multiple attributes provide location index
+    or deduce:
+        - explicitly passing the index number
+        - if attribute type is unique
+        - for named may use tag dispatching
+
+Cases:
+- VBO of unnamed attributes
+    glVBO<glm::Vec3, glm::Vec3, int, int>
+
+- VBO with first compound maybe followed by several unnamed attributes
+    glVBO<comp_attr<glm::Vec3, glm::Vec2>, int, int>
+
+- VBO with named attributes
+    glVBO<glslt<glm::Vec3, gl_pos>, glslt<glm::Vec2, gl_tex>> (gl_pos = "pos", gl_tex = "tex")
+    glVBO<comp_attr<glslt<glm::Vec3, gl_pos>, glslt<glm::Vec2, gl_tex>>>
+
+TODO: define all attribute validations here (at the beginning)
+*/
+
+
+// attribute traits
+template <class T, const char * glslName>
+struct glslt
+{
+    using type = typename T;
+    constexpr static const char * name = glslName;
+};
+
+template <class ... vAttribs>
+using comp_attr = std::tuple<vAttribs...>;
+
+template <class T>
+struct is_named_attr : std::bool_constant<false> {};
+
+template <class T, const char * glslName>
+struct is_named_attr<glslt<T, glslName>> : std::bool_constant<true> {};
+
+template <class T>
+constexpr inline bool is_named_attr_v = is_named_attr<T>();
+
+template <class T>
+struct is_compound_attr : std::bool_constant<false> {};
+
+template <class ... T>
+struct is_compound_attr<comp_attr<T...>> : std::bool_constant<true> {};
+
+// matrices are compound
+template<glm::length_t C, glm::length_t R, typename T, glm::qualifier Q>
+struct is_compound_attr<glm::mat<C, R, T, Q>> : std::bool_constant<true> {};
+
+template <class T>
+constexpr inline bool is_compound_attr_v = is_compound_attr<T>();
+
+template <typename T, typename ... N>
+class gltBuffer
+{
+    
+};

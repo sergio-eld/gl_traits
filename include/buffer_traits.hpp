@@ -9,18 +9,19 @@ Shader source contains:
 - named uniforms
 
 Buffers can store arrays of attributes:
+
+- one batched attribute array in one VBO (one attribute per array element)
 - array of compounds (several attributes per array element)
-- several batched arrays of attributes (one attribute per array element) in one VBO
-- one batched attribute array in one VBO
+- several batched arrays of attributes  in one VBO
 - first - compound, followed by multiple batched atribute arrays
 
-Each attribute/variable has a glsl Type, unifroms also have a name;
+Each attribute/variable has a glsl Type and a name;
 
 Goal: 
 1. Provide typesafe info about Vertex Buffer Object:
-	a. types of attributes stored
+	a. types of attributes stored (Type, Batched/Compound)
 	b. order of attributes stored
-	c. if the first attribute is compound (several attributes per array element)
+	c. if the first array is compound
 	d. (maybe) specific info about the attribute variable name
 	e. (maybe) specific info about the attribute location number
 
@@ -183,7 +184,7 @@ public:
 		GLuint handle = 0;
 		glGenBuffers(1, &handle);
 		assert(handle && "Failed to generate buffer!");
-        return handle_allocator<target>::Allocate();// gltHandle<target>(handle);
+        return gltAllocator<target>::Allocate();// gltHandle<target>(handle);
 	}
 
 	template <glBufferTarget target>
@@ -246,7 +247,7 @@ public:
 		GLuint vao;
 		glGenVertexArrays(1, &vao);
 		assert(vao && "Failed to generate VAO");
-        return handle_allocator<glVertexArrayTarget::vao>()();// gltHandle<glVertexArrayTarget::vao>(vao);
+        return gltAllocator<glVertexArrayTarget::vao>()();// gltHandle<glVertexArrayTarget::vao>(vao);
 	}
 
     static void BindVAO(const gltHandle<glVertexArrayTarget::vao>& handle)

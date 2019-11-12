@@ -50,6 +50,9 @@ GLuint glCreateShader       (GLenum)                void glDeleteShader         
 
 */
 
+template <auto A>
+using glt_constant = std::integral_constant<decltype(A), A>;
+
 enum class glBufferTarget : int;
 enum class glFrameBufferTarget : int;
 enum class glTextureTarget : int;
@@ -71,22 +74,22 @@ enum class glSamplerTarget : int;           // empty
 template <typename glObjType>
 struct pp_gl_allocator;
 
-template <> struct pp_gl_allocator<glBufferTarget> :            std::integral_constant<void(APIENTRYP *)(GLsizei, GLuint*), &glGenBuffers> {};
-template <> struct pp_gl_allocator<glFrameBufferTarget> :       std::integral_constant<void(APIENTRYP *)(GLsizei, GLuint*), &glGenFramebuffers> {};
-template <> struct pp_gl_allocator<glTextureTarget> :           std::integral_constant<void(APIENTRYP *)(GLsizei, GLuint*), &glGenTextures> {};
-template <> struct pp_gl_allocator<glVertexArrayTarget> :       std::integral_constant<void(APIENTRYP *)(GLsizei, GLuint*), &glGenVertexArrays> {};
+template <> struct pp_gl_allocator<glBufferTarget> :            glt_constant<&glGenBuffers> {};
+template <> struct pp_gl_allocator<glFrameBufferTarget> :       glt_constant<&glGenFramebuffers> {};
+template <> struct pp_gl_allocator<glTextureTarget> :           glt_constant<&glGenTextures> {};
+template <> struct pp_gl_allocator<glVertexArrayTarget> :       glt_constant<&glGenVertexArrays> {};
 
-template <> struct pp_gl_allocator<glTransformFeedBackTarget> : std::integral_constant<void(APIENTRYP *)(GLsizei, GLuint*), &glGenTransformFeedbacks> {};
-template <> struct pp_gl_allocator<glQueryTarget> :             std::integral_constant<void(APIENTRYP *)(GLsizei, GLuint*), &glGenQueries> {};
+template <> struct pp_gl_allocator<glTransformFeedBackTarget> : glt_constant<&glGenTransformFeedbacks> {};
+template <> struct pp_gl_allocator<glQueryTarget> :             glt_constant<&glGenQueries> {};
 
-template <> struct pp_gl_allocator<glProgramPipeLineTarget> :   std::integral_constant<void(APIENTRYP *)(GLsizei, GLuint*), &glGenProgramPipelines> {};
-template <> struct pp_gl_allocator<glRenderBufferTarget> :      std::integral_constant<void(APIENTRYP *)(GLsizei, GLuint*), &glGenRenderbuffers> {};
-template <> struct pp_gl_allocator<glSamplerTarget> :           std::integral_constant<void(APIENTRYP *)(GLsizei, GLuint*), &glGenSamplers> {};
+template <> struct pp_gl_allocator<glProgramPipeLineTarget> :   glt_constant<&glGenProgramPipelines> {};
+template <> struct pp_gl_allocator<glRenderBufferTarget> :      glt_constant<&glGenRenderbuffers> {};
+template <> struct pp_gl_allocator<glSamplerTarget> :           glt_constant<&glGenSamplers> {};
 
-template <> struct pp_gl_allocator<glProgramTarget> :           std::integral_constant<GLuint(APIENTRYP *)(void), &glCreateProgram> {};
+template <> struct pp_gl_allocator<glProgramTarget> :           glt_constant<&glCreateProgram> {};
 
 // takes argument 
-template <> struct pp_gl_allocator<glShaderTarget> : std::integral_constant<GLuint(APIENTRYP *)(GLenum), &glCreateShader> {};
+template <> struct pp_gl_allocator<glShaderTarget> :            glt_constant<&glCreateShader> {};
 
 template <typename glObjType>
 constexpr inline auto pp_gl_allocator_v = pp_gl_allocator<glObjType>::value;
@@ -95,24 +98,47 @@ constexpr inline auto pp_gl_allocator_v = pp_gl_allocator<glObjType>::value;
 template <typename glObjType>
 struct pp_gl_deleter;
 
-template <> struct pp_gl_deleter<glBufferTarget> :              std::integral_constant<void(APIENTRYP *)(GLsizei, const GLuint*), &glDeleteBuffers> {};
-template <> struct pp_gl_deleter<glFrameBufferTarget> :         std::integral_constant<void(APIENTRYP *)(GLsizei, const GLuint*), &glDeleteFramebuffers> {};
-template <> struct pp_gl_deleter<glTextureTarget> :             std::integral_constant<void(APIENTRYP *)(GLsizei, const GLuint*), &glDeleteTextures> {};
-template <> struct pp_gl_deleter<glVertexArrayTarget> :         std::integral_constant<void(APIENTRYP *)(GLsizei, const GLuint*), &glDeleteVertexArrays> {};
+template <> struct pp_gl_deleter<glBufferTarget> :              glt_constant<&glDeleteBuffers> {};
+template <> struct pp_gl_deleter<glFrameBufferTarget> :         glt_constant<&glDeleteFramebuffers> {};
+template <> struct pp_gl_deleter<glTextureTarget> :             glt_constant<&glDeleteTextures> {};
+template <> struct pp_gl_deleter<glVertexArrayTarget> :         glt_constant<&glDeleteVertexArrays> {};
 
-template <> struct pp_gl_deleter<glTransformFeedBackTarget> :   std::integral_constant<void(APIENTRYP *)(GLsizei, const GLuint*), &glDeleteTransformFeedbacks> {};
-template <> struct pp_gl_deleter<glQueryTarget> :               std::integral_constant<void(APIENTRYP *)(GLsizei, const GLuint*), &glDeleteQueries> {};
+template <> struct pp_gl_deleter<glTransformFeedBackTarget> :   glt_constant<&glDeleteTransformFeedbacks> {};
+template <> struct pp_gl_deleter<glQueryTarget> :               glt_constant<&glDeleteQueries> {};
 
-template <> struct pp_gl_deleter<glProgramPipeLineTarget> :     std::integral_constant<void(APIENTRYP *)(GLsizei, const GLuint*), &glDeleteProgramPipelines> {};
-template <> struct pp_gl_deleter<glRenderBufferTarget> :        std::integral_constant<void(APIENTRYP *)(GLsizei, const GLuint*), &glDeleteRenderbuffers> {};
-template <> struct pp_gl_deleter<glSamplerTarget> :             std::integral_constant<void(APIENTRYP *)(GLsizei, const GLuint*), &glDeleteSamplers> {};
+template <> struct pp_gl_deleter<glProgramPipeLineTarget> :     glt_constant<&glDeleteProgramPipelines> {};
+template <> struct pp_gl_deleter<glRenderBufferTarget> :        glt_constant<&glDeleteRenderbuffers> {};
+template <> struct pp_gl_deleter<glSamplerTarget> :             glt_constant<&glDeleteSamplers> {};
 
 
-template <> struct pp_gl_deleter<glShaderTarget> :              std::integral_constant<void(APIENTRYP *)(GLuint), &glDeleteShader> {};
-template <> struct pp_gl_deleter<glProgramTarget> :             std::integral_constant<void(APIENTRYP *)(GLuint), &glDeleteProgram> {};
+template <> struct pp_gl_deleter<glShaderTarget> :              glt_constant<&glDeleteShader> {};
+template <> struct pp_gl_deleter<glProgramTarget> :             glt_constant<&glDeleteProgram> {};
 
 template <typename glObjType>
 constexpr inline auto pp_gl_deleter_v = pp_gl_deleter<glObjType>::value;
+
+template <typename glObjType>
+constexpr inline bool has_func_bind_v = std::bool_constant<std::disjunction_v<
+    std::is_same<glObjType, glBufferTarget>,
+    std::is_same<glObjType, glFrameBufferTarget>,
+    std::is_same<glObjType, glTextureTarget>,
+    std::is_same<glObjType, glVertexArrayTarget>,
+    std::is_same<glObjType, glTransformFeedBackTarget>
+    >>::value;
+
+// map for binding functions
+template <typename glObjType>
+struct pp_gl_binder;
+
+template <> struct pp_gl_binder<glBufferTarget> :               glt_constant<&glBindBuffer> {};
+template <> struct pp_gl_binder<glFrameBufferTarget> :          glt_constant<&glBindFramebuffer> {};
+template <> struct pp_gl_binder<glTextureTarget> :              glt_constant<&glBindTexture> {};
+template <> struct pp_gl_binder<glTransformFeedBackTarget> :    glt_constant<&glBindTransformFeedback> {};
+
+template <> struct pp_gl_binder<glVertexArrayTarget> :          glt_constant<&glBindVertexArray> {};
+
+template <typename glObjType>
+constexpr inline auto pp_gl_binder_v = pp_gl_binder<glObjType>::value;
 
 // buffer targets // remove underscore later
 enum class glBufferTarget : int
@@ -132,6 +158,62 @@ enum class glBufferTarget : int
     transform_feedback_buffer = GL_TRANSFORM_FEEDBACK_BUFFER,
     uniform_buffer = GL_UNIFORM_BUFFER
 };
+
+using glBufferTargetList = std::integer_sequence<glBufferTarget,
+    glBufferTarget::array_buffer,
+    glBufferTarget::atomic_counter_buffer,
+    glBufferTarget::copy_read_buffer,
+    glBufferTarget::copy_write_buffer,
+    glBufferTarget::dispatch_indirect_buffer,
+    glBufferTarget::draw_indirect_buffer,
+    glBufferTarget::element_array_buffer,
+    glBufferTarget::pixel_pack_buffer,
+    glBufferTarget::pixel_unpack_buffer,
+    glBufferTarget::query_buffer,
+    glBufferTarget::shader_storage_buffer,
+    glBufferTarget::texture_buffer,
+    glBufferTarget::transform_feedback_buffer,
+    glBufferTarget::uniform_buffer>;
+
+
+enum class glBufferBinding : int
+{
+    array_buffer_binding =              GL_ARRAY_BUFFER_BINDING,
+    atomic_buffer_binding =             GL_ATOMIC_COUNTER_BUFFER_BINDING,
+    copy_read_buffer_binding =          GL_COPY_READ_BUFFER_BINDING,
+    copy_write_buffer_binding =         GL_COPY_WRITE_BUFFER_BINDING,
+    draw_indirect_buffer_binding =      GL_DRAW_INDIRECT_BUFFER_BINDING,
+    dispatch_indirect_buffer_binding =  GL_DISPATCH_INDIRECT_BUFFER_BINDING,
+    element_array_buffer_binding =      GL_ELEMENT_ARRAY_BUFFER_BINDING,
+    pixel_pack_buffer_binding =         GL_PIXEL_PACK_BUFFER_BINDING,
+    pixel_unpack_buffer_binding =       GL_PIXEL_UNPACK_BUFFER_BINDING,
+    shader_storage_buffer_binding =     GL_SHADER_STORAGE_BUFFER_BINDING,
+    transform_feedback_buffer_binding = GL_TRANSFORM_FEEDBACK_BUFFER_BINDING,
+    uniform_buffer_binding =            GL_UNIFORM_BUFFER_BINDING
+};
+
+template <auto>
+struct get_binding : std::integral_constant<void*, 0> {};
+
+template <auto A>
+constexpr inline bool has_gl_binding_v = !std::is_same_v<get_binding<A>::type, void*>;
+
+// TODO: generate this maps using python
+template <> struct get_binding<glBufferTarget::array_buffer> :              glt_constant<glBufferBinding::array_buffer_binding>{};
+template <> struct get_binding<glBufferTarget::atomic_counter_buffer> :     glt_constant<glBufferBinding::atomic_buffer_binding>{};
+template <> struct get_binding<glBufferTarget::copy_read_buffer> :          glt_constant<glBufferBinding::copy_read_buffer_binding>{};
+template <> struct get_binding<glBufferTarget::copy_write_buffer> :         glt_constant<glBufferBinding::copy_write_buffer_binding>{};
+template <> struct get_binding<glBufferTarget::dispatch_indirect_buffer> :  glt_constant<glBufferBinding::dispatch_indirect_buffer_binding>{};
+template <> struct get_binding<glBufferTarget::draw_indirect_buffer> :      glt_constant<glBufferBinding::draw_indirect_buffer_binding>{};
+template <> struct get_binding<glBufferTarget::element_array_buffer> :      glt_constant<glBufferBinding::element_array_buffer_binding>{};
+template <> struct get_binding<glBufferTarget::pixel_pack_buffer> :         glt_constant<glBufferBinding::pixel_pack_buffer_binding>{};
+template <> struct get_binding<glBufferTarget::pixel_unpack_buffer> :       glt_constant<glBufferBinding::pixel_unpack_buffer_binding>{};
+template <> struct get_binding<glBufferTarget::shader_storage_buffer> :     glt_constant<glBufferBinding::shader_storage_buffer_binding>{};
+template <> struct get_binding<glBufferTarget::transform_feedback_buffer> : glt_constant<glBufferBinding::transform_feedback_buffer_binding>{};
+template <> struct get_binding<glBufferTarget::uniform_buffer> :            glt_constant<glBufferBinding::uniform_buffer_binding>{};
+
+template <auto A>
+constexpr inline auto get_binding_v = get_binding<A>::value;
 
 enum class glBufUse : int
 {
@@ -231,28 +313,19 @@ enum class glCapability : int
 template <typename cType>
 struct c_to_gl;
 
-template <> struct c_to_gl<GLbyte> : std::integral_constant<glType, glType::gl_byte> {};
-template <> struct c_to_gl<GLubyte> : std::integral_constant<glType, glType::gl_unsigned_byte> {};
-template <> struct c_to_gl<GLshort> : std::integral_constant<glType, glType::gl_short> {};
-template <> struct c_to_gl<GLushort> : std::integral_constant<glType, glType::gl_unsigned_short> {};
-template <> struct c_to_gl<GLint> : std::integral_constant<glType, glType::gl_int> {};
-template <> struct c_to_gl<GLuint> : std::integral_constant<glType, glType::gl_unsigned_int> {};
+template <> struct c_to_gl<GLbyte> :    glt_constant<glType::gl_byte> {};
+template <> struct c_to_gl<GLubyte> :   glt_constant<glType::gl_unsigned_byte> {};
+template <> struct c_to_gl<GLshort> :   glt_constant<glType::gl_short> {};
+template <> struct c_to_gl<GLushort> :  glt_constant<glType::gl_unsigned_short> {};
+template <> struct c_to_gl<GLint> :     glt_constant<glType::gl_int> {};
+template <> struct c_to_gl<GLuint> :    glt_constant<glType::gl_unsigned_int> {};
 //template <> struct c_to_gl<GLfixed> : std::integral_constant<int, GL_FIXED> {};
-//template <> struct c_to_gl<GLhalf> : std::integral_constant<int, GL_HALF_FLOAT> {};
-template <> struct c_to_gl<GLfloat> : std::integral_constant<glType, glType::gl_float> {};
-template <> struct c_to_gl<GLdouble> : std::integral_constant<glType, glType::gl_double> {};
+//template <> struct c_to_gl<GLhalf> :  std::integral_constant<int, GL_HALF_FLOAT> {};
+template <> struct c_to_gl<GLfloat> :   glt_constant<glType::gl_float> {};
+template <> struct c_to_gl<GLdouble> :  glt_constant<glType::gl_double> {};
 
 // TODO: add glm types recognition
 template <typename cType>
 constexpr inline glType c_to_gl_v = c_to_gl<cType>::value;
 
 
-// map for binding functions
-template <typename glObjType>
-struct pp_gl_binder;
-
-template <> struct pp_gl_binder<glBufferTarget> : std::integral_constant<void(APIENTRYP *)(GLenum, GLuint), &glBindBuffer> {};
-template <> struct pp_gl_binder<glTextureTarget> : std::integral_constant<void(APIENTRYP *)(GLenum, GLuint), &glBindTexture> {};
-template <> struct pp_gl_binder<glShaderTarget> : std::integral_constant<void(APIENTRYP *)(GLuint), &glDeleteShader> {};
-template <> struct pp_gl_binder<glProgramTarget> : std::integral_constant<void(APIENTRYP *)(GLuint), &glDeleteProgram> {};
-template <> struct pp_gl_binder<glVertexArrayTarget> : std::integral_constant<void(APIENTRYP *)(GLuint), &glBindVertexArray> {};

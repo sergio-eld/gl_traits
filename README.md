@@ -5,7 +5,7 @@ OpenGL (GLAD) type-safe template wrapper library
 
 Goals:
 1. Define strong type enums for OpenGL values (gltEnums.hpp)
-2. Creating Smart Handles for OpenGL objects.
+2. RAII (Smart Handles) for OpenGL objects.
 3. Reduce third-party dependences
 
 
@@ -19,7 +19,7 @@ template <typename cType>
 constexpr inline int c_to_gl_v = c_to_gl<cType>();
  ```
  
- 2. Smart Handles: 
+2. RAII (Smart Handles): 
  - individual header?
  - one template class for each OpenGL object type
  - Template specializations using enum classes, example:
@@ -46,6 +46,40 @@ constexpr inline int c_to_gl_v = c_to_gl<cType>();
  - Template specialization for OpenGL object deleter. Default parameter, deduced from enum type
  - Restrict multiple ownership?
  - Restrict default constructor?
+
+| Create | Type | Delete | Type |
+| --- | --- | --- | --- |
+| glGenBuffers | void(APIENTRY*)(GLsizei, GLuint*)| glDeleteBuffers | void(APIENTRY*)(GLsizei, const GLuint*) |
+| glGenTextures | void(APIENTRY*)(GLsizei, GLuint*)| glDeleteTextures | void(APIENTRY*)(GLsizei, const GLuint*) |
+| glGenFramebuffers | void(APIENTRY*)(GLsizei, GLuint*) | glDeleteFramebuffers | void(APIENTRY*)(GLsizei, const GLuint*) |
+| glGenSamplers| void(APIENTRY*)(GLsizei, GLuint*) | glDeleteSamplers | void(APIENTRY*)(GLsizei, const GLuint*) |
+| glGenVertexArrays| void(APIENTRY*)(GLsizei, GLuint*) | glDeleteVertexArrays | void(APIENTRY*)(GLsizei, const GLuint*) |
+| glGenRenderbuffers| void(APIENTRY*)(GLsizei, GLuint*) | glDeleteRenderbuffers | void(APIENTRY*)(GLsizei, const GLuint*) |
+| glGenProgramPipelines| void(APIENTRY*)(GLsizei, GLuint*) | glDeleteProgramPipelines | void(APIENTRY*)(GLsizei, const GLuint*) |
+| glGenQueries| void(APIENTRY*)(GLsizei, GLuint*) | glDeleteQueries | void(APIENTRY*)(GLsizei, const GLuint*) |
+| glGenTransformFeedbacks| void(APIENTRY*)(GLsizei, GLuint*) | glDeleteTransformFeedbacks | void(APIENTRY*)(GLsizei, const GLuint*) |
+| glCreateShader| GLuint(APIENTRY*)(GLenum)| glDeleteProgram | void(APIENTRY*)(GLuint) |
+| glCreateProgram| GLuint(APIENTRY*)(void) | glDeleteShader | void(APIENTRY*)(GLuint) |
+
+
+Enum classes to be used as template arguments (and to lookup gen and delete function pointers):
+TODO: naming convention for enums.
+Some enums are declared only to be used as template parameters and have no defined values
+| Create | Enum Typename |
+| --- | --- |
+| glGenBuffers | glBufferTarget |
+| glGenTextures | glTextureTarget |
+| glGenFramebuffers | glFrameBufferTarget |
+| glGenSamplers| glSamplerTarget |
+| glGenVertexArrays| glVertexArrayTarget |
+| glGenRenderbuffers| glRenderBufferTarget |
+| glGenProgramPipelines| glProgramPipeLineTarget |
+| glGenQueries| glQueryTarget |
+| glGenTransformFeedbacks| glTransformFeedBackTarget |
+| glCreateShader| glShaderTarget |
+| glCreateProgram| glProgramTarget |
+
+
 2. Current third-perty dependences:
  - GLAD
  - GLM
