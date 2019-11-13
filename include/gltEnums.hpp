@@ -143,6 +143,7 @@ constexpr inline auto pp_gl_binder_v = pp_gl_binder<glObjType>::value;
 // buffer targets // remove underscore later
 enum class glBufferTarget : int
 {
+	none = 0,
     array_buffer = GL_ARRAY_BUFFER,
     atomic_counter_buffer = GL_ATOMIC_COUNTER_BUFFER,
     copy_read_buffer = GL_COPY_READ_BUFFER,

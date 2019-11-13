@@ -244,8 +244,76 @@ template <typename eTargetType, eTargetType ... vals>
 class gl_current_object<std::integer_sequence<eTargetType, vals...>> :
     public gl_current_object_collection<gl_current_object_base<eTargetType, vals> ...>
 {
+	using this_t = gl_current_object<std::integer_sequence<eTargetType, vals...>>;
+
+	template <size_t n>
+	constexpr static eTargetType arg_n = std::tuple_element_t<n, std::tuple<std::integral_constant<eTargetType, vals>...>>::value;
+
+	template <size_t iter = 0>
+	static void bind_or_next(eTargetType target, const gltHandle<eTargetType>& handle)
+	{
+		if constexpr (iter != sizeof...(vals))
+		{
+			constexpr eTargetType cur_target = arg_n<iter>;
+			if (target == cur_target)
+				return Bind(tag<cur_target>(), handle);
+			return bind_or_next<iter + 1>(target, handle);
+		}
+
+		assert(false && "Invalid input! Unrecognized target");
+		throw("Invalid input! Unrecognized target");
+	}
+
+	template <size_t iter = 0>
+	static bool iscurrent_or_next(eTargetType target, const gltHandle<eTargetType>& handle)
+	{
+		if constexpr (iter != sizeof...(vals))
+		{
+			constexpr eTargetType cur_target = arg_n<iter>;
+			if (target == cur_target)
+				return IsCurrent(tag<cur_target>(), handle);
+			return iscurrent_or_next<iter + 1>(target, handle);
+		}
+
+		assert(false && "Invalid input! Unrecognized target");
+		throw("Invalid input! Unrecognized target");
+	}
+
+	template <size_t iter = 0>
+	static void unbind_or_next(eTargetType target)
+	{
+		if constexpr (iter != sizeof...(vals))
+		{
+			constexpr eTargetType cur_target = arg_n<iter>;
+			if (target == cur_target)
+				return UnBind(tag<cur_target>());
+			return unbind_or_next<iter + 1>(target);
+		}
+
+		assert(false && "Invalid input! Unrecognized target");
+		throw("Invalid input! Unrecognized target");
+	}
+
+public:
+	// TODO: add runtime versions 
+	static void BindRT(eTargetType target, const gltHandle<eTargetType>& handle)
+	{
+		return bind_or_next(target, handle);
+	}
+
+	static bool IsCurrentRT(eTargetType target, const gltHandle<eTargetType>& handle)
+	{
+		return iscurrent_or_next(target, handle);
+	}
+
+	static void UnBindRT(eTargetType target)
+	{
+		return unbind_or_next(target);
+	}
 
 };
+
+using gltActiveBufferTargets = gl_current_object<glBufferTargetList>;
 
 /*
 OpenGL:
@@ -342,7 +410,7 @@ template <class T>
 struct is_compound_attr : std::bool_constant<false> {};
 
 template <class ... T>
-struct is_compound_attr<comp_attr<T...>> : std::bool_constant<true> {};
+struct is_compound_attr<comp_attr<T...>> : std::bool_constant<(sizeof...(T) > 1)> {};
 
 // matrices are compound
 template<glm::length_t C, glm::length_t R, typename T, glm::qualifier Q>
@@ -351,8 +419,165 @@ struct is_compound_attr<glm::mat<C, R, T, Q>> : std::bool_constant<true> {};
 template <class T>
 constexpr inline bool is_compound_attr_v = is_compound_attr<T>();
 
+////////////////////////////////////////////////////
+// helpers
+////////////////////////////////////////////////////
+
+template <typename To, typename From>
+using to_type = To;
+
+template <typename To, size_t indx>
+using type_from_indx = To;
+
+template <typename T, size_t sz, class = decltype(std::make_index_sequence<sz>())>
+struct gen_tuple;
+
+template <typename T, size_t sz, size_t ... indx>
+struct gen_tuple<T, sz, std::index_sequence<indx...>>
+{
+	using type = std::tuple<type_from_indx<T, indx> ...>;
+};
+
+template <typename T, size_t sz>
+using gen_tuple_t = typename gen_tuple<T, sz>::type;
+
+template <typename T, size_t sz, class = decltype(std::make_index_sequence<sz>())>
+struct init_array;
+
+template <typename T, size_t sz, size_t ... Indx>
+struct init_array<T, sz, std::index_sequence<Indx...>>
+{
+	constexpr static std::array<T, sz> init(T def_value)
+	{
+		return std::array<T, sz>{ type_from_indx<T, Indx>(def_value) ... };
+	}
+
+	constexpr std::array<T, sz> operator()(T def_value) const
+	{
+		return init(def_value);
+	}
+};
+
+template <typename T, size_t sz, class = decltype(std::make_index_sequence<sz>())>
+struct modify_array;
+
+template <typename T, size_t sz, size_t ... indx>
+struct modify_array<T, sz, std::index_sequence<indx...>>
+{
+	template<size_t i>
+	constexpr static void set(std::array<T, sz>& arr, const T& val)
+	{
+		arr[i] = val;
+	}
+
+	constexpr static void modify(std::array<T, sz>& arr, const type_from_indx<T, indx>& ... vals)
+	{
+		(set<indx>(arr, vals), ...);
+	}
+};
+
+
+////////////////////////////////////////////////////
+
 template <typename T, typename ... N>
 class gltBuffer
 {
-    
+
+	constexpr static size_t n_arrays_ = sizeof...(N) + 1;
+
+	gltHandle<glBufferTarget> handle_;
+	glBufferTarget last_bound_ = glBufferTarget::none;
+	std::array<size_t, n_arrays_> inst_allocated_ =
+		init_array<size_t, n_arrays_>()(0);
+
+	void validate()
+	{
+		if constexpr (sizeof...(N))
+			static_assert(!std::disjunction_v<is_compound_attr<N>...>, "Only first type may be compound!");
+	}
+
+	template <typename C>
+	constexpr static size_t size_of_N(size_t Num)
+	{
+		return sizeof(C) * Num;
+	}
+
+public:
+	gltBuffer(gltHandle<glBufferTarget>&& handle = gltAllocator<glBufferTarget>::Allocate())
+		: handle_(std::move(handle))
+	{
+		validate();
+	}
+
+	template <glBufferTarget target>
+	void Bind(tag<target> t)
+	{
+		last_bound_ = target;
+		gltActiveBufferTargets::Bind(t, *this);
+	}
+
+	// RunTime wrapper
+	void Bind(glBufferTarget target)
+	{
+		last_bound_ = target;
+		return gltActiveBufferTargets::BindRT(target, *this);
+	}
+
+	template <glBufferTarget target>
+	bool IsCurrent(tag<target>) const
+	{
+		return gltActiveBufferTargets::IsCurrent(tag<target>(), *this);
+	}
+
+	bool IsCurrent(glBufferTarget target) const
+	{
+		return gltActiveBufferTargets::IsCurrentRT(target, *this);
+	}
+
+	template <glBufferTarget target>
+	void UnBind(tag<target> t)
+	{
+		last_bound_ = glBufferTarget::none;
+		gltActiveBufferTargets::UnBind(t, *this);
+	}
+
+	// RunTime wrapper
+	void UnBind(glBufferTarget target)
+	{
+		last_bound_ = glBufferTarget::none;
+		return gltActiveBufferTargets::UnBindRT(target, *this);
+	}
+
+	operator const gltHandle<glBufferTarget>&() const
+	{
+		return handle_;
+	}
+
+	glBufferTarget LastBound() const
+	{
+		return last_bound_;
+	}
+
+	// TODO: case with named attributes
+	void AllocateMemory(to_type<size_t, T> inst0, to_type<size_t, N> ... instN, glBufUse usage)
+	{
+		if (!(bool)last_bound_ || !IsCurrent(last_bound_))
+		{
+			assert(false && "Allocating memory for non-active buffer!");
+			throw("Allocating memory for non-active buffer!");
+		}
+
+		size_t total_sz = size_of_N<T>(inst0) + (size_of_N<N>(instN) + ...);// sizeof(N) * instN + ...);
+		glBufferData((GLenum)last_bound_, total_sz, nullptr, (GLenum)usage);
+		// TODO: check for OpenGL errors
+		modify_array<size_t, n_arrays_>::modify(inst_allocated_, inst0, instN...);
+	}
+
+	size_t InstancesAllocated(size_t indx) const
+	{
+		if (indx >= n_arrays_)
+			throw std::out_of_range("Buffer's array index is out of range!");
+ 		return inst_allocated_[indx];
+	}
 };
+
