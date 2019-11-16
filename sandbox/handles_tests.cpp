@@ -14,7 +14,7 @@ int CheckHandle()
 
     if (handle_accessor<T>()(h1) != 1 ||
         handle_accessor<T>()(h2) != 2)
-        throw ("Invalid values sequence!");
+        throw ("Invalid values' sequence!");
 
     return 0;
 }
@@ -26,65 +26,19 @@ int CheckHandles()
 }
 
 
-template <int a>
-struct dummy
+#include <chrono>
+#include <map>
+
+template <int ... keys>
+struct test
 {
-	void print(tag<a>) const
-	{
-		std::cout << a << std::endl;
-	}
+	inline static std::map<int, char> map_{ std::pair(keys, 'a' + keys) ... };
 };
 
-template <class ... cl>
-struct collection : cl...
-{
-	using cl::print...;
-};
-
-template <int ... I>
-struct dummy_collection : public collection<dummy<I>...>
-{
-	template <size_t n>
-	constexpr static int arg_n = std::tuple_element_t<n, std::tuple<std::integral_constant<int, I>...>>::value;
-	
-	template <size_t iter = 0>
-	constexpr void print_or_next(int a) const
-	{
-		if constexpr (iter != sizeof...(I))
-		{
-			constexpr int cur = arg_n<iter>;
-			if (a == cur)
-				return print(tag<cur>());
-			return print_or_next<iter + 1>(a);
-		}
-		throw std::invalid_argument("Invalid input value");
-	}
-
-	void print_rt(int a)
-	{
-		print_or_next(a);
-	}
-
-};
-
+template struct test<4, 5, 8, 12, 16>;
 
 int main()
 {
-	dummy_collection<4, 8, 15, 16, 23, 42> col;
-	col.print(tag<4>());
-	col.print_rt(8);
-	col.print_rt(23);
-	col.print_rt(42);
-	try
-	{
-		col.print_rt(2);
-	}
-	catch (const std::invalid_argument& e)
-	{
-		std::cerr << e.what() << std::endl;
-	}
-
-	std::tuple_element_t<1, std::tuple<std::integral_constant<int, 3>, std::integral_constant<int, 4>>>::value;
 
 	std::array<int, 4> arr;
 	modify_array<int, 4>::modify(arr, 2, 3, 2, 1);
@@ -93,11 +47,6 @@ int main()
 	is_compound_attr_v<comp_attr<glm::vec4>>;
 	is_compound_attr_v<comp_attr<glm::vec4, glm::vec2>>;
 
-	(gltBuffer<glm::vec4>*)nullptr;
-	(gltBuffer<comp_attr<glm::vec4>>*)nullptr;
-	(gltBuffer<glm::vec4, comp_attr<glm::vec4, glm::vec3>>*)nullptr;
-
-
     SmartGLFW sglfw{4, 4};
     SmartGLFWwindow window{ SCR_WIDTH, SCR_HEIGHT, "testing buffers" };
 
@@ -105,7 +54,7 @@ int main()
 
     sglfw.LoadOpenGL();
 
-    int res = CheckHandles<glBufferTarget,
+    int res = CheckHandles<gltBufferTarget,
         glFrameBufferTarget,
         glTextureTarget,
         glVertexArrayTarget,
@@ -120,20 +69,22 @@ int main()
 
     // TODO: add glShaderTarget test;
 
-    gltHandle<glBufferTarget> hBuf = gltAllocator<glBufferTarget>::Allocate();
 
-    //gl_current_object_base<glBufferTarget, glBufferTarget::array_buffer>::Bind(tag<glBufferTarget::array_buffer>(), hBuf);
-    gl_current_object_base<glBufferTarget, glBufferTarget::array_buffer>::binding;
+    //gl_bound_handle_base<gltBufferTarget, gltBufferTarget::array_buffer>::Bind(tag<gltBufferTarget::array_buffer>(), hBuf);
+    gl_bound_handle_base<gltBufferTarget, gltBufferTarget::array_buffer>::binding;
 
-    has_gl_binding_v<glBufferTarget::array_buffer>;
-    get_binding_v<glBufferTarget::array_buffer>;
+    has_gl_binding_v<gltBufferTarget::array_buffer>;
+    get_binding_v<gltBufferTarget::array_buffer>;
 
-    gl_current_object<glBufferTargetList>::Bind(tag<glBufferTarget::array_buffer>(), hBuf);
-    gl_current_object<glBufferTargetList>::IsCurrent(tag<glBufferTarget::array_buffer>(), hBuf);
+
+	gltHandle<gltBufferTarget> hBuf = gltAllocator<gltBufferTarget>::Allocate();
+
+
+	//gl_bound_handle<glBufferTargetList>::Bind(tag<gltBufferTarget::array_buffer>(), hBuf);
 
 	gltBuffer<glm::vec3, glm::vec2> buf{};
-	//buf.Bind(tag<glBufferTarget::array_buffer>());
-	buf.Bind(glBufferTarget::array_buffer);
+	//buf.Bind(tag<gltBufferTarget::array_buffer>());
+	buf.Bind(gltBufferTarget::array_buffer);
 	buf.AllocateMemory(16, 16, glBufUse::static_draw);
 
 	try
@@ -144,8 +95,8 @@ int main()
 	{
 		std::cerr << e.what() << std::endl;
 	}
-	bool isCurrent = buf.IsCurrent(glBufferTarget::array_buffer);
-		//gl_current_object<glBufferTargetList>::IsCurrent(tag<glBufferTarget::array_buffer>(), buf);
+	bool isCurrent = buf.IsBound(gltBufferTarget::array_buffer);
+		//gl_bound_handle<glBufferTargetList>::IsBound(tag<gltBufferTarget::array_buffer>(), buf);
 
     return res;
 }

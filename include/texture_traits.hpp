@@ -446,7 +446,7 @@ public:
 		return handle_;
 	}
 
-	bool IsCurrent() const
+	bool IsBound() const
 	{
 		bool res = gltActiveTexture::IsCurrentTexture(handle_);
 		if (!res)
@@ -463,13 +463,13 @@ public:
 	//unbind changing active unit!
 	void UnBind()
 	{
-		assert(IsCurrent() && "Unbind texture wich is not currently active!");
+		assert(IsBound() && "Unbind texture wich is not currently active!");
 		texture_traits::BindTexture(gltHandle<target>(0), texUnit_);
 	}
 
 	void GenerateMipMap()
 	{
-		assert(IsCurrent() && "Updating parameters of non-active texture!");
+		assert(IsBound() && "Updating parameters of non-active texture!");
 		texture_traits::GenerateMipMap<target>();
 	}
 };

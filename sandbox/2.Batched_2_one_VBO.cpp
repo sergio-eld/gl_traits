@@ -22,7 +22,7 @@ int main()
 	auto texCoords = glm_cube_texCoords();
 
 	glVBO<glm::vec3, glm::vec2> vbo{
-		glt_buffers::GenBuffer<glBufferTarget::array_buffer>() };
+		glt_buffers::GenBuffer<gltBufferTarget::array_buffer>() };
 
 	vbo.Bind();
 	vbo.AllocateMemory(positions.size(), texCoords.size(), glBufUse::static_draw);

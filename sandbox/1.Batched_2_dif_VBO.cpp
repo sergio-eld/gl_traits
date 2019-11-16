@@ -26,10 +26,10 @@ int main()
 	auto texCoords = glm_cube_texCoords();
 
 	glVBO<glm::vec3> vboPositions{
-		glt_buffers::GenBuffer<glBufferTarget::array_buffer>() };
+		glt_buffers::GenBuffer<gltBufferTarget::array_buffer>() };
 
 	glVBO<glm::vec2> vboTextures{
-		glt_buffers::GenBuffer<glBufferTarget::array_buffer>() };
+		glt_buffers::GenBuffer<gltBufferTarget::array_buffer>() };
 
 	vboPositions.Bind();
 	vboPositions.AllocateMemory(positions.size(), glBufUse::static_draw);

@@ -53,7 +53,7 @@ GLuint glCreateShader       (GLenum)                void glDeleteShader         
 template <auto A>
 using glt_constant = std::integral_constant<decltype(A), A>;
 
-enum class glBufferTarget : int;
+enum class gltBufferTarget : int;
 enum class glFrameBufferTarget : int;
 enum class glTextureTarget : int;
 enum class glShaderTarget : int;
@@ -74,7 +74,7 @@ enum class glSamplerTarget : int;           // empty
 template <typename glObjType>
 struct pp_gl_allocator;
 
-template <> struct pp_gl_allocator<glBufferTarget> :            glt_constant<&glGenBuffers> {};
+template <> struct pp_gl_allocator<gltBufferTarget> :            glt_constant<&glGenBuffers> {};
 template <> struct pp_gl_allocator<glFrameBufferTarget> :       glt_constant<&glGenFramebuffers> {};
 template <> struct pp_gl_allocator<glTextureTarget> :           glt_constant<&glGenTextures> {};
 template <> struct pp_gl_allocator<glVertexArrayTarget> :       glt_constant<&glGenVertexArrays> {};
@@ -98,7 +98,7 @@ constexpr inline auto pp_gl_allocator_v = pp_gl_allocator<glObjType>::value;
 template <typename glObjType>
 struct pp_gl_deleter;
 
-template <> struct pp_gl_deleter<glBufferTarget> :              glt_constant<&glDeleteBuffers> {};
+template <> struct pp_gl_deleter<gltBufferTarget> :              glt_constant<&glDeleteBuffers> {};
 template <> struct pp_gl_deleter<glFrameBufferTarget> :         glt_constant<&glDeleteFramebuffers> {};
 template <> struct pp_gl_deleter<glTextureTarget> :             glt_constant<&glDeleteTextures> {};
 template <> struct pp_gl_deleter<glVertexArrayTarget> :         glt_constant<&glDeleteVertexArrays> {};
@@ -119,7 +119,7 @@ constexpr inline auto pp_gl_deleter_v = pp_gl_deleter<glObjType>::value;
 
 template <typename glObjType>
 constexpr inline bool has_func_bind_v = std::bool_constant<std::disjunction_v<
-    std::is_same<glObjType, glBufferTarget>,
+    std::is_same<glObjType, gltBufferTarget>,
     std::is_same<glObjType, glFrameBufferTarget>,
     std::is_same<glObjType, glTextureTarget>,
     std::is_same<glObjType, glVertexArrayTarget>,
@@ -130,7 +130,7 @@ constexpr inline bool has_func_bind_v = std::bool_constant<std::disjunction_v<
 template <typename glObjType>
 struct pp_gl_binder;
 
-template <> struct pp_gl_binder<glBufferTarget> :               glt_constant<&glBindBuffer> {};
+template <> struct pp_gl_binder<gltBufferTarget> :               glt_constant<&glBindBuffer> {};
 template <> struct pp_gl_binder<glFrameBufferTarget> :          glt_constant<&glBindFramebuffer> {};
 template <> struct pp_gl_binder<glTextureTarget> :              glt_constant<&glBindTexture> {};
 template <> struct pp_gl_binder<glTransformFeedBackTarget> :    glt_constant<&glBindTransformFeedback> {};
@@ -141,7 +141,7 @@ template <typename glObjType>
 constexpr inline auto pp_gl_binder_v = pp_gl_binder<glObjType>::value;
 
 // buffer targets // remove underscore later
-enum class glBufferTarget : int
+enum class gltBufferTarget : int
 {
 	none = 0,
     array_buffer = GL_ARRAY_BUFFER,
@@ -160,21 +160,21 @@ enum class glBufferTarget : int
     uniform_buffer = GL_UNIFORM_BUFFER
 };
 
-using glBufferTargetList = std::integer_sequence<glBufferTarget,
-    glBufferTarget::array_buffer,
-    glBufferTarget::atomic_counter_buffer,
-    glBufferTarget::copy_read_buffer,
-    glBufferTarget::copy_write_buffer,
-    glBufferTarget::dispatch_indirect_buffer,
-    glBufferTarget::draw_indirect_buffer,
-    glBufferTarget::element_array_buffer,
-    glBufferTarget::pixel_pack_buffer,
-    glBufferTarget::pixel_unpack_buffer,
-    glBufferTarget::query_buffer,
-    glBufferTarget::shader_storage_buffer,
-    glBufferTarget::texture_buffer,
-    glBufferTarget::transform_feedback_buffer,
-    glBufferTarget::uniform_buffer>;
+using glBufferTargetList = std::integer_sequence<gltBufferTarget,
+    gltBufferTarget::array_buffer,
+    gltBufferTarget::atomic_counter_buffer,
+    gltBufferTarget::copy_read_buffer,
+    gltBufferTarget::copy_write_buffer,
+    gltBufferTarget::dispatch_indirect_buffer,
+    gltBufferTarget::draw_indirect_buffer,
+    gltBufferTarget::element_array_buffer,
+    gltBufferTarget::pixel_pack_buffer,
+    gltBufferTarget::pixel_unpack_buffer,
+    gltBufferTarget::query_buffer,
+    gltBufferTarget::shader_storage_buffer,
+    gltBufferTarget::texture_buffer,
+    gltBufferTarget::transform_feedback_buffer,
+    gltBufferTarget::uniform_buffer>;
 
 
 enum class glBufferBinding : int
@@ -200,19 +200,20 @@ template <auto A>
 constexpr inline bool has_gl_binding_v = !std::is_same_v<get_binding<A>::type, void*>;
 
 // TODO: generate this maps using python
-template <> struct get_binding<glBufferTarget::array_buffer> :              glt_constant<glBufferBinding::array_buffer_binding>{};
-template <> struct get_binding<glBufferTarget::atomic_counter_buffer> :     glt_constant<glBufferBinding::atomic_buffer_binding>{};
-template <> struct get_binding<glBufferTarget::copy_read_buffer> :          glt_constant<glBufferBinding::copy_read_buffer_binding>{};
-template <> struct get_binding<glBufferTarget::copy_write_buffer> :         glt_constant<glBufferBinding::copy_write_buffer_binding>{};
-template <> struct get_binding<glBufferTarget::dispatch_indirect_buffer> :  glt_constant<glBufferBinding::dispatch_indirect_buffer_binding>{};
-template <> struct get_binding<glBufferTarget::draw_indirect_buffer> :      glt_constant<glBufferBinding::draw_indirect_buffer_binding>{};
-template <> struct get_binding<glBufferTarget::element_array_buffer> :      glt_constant<glBufferBinding::element_array_buffer_binding>{};
-template <> struct get_binding<glBufferTarget::pixel_pack_buffer> :         glt_constant<glBufferBinding::pixel_pack_buffer_binding>{};
-template <> struct get_binding<glBufferTarget::pixel_unpack_buffer> :       glt_constant<glBufferBinding::pixel_unpack_buffer_binding>{};
-template <> struct get_binding<glBufferTarget::shader_storage_buffer> :     glt_constant<glBufferBinding::shader_storage_buffer_binding>{};
-template <> struct get_binding<glBufferTarget::transform_feedback_buffer> : glt_constant<glBufferBinding::transform_feedback_buffer_binding>{};
-template <> struct get_binding<glBufferTarget::uniform_buffer> :            glt_constant<glBufferBinding::uniform_buffer_binding>{};
+template <> struct get_binding<gltBufferTarget::array_buffer> :              glt_constant<glBufferBinding::array_buffer_binding>{};
+template <> struct get_binding<gltBufferTarget::atomic_counter_buffer> :     glt_constant<glBufferBinding::atomic_buffer_binding>{};
+template <> struct get_binding<gltBufferTarget::copy_read_buffer> :          glt_constant<glBufferBinding::copy_read_buffer_binding>{};
+template <> struct get_binding<gltBufferTarget::copy_write_buffer> :         glt_constant<glBufferBinding::copy_write_buffer_binding>{};
+template <> struct get_binding<gltBufferTarget::dispatch_indirect_buffer> :  glt_constant<glBufferBinding::dispatch_indirect_buffer_binding>{};
+template <> struct get_binding<gltBufferTarget::draw_indirect_buffer> :      glt_constant<glBufferBinding::draw_indirect_buffer_binding>{};
+template <> struct get_binding<gltBufferTarget::element_array_buffer> :      glt_constant<glBufferBinding::element_array_buffer_binding>{};
+template <> struct get_binding<gltBufferTarget::pixel_pack_buffer> :         glt_constant<glBufferBinding::pixel_pack_buffer_binding>{};
+template <> struct get_binding<gltBufferTarget::pixel_unpack_buffer> :       glt_constant<glBufferBinding::pixel_unpack_buffer_binding>{};
+template <> struct get_binding<gltBufferTarget::shader_storage_buffer> :     glt_constant<glBufferBinding::shader_storage_buffer_binding>{};
+template <> struct get_binding<gltBufferTarget::transform_feedback_buffer> : glt_constant<glBufferBinding::transform_feedback_buffer_binding>{};
+template <> struct get_binding<gltBufferTarget::uniform_buffer> :            glt_constant<glBufferBinding::uniform_buffer_binding>{};
 
+// get gl Binding value from gl Target value (to access corresponing function pointer)
 template <auto A>
 constexpr inline auto get_binding_v = get_binding<A>::value;
 
@@ -309,6 +310,13 @@ enum class glCapability : int
     stencil_test = GL_STENCIL_TEST,
     texture_cube_map_seamless = GL_TEXTURE_CUBE_MAP_SEAMLESS,
     program_point_size = GL_PROGRAM_POINT_SIZE
+};
+
+enum class gltMapBufferType : int
+{
+	read_only = GL_READ_ONLY,
+	write_only = GL_WRITE_ONLY,
+	read_write = GL_READ_WRITE
 };
 
 template <typename cType>

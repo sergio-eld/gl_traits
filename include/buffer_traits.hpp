@@ -111,7 +111,7 @@ constexpr inline bool is_compound_attr_v = is_compound_attr<T>();
 ///////////////////////////
 
 // this does not consider padding for types less than 4 bytes
-template <size_t indx, class tuple, class seq = indx_seq<indx>>
+template <size_t indx, class tuple, class seq = typename indx_seq<indx>>
 struct get_offset;
 
 template <typename ... attribs>
@@ -170,7 +170,7 @@ struct attrib_traits<comp_attr<vAttribs...>>
 
 class GLT_API glt_buffers
 {
-	template <glBufferTarget target>
+	template <gltBufferTarget target>
 	static const gltHandle<target> *currentBuffer_;
 
     // separate to another class ?
@@ -178,7 +178,7 @@ class GLT_API glt_buffers
 
 public:
 
-	template <glBufferTarget target>
+	template <gltBufferTarget target>
 	static gltHandle<target> GenBuffer()
 	{
 		GLuint handle = 0;
@@ -187,20 +187,20 @@ public:
         return gltAllocator<target>::Allocate();// gltHandle<target>(handle);
 	}
 
-	template <glBufferTarget target>
+	template <gltBufferTarget target>
 	static bool IsCurrentBuffer(const gltHandle<target>& handle)
 	{
 		return currentBuffer_<target> ? *currentBuffer_<target> == handle : false;
 	}
 
-	template <glBufferTarget target>
+	template <gltBufferTarget target>
 	static void BindBuffer(const gltHandle<target>& handle)
 	{
 		glBindBuffer((int)target, handle_accessor<target>()(handle));
 		currentBuffer_<target> = &handle;
 	}
 
-	template <glBufferTarget target>
+	template <gltBufferTarget target>
 	static void AllocateBuffer(const gltHandle<target>& handle, size_t sizeBytes, glBufUse usage)
 	{
         if (!IsCurrentBuffer(handle))
@@ -213,7 +213,7 @@ public:
 
 
     // raw, type-independent members, doesnt track allocated memory ranges
-	template <glBufferTarget target, typename dataType>
+	template <gltBufferTarget target, typename dataType>
 	static void BufferSubData(const gltHandle<target>& handle, size_t offset, const std::vector<dataType>& data)
 	{
         if (!IsCurrentBuffer(handle))
@@ -226,13 +226,13 @@ public:
 
 	//TODO: restrict usage for array_buffer
 	template<size_t sz, typename dataType>
-	static void BufferData(glBufferTarget target, const dataType(&data)[sz], glBufUse usage)
+	static void BufferData(gltBufferTarget target, const dataType(&data)[sz], glBufUse usage)
 	{
 		glBufferData(target, sizeof(data), data, usage);
 	}
 
 	template <class dataType>
-	static void BufferData(glBufferTarget target, const std::vector<dataType>& data, glBufUse usage)
+	static void BufferData(gltBufferTarget target, const std::vector<dataType>& data, glBufUse usage)
 	{
 		glBufferData((GLenum)target, data.size() * sizeof(dataType), data.data(), (GLenum)usage);
 	}
@@ -342,18 +342,18 @@ public:
 
 };
 
-template <glBufferTarget target>
+template <gltBufferTarget target>
 const gltHandle<target> *glt_buffers::currentBuffer_ = nullptr;
 
 
-template <glBufferTarget, class ... params>
+template <gltBufferTarget, class ... params>
 class gltBuffer;
 
-template <glBufferTarget target>
+template <gltBufferTarget target>
 class gltBuffer<target>
 {
-	static_assert(target != glBufferTarget::array_buffer, "Array buffer target is not allowed, use corresponding gltBuffer specialization");
-	static_assert(target != glBufferTarget::element_array_buffer, "Element Array buffer target is not allowed, use corresponding gltBuffer specialization");
+	static_assert(target != gltBufferTarget::array_buffer, "Array buffer target is not allowed, use corresponding gltBuffer specialization");
+	static_assert(target != gltBufferTarget::element_array_buffer, "Element Array buffer target is not allowed, use corresponding gltBuffer specialization");
 
 	//TODO: add support for multiple threads. Use static map or something
 	//static const gltHandle<target> *currentBuffer_;
@@ -376,12 +376,12 @@ public:
 
 	void UnBind()
 	{
-		assert(IsCurrent() && "Trying to unbind non-active buffer object!");
+		assert(IsBound() && "Trying to unbind non-active buffer object!");
 		glt_buffers::BindBuffer<target>(0);
 		currentBuffer_ = nullptr;
 	}
 
-	bool IsCurrent() const
+	bool IsBound() const
 	{
 		if (!handle_)
 			return false;
@@ -395,7 +395,7 @@ public:
 
 	~gltBuffer()
 	{
-		if (IsCurrent())
+		if (IsBound())
 			UnBind();
 	}
 };
@@ -445,7 +445,7 @@ class glVBO;
 
 
 // not only for vertex buffer I suppose
-template <glBufferTarget target, class ... attribs>
+template <gltBufferTarget target, class ... attribs>
 class vbo_allocator
 {
 	const gltHandle<target> *handle_;
@@ -661,12 +661,12 @@ TODO: named attributes
 TODO: validate attributes' collection
 */
 template <class ... attribs>
-class glVBO : public vbo_allocator<glBufferTarget::array_buffer, attribs...>
+class glVBO : public vbo_allocator<gltBufferTarget::array_buffer, attribs...>
 {
 //	static_assert(valid_attr_collection_v<attribs...>, "Inavlid attributes collection!");
-	using vboalloc = vbo_allocator<glBufferTarget::array_buffer, attribs...>;
+	using vboalloc = vbo_allocator<gltBufferTarget::array_buffer, attribs...>;
 
-	gltHandle<glBufferTarget::array_buffer> handle_;
+	gltHandle<gltBufferTarget::array_buffer> handle_;
 
 public:
 
@@ -695,7 +695,7 @@ public:
 	}
 
 
-	glVBO(gltHandle<glBufferTarget::array_buffer>&& handle)
+	glVBO(gltHandle<gltBufferTarget::array_buffer>&& handle)
 		: vboalloc(&handle_),
 		handle_(std::move(handle))
 	{}
@@ -745,9 +745,9 @@ using glVBOCompound = glVBO<comp_attr<attribs...>>;
 // One VBO can continiously store as many attributes as needed. Each attribute can store no more than 4 components
 // should we track the active array_buffer and where? in VAO?
 template <class ... vaoAttribs>
-class gltBuffer<glBufferTarget::array_buffer, vao_attribs<vaoAttribs...>>// : public Buffer_base
+class gltBuffer<gltBufferTarget::array_buffer, vao_attribs<vaoAttribs...>>// : public Buffer_base
 {
-    gltHandle<glBufferTarget::array_buffer> handle_;// = glt_buffers::GenBuffer<glBufferTarget::array_buffer>();
+    gltHandle<gltBufferTarget::array_buffer> handle_;// = glt_buffers::GenBuffer<gltBufferTarget::array_buffer>();
 
 	size_t elemsLoaded_ = 0;
 
@@ -760,11 +760,11 @@ public:
     gltBuffer()
     {}
 
-    gltBuffer(gltHandle<glBufferTarget::array_buffer>&& handle)
+    gltBuffer(gltHandle<gltBufferTarget::array_buffer>&& handle)
         : handle_(std::move(handle))
     {}
 
-    void Init(gltHandle<glBufferTarget::array_buffer>&& handle)
+    void Init(gltHandle<gltBufferTarget::array_buffer>&& handle)
     {
         handle_ = std::move(handle);
     }
@@ -779,17 +779,17 @@ public:
 		//assert vertexInfo to have attributes
 		//glNamedBufferData(handle_, vertexes.size() * sizeof(vertexInfo), vertexes.data(), usage);     //glNamedBufferData is nullptr!!!!!
 
-		glt_buffers::BufferData(glBufferTarget::array_buffer, vertexes, usage);
+		glt_buffers::BufferData(gltBufferTarget::array_buffer, vertexes, usage);
 		elemsLoaded_ = vertexes.size();
 
 	}
 
-	const gltHandle<glBufferTarget::array_buffer>& Handle() const
+	const gltHandle<gltBufferTarget::array_buffer>& Handle() const
 	{
 		return handle_;
 	}
 
-	operator const gltHandle<glBufferTarget::array_buffer>&() const
+	operator const gltHandle<gltBufferTarget::array_buffer>&() const
 	{
 		return handle_;
 	}
@@ -801,7 +801,7 @@ public:
 };
 
 template <class ... vaoAttribs>
-using gltVBO = gltBuffer<glBufferTarget::array_buffer, vao_attribs<vaoAttribs...>>;
+using gltVBO = gltBuffer<gltBufferTarget::array_buffer, vao_attribs<vaoAttribs...>>;
 
 
 template <typename>
@@ -917,10 +917,10 @@ public:
     void Init(gltHandle<glVertexArrayTarget::vao>&& handle)
     {
         handle_ = std::move(handle);
-        vbo_.Init(glt_buffers::GenBuffer<glBufferTarget::array_buffer>());
+        vbo_.Init(glt_buffers::GenBuffer<gltBufferTarget::array_buffer>());
     }
 
-    bool IsCurrent() const
+    bool IsBound() const
     {
         return glt_buffers::IsCurrentVAO(handle_);
     }

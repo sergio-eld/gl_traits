@@ -26,7 +26,7 @@ int main()
 	using vertex_attr = comp_attr<glm::vec3, glm::vec2>;
 
 	glVBOCompound<glm::vec3, glm::vec2> vboVertexes{
-		glt_buffers::GenBuffer<glBufferTarget::array_buffer>() };
+		glt_buffers::GenBuffer<gltBufferTarget::array_buffer>() };
 
 	//glVBOCompound<glm::vec3, glm::vec2>::has_named_attribs;
 

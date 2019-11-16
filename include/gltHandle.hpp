@@ -2,10 +2,13 @@
 
 #include "gltEnums.hpp"
 
-template <typename>//auto target, typename = decltype(target)>
+#include <map>
+
+// constructs handles
+template <typename>
 struct gltAllocator;
 
-template <typename eTargetType>//auto target>
+template <typename eTargetType>
 struct handle_accessor;
 
 template <typename eTargetType>
@@ -69,13 +72,15 @@ public:
         return !IsValid();
     }
 
-
+	// handle is not aware if it is or can be bound to a target
     ~gltHandle()
     {
         if (handle_)
         {
             // TODO: do i need to check?
             assert(*ppDeleteFunc && "Pointers to OpenGL deleter functions have not been initialiized!");
+
+			// TODO: Unbind from gl_bound_handle, OpenGL ubinds automaticallu after deleting
 
             // check function signature for arguments
             if constexpr (std::is_same_v<void(APIENTRYP *)(GLsizei, const GLuint*), pp_gl_deleter<eTargetType>::value_type>)
@@ -105,6 +110,10 @@ protected:
 
 };
 
+using gltBufferHandle = gltHandle<gltBufferTarget>;
+
+// TODO: add responsibility to delete handle?
+// TODO: unbind handle when deleting?
 template <typename eTargetType>
 struct gltAllocator
 {
@@ -179,14 +188,24 @@ struct handle_accessor
     }
 };
 
+// base class for every object, that has glBind(target, handle) function
+template <typename eTargetType>
+struct IBindable
+{
+	virtual const gltHandle<eTargetType>& GetHandle() const = 0;
+};
+
 template <auto>
 struct tag
 {};
 
+
+// TODO: replace with map?
 template <typename eTargetType, eTargetType target>
-class gl_current_object_base
+class gl_bound_handle_base
 {
-    static GLuint raw_handle_;
+protected:
+    inline static GLuint raw_handle_ = 0;
 
     static_assert(has_func_bind_v<eTargetType>, "Typename doesn't have a glBind function");
 
@@ -197,24 +216,32 @@ public:
     constexpr static auto ppBindFunc = pp_gl_binder_v<eTargetType>;
     constexpr static auto binding = get_binding_v<target>;
 
-    static void Bind(tag<target>, const gltHandle<eTargetType>& handle)
+    inline static void Bind(tag<target>, const IBindable<eTargetType>& obj)
     {
+		const gltHandle<eTargetType>& handle = obj.GetHandle();
         assert(*ppBindFunc && "OpenGL Bind function has not been initialized!");
 
         (*ppBindFunc)((GLenum)target, handle_accessor<eTargetType>()(handle));
         raw_handle_ = handle_accessor<eTargetType>()(handle);
     }
 
-    static void UnBind(tag<target>)
+    static void UnBind(tag<target>, const IBindable<eTargetType>& obj)
     {
+		const gltHandle<eTargetType>& handle = obj.GetHandle();
+		if (handle != raw_handle_)
+		{
+			assert(false && "Unbinding handle that is not bound!");
+			throw("Unbinding handle that is not bound!");
+		}
         assert(*ppBindFunc && "OpenGL Bind function has not been initialized!");
 
-        (*ppBindFunc)((GLenum)target, handle_accessor<eTargetType>()(handle));
-        raw_handle_ = handle_accessor<eTargetType>()(handle);
+        (*ppBindFunc)((GLenum)target, 0);
+        raw_handle_ = 0;
     }
 
-    static bool IsCurrent(tag<target>, const gltHandle<eTargetType>& handle)
+    static bool IsBound(tag<target>, const IBindable<eTargetType>& obj)
     {
+		const gltHandle<eTargetType>& handle = obj.GetHandle();
         // TODO: assert that returned by glGet object is equal to raw_handle_;
         // TODO: make an independent wrapper
         GLint res = 0;
@@ -225,95 +252,94 @@ public:
     }
 };
 
-template <typename eTargetType, eTargetType target>
-GLuint gl_current_object_base<eTargetType, target>::raw_handle_ = 0;
+
+
 
 template <typename ... gl_cur_obj>
-struct gl_current_object_collection : gl_cur_obj...
+struct gl_bound_handle_collection : gl_cur_obj...
 {
     using gl_cur_obj::Bind...;
     using gl_cur_obj::UnBind...;
-    using gl_cur_obj::IsCurrent...;
+    using gl_cur_obj::IsBound...;
 
 };
 
 template <typename>
-class gl_current_object;
+class gl_bound_handle;
 
+// Target enum collection template parameter as integer sequence
 template <typename eTargetType, eTargetType ... vals>
-class gl_current_object<std::integer_sequence<eTargetType, vals...>> :
-    public gl_current_object_collection<gl_current_object_base<eTargetType, vals> ...>
+class gl_bound_handle<std::integer_sequence<eTargetType, vals...>> :
+    public gl_bound_handle_collection<gl_bound_handle_base<eTargetType, vals> ...>
 {
-	using this_t = gl_current_object<std::integer_sequence<eTargetType, vals...>>;
+	using this_t = gl_bound_handle<std::integer_sequence<eTargetType, vals...>>;
 
-	template <size_t n>
-	constexpr static eTargetType arg_n = std::tuple_element_t<n, std::tuple<std::integral_constant<eTargetType, vals>...>>::value;
+	using pBindFunc = void(*)(tag<(eTargetType)0>, const IBindable<eTargetType>&);
+	using pIsBoundFunc = bool(*)(tag<(eTargetType)0>, const IBindable<eTargetType>&);
+	using pUnbindFunc = void(*)(tag<(eTargetType)0>, const IBindable<eTargetType>&);
 
-	template <size_t iter = 0>
-	static void bind_or_next(eTargetType target, const gltHandle<eTargetType>& handle)
+	inline static std::map<eTargetType, void(*)()> pBindFuncsMap_
 	{
-		if constexpr (iter != sizeof...(vals))
-		{
-			constexpr eTargetType cur_target = arg_n<iter>;
-			if (target == cur_target)
-				return Bind(tag<cur_target>(), handle);
-			return bind_or_next<iter + 1>(target, handle);
-		}
-
-		assert(false && "Invalid input! Unrecognized target");
-		throw("Invalid input! Unrecognized target");
-	}
-
-	template <size_t iter = 0>
-	static bool iscurrent_or_next(eTargetType target, const gltHandle<eTargetType>& handle)
+		std::pair(vals,
+		reinterpret_cast<void(*)()>(&gl_bound_handle_base<eTargetType, vals>::Bind)) ...
+	},
+		pUnbindFuncsMap_
 	{
-		if constexpr (iter != sizeof...(vals))
-		{
-			constexpr eTargetType cur_target = arg_n<iter>;
-			if (target == cur_target)
-				return IsCurrent(tag<cur_target>(), handle);
-			return iscurrent_or_next<iter + 1>(target, handle);
-		}
-
-		assert(false && "Invalid input! Unrecognized target");
-		throw("Invalid input! Unrecognized target");
-	}
-
-	template <size_t iter = 0>
-	static void unbind_or_next(eTargetType target)
+		std::pair(vals,
+		reinterpret_cast<void(*)()>(&gl_bound_handle_base<eTargetType, vals>::UnBind)) ...
+	},
+		pIsBoundFuncsMap_
 	{
-		if constexpr (iter != sizeof...(vals))
-		{
-			constexpr eTargetType cur_target = arg_n<iter>;
-			if (target == cur_target)
-				return UnBind(tag<cur_target>());
-			return unbind_or_next<iter + 1>(target);
-		}
-
-		assert(false && "Invalid input! Unrecognized target");
-		throw("Invalid input! Unrecognized target");
-	}
+		std::pair(vals,
+		reinterpret_cast<void(*)()>(&gl_bound_handle_base<eTargetType, vals>::IsBound)) ...
+	};
 
 public:
 	// TODO: add runtime versions 
-	static void BindRT(eTargetType target, const gltHandle<eTargetType>& handle)
+	static void BindRT(eTargetType target, const IBindable<eTargetType>& handle)
 	{
-		return bind_or_next(target, handle);
+		auto found = pBindFuncsMap_.find(target);
+
+		assert(found != pBindFuncsMap_.cend() &&
+			"Target is not registered!");
+
+		pBindFunc pBind = reinterpret_cast<pBindFunc>(found->second);
+		(pBind)(tag<(eTargetType)0>(), handle);
+
 	}
 
-	static bool IsCurrentRT(eTargetType target, const gltHandle<eTargetType>& handle)
+	static bool IsBoundRT(eTargetType target, const IBindable<eTargetType>& handle)
 	{
-		return iscurrent_or_next(target, handle);
+		auto found = pIsBoundFuncsMap_.find(target);
+
+		assert(found != pIsBoundFuncsMap_.cend() &&
+			"Target is not registered!");
+
+		pIsBoundFunc pIsBound = reinterpret_cast<pIsBoundFunc>(found->second);
+		return (pIsBound)(tag<(eTargetType)0>(), handle);
 	}
 
-	static void UnBindRT(eTargetType target)
+	static void UnBindRT(eTargetType target, const IBindable<eTargetType>& handle)
 	{
-		return unbind_or_next(target);
+		auto found = pUnbindFuncsMap_.find(target);
+
+		assert(found != pUnbindFuncsMap_.cend() &&
+			"Target is not registered!");
+
+		pUnbindFunc pUnBind = reinterpret_cast<pUnbindFunc>(found->second);
+		(pUnBind)(tag<(eTargetType)0>(), handle);
 	}
 
 };
 
-using gltActiveBufferTargets = gl_current_object<glBufferTargetList>;
+// forcing generation
+// template class gl_bound_handle<glBufferTargetList>; // will throw
+
+using gltActiveBufferTargets = gl_bound_handle<glBufferTargetList>;
+
+
+
+
 
 /*
 OpenGL:
@@ -476,26 +502,25 @@ struct modify_array<T, sz, std::index_sequence<indx...>>
 	}
 };
 
-
+////////////////////////////////////////////////////
 ////////////////////////////////////////////////////
 
+
 template <typename T, typename ... N>
-class gltBuffer
+class gltBuffer : public IBindable<gltBufferTarget>
 {
+	static_assert(!std::disjunction_v<is_compound_attr<N>...>, 
+		"Only first type may be compound!");
 
 	constexpr static size_t n_arrays_ = sizeof...(N) + 1;
 
-	gltHandle<glBufferTarget> handle_;
-	glBufferTarget last_bound_ = glBufferTarget::none;
+	gltHandle<gltBufferTarget> handle_;
+	gltBufferTarget last_bound_ = gltBufferTarget::none;
 	std::array<size_t, n_arrays_> inst_allocated_ =
 		init_array<size_t, n_arrays_>()(0);
 
-	void validate()
-	{
-		if constexpr (sizeof...(N))
-			static_assert(!std::disjunction_v<is_compound_attr<N>...>, "Only first type may be compound!");
-	}
 
+	// get total size of N elements of type C
 	template <typename C>
 	constexpr static size_t size_of_N(size_t Num)
 	{
@@ -503,13 +528,11 @@ class gltBuffer
 	}
 
 public:
-	gltBuffer(gltHandle<glBufferTarget>&& handle = gltAllocator<glBufferTarget>::Allocate())
+	gltBuffer(gltHandle<gltBufferTarget>&& handle = gltAllocator<gltBufferTarget>::Allocate())
 		: handle_(std::move(handle))
-	{
-		validate();
-	}
+	{}
 
-	template <glBufferTarget target>
+	template <gltBufferTarget target>
 	void Bind(tag<target> t)
 	{
 		last_bound_ = target;
@@ -517,43 +540,49 @@ public:
 	}
 
 	// RunTime wrapper
-	void Bind(glBufferTarget target)
+	void Bind(gltBufferTarget target)
 	{
 		last_bound_ = target;
 		return gltActiveBufferTargets::BindRT(target, *this);
 	}
 
-	template <glBufferTarget target>
-	bool IsCurrent(tag<target>) const
+	template <gltBufferTarget target>
+	bool IsBound(tag<target>) const
 	{
-		return gltActiveBufferTargets::IsCurrent(tag<target>(), *this);
+		return gltActiveBufferTargets::IsBound(tag<target>(), *this);
 	}
 
-	bool IsCurrent(glBufferTarget target) const
+	// RunTime wrapper
+	bool IsBound(gltBufferTarget target) const
 	{
-		return gltActiveBufferTargets::IsCurrentRT(target, *this);
+		return gltActiveBufferTargets::IsBoundRT(target, *this);
 	}
 
-	template <glBufferTarget target>
+	template <gltBufferTarget target>
 	void UnBind(tag<target> t)
 	{
-		last_bound_ = glBufferTarget::none;
+		last_bound_ = gltBufferTarget::none;
 		gltActiveBufferTargets::UnBind(t, *this);
 	}
 
 	// RunTime wrapper
-	void UnBind(glBufferTarget target)
+	void UnBind(gltBufferTarget target)
 	{
-		last_bound_ = glBufferTarget::none;
+		last_bound_ = gltBufferTarget::none;
 		return gltActiveBufferTargets::UnBindRT(target, *this);
 	}
 
-	operator const gltHandle<glBufferTarget>&() const
+	const gltHandle<gltBufferTarget>& GetHandle() const
 	{
 		return handle_;
 	}
 
-	glBufferTarget LastBound() const
+	operator const gltHandle<gltBufferTarget>&() const
+	{
+		return GetHandle();
+	}
+
+	gltBufferTarget LastBound() const
 	{
 		return last_bound_;
 	}
@@ -561,7 +590,7 @@ public:
 	// TODO: case with named attributes
 	void AllocateMemory(to_type<size_t, T> inst0, to_type<size_t, N> ... instN, glBufUse usage)
 	{
-		if (!(bool)last_bound_ || !IsCurrent(last_bound_))
+		if (!(bool)last_bound_ || !IsBound(last_bound_))
 		{
 			assert(false && "Allocating memory for non-active buffer!");
 			throw("Allocating memory for non-active buffer!");
@@ -579,5 +608,13 @@ public:
 			throw std::out_of_range("Buffer's array index is out of range!");
  		return inst_allocated_[indx];
 	}
+
+	~gltBuffer()
+	{
+		// check if is still bound
+		if ((bool)last_bound_ && IsBound(last_bound_))
+			UnBind(last_bound_);
+	}
 };
+
 
