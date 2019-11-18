@@ -32,6 +32,7 @@ target_include_directories(gl_sandbox
 
 set(VBO_USE_CASES 
 	"handles_tests"
+	"BufferMap_tests"
 	#"1.Batched_2_dif_VBO" 
 	#"2.Batched_2_one_VBO" 
 	#"3.Compound_one_VBO"

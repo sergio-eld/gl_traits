@@ -29,13 +29,7 @@ int CheckHandles()
 #include <chrono>
 #include <map>
 
-template <int ... keys>
-struct test
-{
-	inline static std::map<int, char> map_{ std::pair(keys, 'a' + keys) ... };
-};
 
-template struct test<4, 5, 8, 12, 16>;
 
 int main()
 {

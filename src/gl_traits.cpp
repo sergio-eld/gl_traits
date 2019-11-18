@@ -1,5 +1,7 @@
 #include "gl_traits.hpp"
 
+template class gltMapStatus_<glBufferTargetList>;
+
 // 
 
 //const gltHandle<glVertexArrayTarget::vao> *glt_buffers::currentVAO_ = nullptr;

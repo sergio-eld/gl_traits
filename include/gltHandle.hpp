@@ -199,6 +199,22 @@ template <auto>
 struct tag
 {};
 
+/*
+Depending on OpenGL spec version and extensions, Named methods for GL objects
+may be accessible. Default versions of such functions (glMapBuffer, glBufferData, etc.)
+require these objects to be bound to a particular target.
+Need to implement compile-time (or maybe run-time) algorithm selection to choose between those
+functions.
+Default pipeline involves:
+1. Check that target is free
+2. Bind
+3. Do stuff
+4. Unbind
+
+Need one class template to check Bindable GL objects.
+- Use guards?
+
+*/
 
 // TODO: replace with map?
 template <typename eTargetType, eTargetType target>
@@ -216,7 +232,7 @@ public:
     constexpr static auto ppBindFunc = pp_gl_binder_v<eTargetType>;
     constexpr static auto binding = get_binding_v<target>;
 
-    inline static void Bind(tag<target>, const IBindable<eTargetType>& obj)
+    static void Bind(tag<target>, const IBindable<eTargetType>& obj)
     {
 		const gltHandle<eTargetType>& handle = obj.GetHandle();
         assert(*ppBindFunc && "OpenGL Bind function has not been initialized!");
@@ -505,6 +521,220 @@ struct modify_array<T, sz, std::index_sequence<indx...>>
 ////////////////////////////////////////////////////
 ////////////////////////////////////////////////////
 
+template <class>
+class gltMapStatus_;
+
+// this can be acquired via OpenGL function
+template <gltBufferTarget ... targets>
+class gltMapStatus_<std::integer_sequence<gltBufferTarget, targets...>>
+{
+	inline static std::map<gltBufferTarget, gltBufferMapStatus>
+		mapStatus_{ std::pair(targets, (gltBufferMapStatus)0) ... };
+
+public:
+
+	static gltBufferMapStatus MappedStatus(gltBufferTarget target)
+	{
+		auto found = mapStatus_.find(target);
+		assert(found != mapStatus_.cend() && "Target is not registered!");
+		// or use glGet ?
+
+		return found->second;
+	}
+
+	static bool IsMapped(gltBufferTarget target)
+	{
+		return (bool)MappedStatus(target);
+	}
+
+	static void SetMapStatus(gltBufferTarget target, gltBufferMapStatus type)
+	{
+		auto found = mapStatus_.find(target);
+		assert(found != mapStatus_.cend() && "Target is not registered!");
+		found->second = type;
+	}
+};
+
+using gltMapStatus = gltMapStatus_<glBufferTargetList>;
+
+// TODO: unite with gltBuffer and replace with gltMapGuard?
+// or use the same collection of template attribute params:
+// 
+template <typename T, gltBufferMapStatus S = gltBufferMapStatus::read_write>
+class gltBufferMap
+{
+	//const IBindable<gltBufferTarget> *handle_;
+	gltBufferTarget target_;
+	T *start_,
+		*end_;
+	bool unmapped_ = false;
+
+public:
+	gltBufferMap(T* start,
+		T* end,
+		gltBufferTarget target)
+		: start_(start),
+		end_(end),
+		target_(target)
+	{
+		// maybe this checks should do gltBuffer class? 
+		// gltBuffer also has to check for mapping when allocating memory or buffering data!
+		//if (!gl_bound_handle<glBufferTargetList>::IsBoundRT(target_, handle_))
+			//throw("Attempting to Map a buffer which has not been bound!");
+
+		assert(end_ > start_ && "Invalid range!");
+	}
+
+	gltBufferMap(const gltBufferMap<T, S>&) = delete;
+	gltBufferMap& operator=(const gltBufferMap<T, S>&) = delete;
+
+	template <gltBufferMapStatus S2>
+	gltBufferMap(gltBufferMap<T, S2>&& other)
+		: target_(other.target_),
+		start_(other.start_),
+		end_(other.end_)
+	{
+		other.start_ = nullptr;
+		other.end_ = nullptr;
+		other.unmapped_ = true;
+	}
+
+	gltBufferMap& operator=(gltBufferMap<T, S>&& other)
+	{
+		// two Maps may have different targets, current one must be unmapped
+		if (!unmapped_)
+		{
+			assert(other.unmapped_ || target_ == other.target_ &&
+				"Invalid scenario! Both maps are mapped to the same target!");
+			UnMap();
+		}
+
+		target_ = other.target_;
+		start_ = other.start_;
+		end_ = other.end_;
+
+		other.start_ = nullptr;
+		other.end_ = nullptr;
+		other.unmapped_ = true;
+
+		return *this;
+	}
+
+	size_t Size() const
+	{
+		return std::distance(start_, end);
+	}
+
+	class Iterator
+	{
+		T *ptr_;
+
+	public:
+		Iterator(T *const ptr)
+			: ptr_(ptr)
+		{}
+
+		bool operator!=(const Iterator& other) const
+		{
+			return ptr_ != other.ptr_;
+		}
+
+		Iterator& operator++()
+		{
+			++ptr_;
+			return *this;
+		}
+
+		Iterator operator++(int)
+		{
+			Iterator tmp{ *this };
+			operator++();
+			return tmp;
+		}
+
+		T& operator*()
+		{
+			return *ptr_;
+		}
+		T operator*() const
+		{
+			return *ptr_;
+		}
+	};
+
+	class ConstIterator
+	{
+		T *ptr_;
+
+	public:
+		ConstIterator(T *const ptr)
+			: ptr_(ptr)
+		{}
+
+		bool operator!=(const ConstIterator& other) const
+		{
+			return ptr_ != other.ptr_;
+		}
+		ConstIterator& operator++()
+		{
+			++ptr_;
+			return *this;
+		}
+
+		ConstIterator operator++(int)
+		{
+			ConstIterator tmp{ *this };
+			operator++();
+			return tmp;
+		}
+
+		const T& operator*()
+		{
+			return *ptr_;
+		}
+		T operator*() const
+		{
+			return *ptr_;
+		}
+
+	};
+
+
+
+	Iterator begin()
+	{
+		return Iterator(start_);
+	}
+
+	ConstIterator begin() const
+	{
+		return Iterator(start_);
+	}
+
+	Iterator end()
+	{
+		return Iterator(end_);
+	}
+	ConstIterator end() const
+	{
+		return ConstIterator(end_);
+	}
+
+	void UnMap()
+	{
+		glUnmapBuffer((GLenum)target_);
+		gltMapStatus::SetMapStatus(target_, (gltBufferMapStatus)0);
+		unmapped_ = true;
+		start_ = nullptr;
+		end_ = nullptr;
+	}
+
+	~gltBufferMap()
+	{
+		if (!unmapped_)
+			UnMap();
+	}
+};
 
 template <typename T, typename ... N>
 class gltBuffer : public IBindable<gltBufferTarget>
@@ -519,13 +749,30 @@ class gltBuffer : public IBindable<gltBufferTarget>
 	std::array<size_t, n_arrays_> inst_allocated_ =
 		init_array<size_t, n_arrays_>()(0);
 
+	gltBufferMapStatus mapped_ = gltBufferMapStatus(0);
 
+
+	// helper methods
 	// get total size of N elements of type C
 	template <typename C>
 	constexpr static size_t size_of_N(size_t Num)
 	{
 		return sizeof(C) * Num;
 	}
+
+	template <size_t n>
+	constexpr static auto* NthType_()
+	{
+		using rawT = std::tuple_element_t<n, std::tuple<T, N...>>;
+
+		// check here for specialized types (for instance, compound and named)
+
+		return (rawT*)nullptr;
+	}
+
+	template <size_t N>
+	using NthType_t = std::remove_pointer_t<decltype(NthType_<N>())>;
+
 
 public:
 	gltBuffer(gltHandle<gltBufferTarget>&& handle = gltAllocator<gltBufferTarget>::Allocate())
@@ -590,13 +837,12 @@ public:
 	// TODO: case with named attributes
 	void AllocateMemory(to_type<size_t, T> inst0, to_type<size_t, N> ... instN, glBufUse usage)
 	{
-		if (!(bool)last_bound_ || !IsBound(last_bound_))
-		{
-			assert(false && "Allocating memory for non-active buffer!");
-			throw("Allocating memory for non-active buffer!");
-		}
+		ValidateBind();
 
-		size_t total_sz = size_of_N<T>(inst0) + (size_of_N<N>(instN) + ...);// sizeof(N) * instN + ...);
+		size_t total_sz = sizeof(T) * inst0; //size_of_N<T>(inst0);
+		if constexpr (sizeof...(N))
+			total_sz += ((sizeof(N) * instN) + ...); //(size_of_N<N>(instN) + ...);
+
 		glBufferData((GLenum)last_bound_, total_sz, nullptr, (GLenum)usage);
 		// TODO: check for OpenGL errors
 		modify_array<size_t, n_arrays_>::modify(inst_allocated_, inst0, instN...);
@@ -609,11 +855,63 @@ public:
  		return inst_allocated_[indx];
 	}
 
+	// default case for Buffer with one template argument
+	template <size_t indx = 0, typename T = typename NthType_t<indx>>
+	void BufferData(T* data, size_t size, size_t offset = 0)
+	{
+		size_t total = size + offset;
+		if (total > inst_allocated_[indx])
+			throw std::range_error("Allocated range exceeded");
+
+
+		// TODO: choose Named or default
+		ValidateBind();
+		using DataType = T;
+		GLintptr offset_bytes = sizeof(DataType) * offset,
+			size_bytes = sizeof(DataType) * size;
+		glBufferSubData((GLenum)last_bound_, offset_bytes, size_bytes, data);
+
+	}
+
 	~gltBuffer()
 	{
 		// check if is still bound
 		if ((bool)last_bound_ && IsBound(last_bound_))
 			UnBind(last_bound_);
+	}
+
+	// TODO: change read_write to Access
+	// N = 0 is default for a Buffer specialization with 1 attribute 
+	template <size_t N = 0, gltBufferMapStatus S = gltBufferMapStatus::read_write,
+		typename T = typename NthType_t<N>>
+	gltBufferMap<T, S> MapBuffer()
+	{
+		// TODO: choose Named or default function
+		ValidateBind();
+
+		if (gltMapStatus::IsMapped(last_bound_))
+			throw("Target is already mapped!");
+
+		// TODO: change to glMapBufferRange?
+		T* start = (T*)glMapBuffer((GLenum)last_bound_, (GLenum)S);
+		if (!start)
+			throw("glMapBuffer returned nullptr!");
+
+		T* end = std::next(start, inst_allocated_[N]);
+
+		gltMapStatus::SetMapStatus(last_bound_, S);
+
+		return gltBufferMap<T, S>(start, end, last_bound_);
+	}
+
+private:
+	void ValidateBind() const
+	{
+		if (!(bool)last_bound_ || !IsBound(last_bound_))
+		{
+			assert(false && "Allocating memory for non-active buffer!");
+			throw("Allocating memory for non-active buffer!");
+		}
 	}
 };
 

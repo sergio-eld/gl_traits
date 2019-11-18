@@ -50,6 +50,9 @@ GLuint glCreateShader       (GLenum)                void glDeleteShader         
 
 */
 
+template <typename eTargetType>
+class gltHandle;
+
 template <auto A>
 using glt_constant = std::integral_constant<decltype(A), A>;
 
@@ -217,6 +220,15 @@ template <> struct get_binding<gltBufferTarget::uniform_buffer> :            glt
 template <auto A>
 constexpr inline auto get_binding_v = get_binding<A>::value;
 
+template <class T, typename = std::void_t<>>
+struct has_GetHandle : std::false_type {};
+
+template <template <typename>  class T, typename TargetType>
+struct has_GetHandle<T<TargetType>, 
+	std::void_t<decltype(	// get type from function pointer
+		(const gltHandle<TargetType>&(T<TargetType>::*)() const)	// cast function pointer to type
+		&T<TargetType>::GetHandle)>> : std::true_type {};	// function pointer
+
 enum class glBufUse : int
 {
     stream_draw = GL_STREAM_DRAW,
@@ -312,7 +324,7 @@ enum class glCapability : int
     program_point_size = GL_PROGRAM_POINT_SIZE
 };
 
-enum class gltMapBufferType : int
+enum class gltBufferMapStatus : int
 {
 	read_only = GL_READ_ONLY,
 	write_only = GL_WRITE_ONLY,

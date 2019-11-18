@@ -1,5 +1,20 @@
 #pragma once
 
+/*
+This library is intended to provide typesafety for OpenGL functions and enumerators.
+Typesafe enum classes and function wrappers allow to eliminate at compile-time the 
+following errors:
+- 
+- 
+
+Additional wrapper classes enforce a workflow that makes easier to avoid or detect
+the following run-time errors:
+-
+-
+
+
+*/
+
 #ifndef _gl_traits_
 #define _gl_traits_
 #endif // !_gl_traits_
