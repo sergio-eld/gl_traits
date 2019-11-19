@@ -22,14 +22,14 @@ int main()
 	auto texCoords = glm_cube_texCoords();
 
 	glVBO<glm::vec3, glm::vec2> vbo{
-		glt_buffers::GenBuffer<gltBufferTarget::array_buffer>() };
+		glt_buffers::GenBuffer<BufferTarget::array_buffer>() };
 
 	vbo.Bind();
 	vbo.AllocateMemory(positions.size(), texCoords.size(), glBufUse::static_draw);
 	vbo.BufferData<0>(positions);
 	vbo.BufferData<1>(texCoords);
 
-	gltHandle<glVertexArrayTarget::vao> vao{ glt_buffers::GenVAO() };
+	Handle<glVertexArrayTarget::vao> vao{ glt_buffers::GenVAO() };
 	glt_buffers::BindVAO(vao);
 	glt_buffers::VertexAttribPointer(glm::vec3(), vao, 0, 0);
 	glt_buffers::EnableVertexAttribArray(vao, 0);

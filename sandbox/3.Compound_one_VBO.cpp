@@ -18,7 +18,7 @@ int main()
 	Shader ourShader{ (path.generic_string() + "vshader.vs").c_str(),
 		(path.generic_string() + "fshader.fs").c_str() };
 
-	gltHandle<glVertexArrayTarget::vao> vao{ glt_buffers::GenVAO() };
+	Handle<glVertexArrayTarget::vao> vao{ glt_buffers::GenVAO() };
 	glt_buffers::BindVAO(vao);
 
 	auto vertexes = cube_vertexes();
@@ -26,7 +26,7 @@ int main()
 	using vertex_attr = comp_attr<glm::vec3, glm::vec2>;
 
 	glVBOCompound<glm::vec3, glm::vec2> vboVertexes{
-		glt_buffers::GenBuffer<gltBufferTarget::array_buffer>() };
+		glt_buffers::GenBuffer<BufferTarget::array_buffer>() };
 
 	//glVBOCompound<glm::vec3, glm::vec2>::has_named_attribs;
 

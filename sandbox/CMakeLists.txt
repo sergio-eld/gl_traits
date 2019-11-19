@@ -30,7 +30,8 @@ target_include_directories(gl_sandbox
 	
 # VBO cases
 
-set(VBO_USE_CASES 
+set(VBO_USE_CASES
+	"equivalence"
 	"handles_tests"
 	"BufferMap_tests"
 	#"1.Batched_2_dif_VBO" 

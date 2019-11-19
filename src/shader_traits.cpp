@@ -37,17 +37,17 @@ std::string shader_traits::ShaderInfoLogPrivate(GLuint shader)
 	return std::string(std::begin(buffer), std::end(buffer));
 }
 
-gltHandle<glProgramTarget::program> shader_traits::GenProgram()
+Handle<glProgramTarget::program> shader_traits::GenProgram()
 {
 	return glCreateProgram();
 }
 
-void shader_traits::LinkProgram(const gltHandle<glProgramTarget::program>& prog)
+void shader_traits::LinkProgram(const Handle<glProgramTarget::program>& prog)
 {
 	glLinkProgram(prog);
 }
 
-bool shader_traits::LinkStatus(const gltHandle<glProgramTarget::program>& prog)
+bool shader_traits::LinkStatus(const Handle<glProgramTarget::program>& prog)
 {
 	int success = 0;
 	glGetProgramiv(prog, GL_LINK_STATUS, &success);

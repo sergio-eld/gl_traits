@@ -77,7 +77,7 @@ public:
 
 
 	template <glTextureTarget target>
-	static void BindTexture(const gltHandle<target>& hTexture, size_t texUnit = ActiveTexUnit())
+	static void BindTexture(const Handle<target>& hTexture, size_t texUnit = ActiveTexUnit())
 	{
 		if (texUnit != ActiveTexUnit())
 			ActiveTextue(texUnit);
@@ -93,12 +93,12 @@ public:
 	//ISSUE
 	//TODO: check implementation!
 	template <glTextureTarget target>
-	static bool IsCurrentTexture(const gltHandle<target>& hTexture)
+	static bool IsCurrentTexture(const Handle<target>& hTexture)
 	{
 		assert(hTexture.IsValid() && "hTexture is nullptr!");
 		std::pair<glTextureTarget, const void*> curUnit = CurrentTexUnit();
 
-		if (*(const gltHandle<target>*)curUnit.second != hTexture)
+		if (*(const Handle<target>*)curUnit.second != hTexture)
 			return false;
 
 		assert(curUnit.first == target &&
@@ -263,14 +263,14 @@ public:
 	class glTexParam_base_target_virtual
 	{
 	protected:
-		const gltHandle<target>* rhandle_ = nullptr;
+		const Handle<target>* rhandle_ = nullptr;
 
 	public:
 		glTexParam_base_target_virtual()
 		{
 			assert(false && "Default constructor called!");
 		}
-		glTexParam_base_target_virtual(const gltHandle<target> * handle)
+		glTexParam_base_target_virtual(const Handle<target> * handle)
 			: rhandle_(handle)
 		{}
 
@@ -350,23 +350,23 @@ class texture_traits
 public:
 
 	template <glTextureTarget target>
-	static gltHandle<target> GenTexture()
+	static Handle<target> GenTexture()
 	{
 		GLuint handle = 0;
 		glGenTextures(1, &handle);
 		assert(handle && "Failed to generate texture!");
-		return gltHandle<target>(handle);
+		return Handle<target>(handle);
 	}
 
 	template <glTextureTarget target, size_t ... indx>
-	static std::array<gltHandle<target>, sizeof...(indx)> GenTextures(std::index_sequence<indx...>&&)
+	static std::array<Handle<target>, sizeof...(indx)> GenTextures(std::index_sequence<indx...>&&)
 	{
 		constexpr size_t sz = sizeof...(indx);
 		GLuint handle[sz];
 		glGenTextures(sz, handle);
 		assert((handle[indx] && ...) && "Failed to generate texture");
 
-		return std::array<gltHandle<target>, sz>{handle[indx] ...};
+		return std::array<Handle<target>, sz>{handle[indx] ...};
 	}
 
 
@@ -374,7 +374,7 @@ public:
 
 	//temporary
 	template <glTextureTarget texStorage, glTextureTarget target>
-	static void TexImage2D(const gltHandle<target>& handle, size_t detailLevel,
+	static void TexImage2D(const Handle<target>& handle, size_t detailLevel,
 		GLint internalFormat,
 		size_t width,
 		size_t height,
@@ -412,7 +412,7 @@ class gltTexture : virtual public gltTexParam_traits::glTexParam_base_target_vir
 	static_assert(gltTexParam_traits::target_validate<target, texStorage>::value,
 		"Invalid texture storage!");
 
-	gltHandle<target> handle_ = texture_traits::GenTexture<target>();
+	Handle<target> handle_ = texture_traits::GenTexture<target>();
 
 	mutable size_t texUnit_ = std::numeric_limits<size_t>::max();
 public:
@@ -431,17 +431,17 @@ public:
 	template <class other>
 	gltTexture(other&&) = delete;
 
-	gltTexture(gltHandle<target>&& handle)
+	gltTexture(Handle<target>&& handle)
 		: tex_base(&handle_),
 		handle_(std::move(handle))
 	{}
 
-	const gltHandle<target>& GetHandle() const
+	const Handle<target>& GetHandle() const
 	{
 		return handle_;
 	}
 
-	operator const gltHandle<target>&() const
+	operator const Handle<target>&() const
 	{
 		return handle_;
 	}
@@ -464,7 +464,7 @@ public:
 	void UnBind()
 	{
 		assert(IsBound() && "Unbind texture wich is not currently active!");
-		texture_traits::BindTexture(gltHandle<target>(0), texUnit_);
+		texture_traits::BindTexture(Handle<target>(0), texUnit_);
 	}
 
 	void GenerateMipMap()

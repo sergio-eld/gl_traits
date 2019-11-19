@@ -151,37 +151,37 @@ class GLT_API shader_traits
 
 public:
 
-	static gltHandle<glProgramTarget::program> GenProgram();
-	static void LinkProgram(const gltHandle<glProgramTarget::program>& prog);
-	static bool LinkStatus(const gltHandle<glProgramTarget::program>& prog);
+	static Handle<glProgramTarget::program> GenProgram();
+	static void LinkProgram(const Handle<glProgramTarget::program>& prog);
+	static bool LinkStatus(const Handle<glProgramTarget::program>& prog);
 
 	template <glShaderTarget target>
-	static gltHandle<target> GenShader()
+	static Handle<target> GenShader()
 	{
 		return GenShaderPrivate(target);
 	}
 
 	template <glShaderTarget target>
-	static bool CompileStatus(const gltHandle<target>& handle)
+	static bool CompileStatus(const Handle<target>& handle)
 	{
 		return CompileStatusPrivate(handle);
 	}
 
 	template <glShaderTarget target>
-	static std::string ShaderInfoLog(const gltHandle<target>& handle)
+	static std::string ShaderInfoLog(const Handle<target>& handle)
 	{
 		return ShaderInfoLogPrivate(handle);
 	}
 
 
 	template <glShaderTarget target>
-	static bool CompileShader(const gltHandle<target>& handle, const std::string& source)
+	static bool CompileShader(const Handle<target>& handle, const std::string& source)
 	{
 		return CompileShaderPrivate(handle, source);
 	}
 
 	template <glShaderTarget target>
-	static void AttachShader(const gltHandle<glProgramTarget::program>& prog, const gltHandle<target>& handleShader)
+	static void AttachShader(const Handle<glProgramTarget::program>& prog, const Handle<target>& handleShader)
 	{
 		AttachShaderPrivate(prog, handleShader);
 	}
@@ -192,7 +192,7 @@ public:
 template <glShaderTarget target>
 class gltShader
 {
-	gltHandle<target> handle_ = shader_traits::GenShader<target>();
+	Handle<target> handle_ = shader_traits::GenShader<target>();
 
 	bool compiled_ = false;
 
@@ -231,12 +231,12 @@ public:
 		return compiled_;
 	}
 
-	const gltHandle<target>& Handle() const
+	const Handle<target>& Handle() const
 	{
 		return handle_;
 	}
 
-	constexpr operator const gltHandle<target>&() const
+	constexpr operator const Handle<target>&() const
 	{
 		return handle_;
 	}
@@ -251,7 +251,7 @@ template <class ... unifDescrs>
 class gltShaderProgram<gltUniformCollection<std::tuple<unifDescrs...>>>
 {
 	using glUniforms = gltUniformCollection<std::tuple<unifDescrs...>>;
-	gltHandle<glProgramTarget::program> handle_;
+	Handle<glProgramTarget::program> handle_;
 	glUniforms uniforms_;
 
 	//TODO: remove in release?
@@ -266,7 +266,7 @@ public:
 	{}
 
 	template <glShaderTarget ... shaders>
-	gltShaderProgram(gltHandle<glProgramTarget::program>&& handle,
+	gltShaderProgram(Handle<glProgramTarget::program>&& handle,
 		const gltShader<glShaderTarget::gl_vertex_shader>& vShader,
 		const gltShader<glShaderTarget::gl_fragment_shader>& fShader, 
 		const gltShader<shaders>& ... otherShaders)
@@ -278,7 +278,7 @@ public:
 		Link();
 	}
 
-	void ResetHandle(gltHandle<glProgramTarget::program>&& handle)
+	void ResetHandle(Handle<glProgramTarget::program>&& handle)
 	{
 		handle_ = std::move(handle);
 	}

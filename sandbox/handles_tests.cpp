@@ -6,11 +6,13 @@
 - handle bindings
 */
 
+using namespace glt;
+
 template <typename T>
 int CheckHandle()
 {
-    gltHandle<T> h1 = gltAllocator<T>::Allocate();
-    gltHandle<T> h2 = gltAllocator<T>::Allocate();
+    Handle<T> h1 = Allocator<T>::Allocate();
+    Handle<T> h2 = Allocator<T>::Allocate();
 
     if (handle_accessor<T>()(h1) != 1 ||
         handle_accessor<T>()(h2) != 2)
@@ -38,8 +40,8 @@ int main()
 	modify_array<int, 4>::modify(arr, 2, 3, 2, 1);
 
 	is_compound_attr_v<glm::vec4>;
-	is_compound_attr_v<comp_attr<glm::vec4>>;
-	is_compound_attr_v<comp_attr<glm::vec4, glm::vec2>>;
+	is_compound_attr_v<compound<glm::vec4>>;
+	is_compound_attr_v<compound<glm::vec4, glm::vec2>>;
 
     SmartGLFW sglfw{4, 4};
     SmartGLFWwindow window{ SCR_WIDTH, SCR_HEIGHT, "testing buffers" };
@@ -48,7 +50,7 @@ int main()
 
     sglfw.LoadOpenGL();
 
-    int res = CheckHandles<gltBufferTarget,
+    int res = CheckHandles<BufferTarget,
         glFrameBufferTarget,
         glTextureTarget,
         glVertexArrayTarget,
@@ -64,21 +66,21 @@ int main()
     // TODO: add glShaderTarget test;
 
 
-    //gl_bound_handle_base<gltBufferTarget, gltBufferTarget::array_buffer>::Bind(tag<gltBufferTarget::array_buffer>(), hBuf);
-    gl_bound_handle_base<gltBufferTarget, gltBufferTarget::array_buffer>::binding;
+    //bound_handle_base<BufferTarget, BufferTarget::array_buffer>::Bind(tag<BufferTarget::array_buffer>(), hBuf);
+    bound_handle_base<BufferTarget, BufferTarget::array_buffer>::binding;
 
-    has_gl_binding_v<gltBufferTarget::array_buffer>;
-    get_binding_v<gltBufferTarget::array_buffer>;
-
-
-	gltHandle<gltBufferTarget> hBuf = gltAllocator<gltBufferTarget>::Allocate();
+    has_gl_binding_v<BufferTarget::array_buffer>;
+    get_binding_v<BufferTarget::array_buffer>;
 
 
-	//gl_bound_handle<glBufferTargetList>::Bind(tag<gltBufferTarget::array_buffer>(), hBuf);
+	Handle<BufferTarget> hBuf = Allocator<BufferTarget>::Allocate();
 
-	gltBuffer<glm::vec3, glm::vec2> buf{};
-	//buf.Bind(tag<gltBufferTarget::array_buffer>());
-	buf.Bind(gltBufferTarget::array_buffer);
+
+	//bound_handle<BufferTargetList>::Bind(tag<BufferTarget::array_buffer>(), hBuf);
+
+	Buffer<glm::vec3, glm::vec2> buf{};
+	//buf.Bind(tag<BufferTarget::array_buffer>());
+	buf.Bind(BufferTarget::array_buffer);
 	buf.AllocateMemory(16, 16, glBufUse::static_draw);
 
 	try
@@ -89,8 +91,8 @@ int main()
 	{
 		std::cerr << e.what() << std::endl;
 	}
-	bool isCurrent = buf.IsBound(gltBufferTarget::array_buffer);
-		//gl_bound_handle<glBufferTargetList>::IsBound(tag<gltBufferTarget::array_buffer>(), buf);
+	bool isCurrent = buf.IsBound(BufferTarget::array_buffer);
+		//bound_handle<BufferTargetList>::IsBound(tag<BufferTarget::array_buffer>(), buf);
 
     return res;
 }

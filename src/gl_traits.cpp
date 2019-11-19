@@ -1,10 +1,12 @@
 #include "gl_traits.hpp"
 
-template class gltMapStatus_<glBufferTargetList>;
+using namespace glt;
+
+template class MapStatus_<BufferTargetList>;
 
 // 
 
-//const gltHandle<glVertexArrayTarget::vao> *glt_buffers::currentVAO_ = nullptr;
+//const Handle<glVertexArrayTarget::vao> *glt_buffers::currentVAO_ = nullptr;
 
 /*
 
