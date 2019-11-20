@@ -98,12 +98,9 @@ namespace glt
 	protected:
 
 		Handle() = default;
-		Handle(GLuint handle)
+		Handle(GLuint handle) noexcept
 			: handle_(handle)
-		{
-			//ownership?
-			//handle = 0;
-		}
+		{}
 
 		constexpr operator GLuint() const
 		{
@@ -113,6 +110,7 @@ namespace glt
 	};
 
 	using HandleBuffer = Handle<BufferTarget>;
+	using HandleVAO = Handle<VAOTarget>;
 
 	// TODO: add responsibility to delete handle?
 	// TODO: unbind handle when deleting?
@@ -126,10 +124,11 @@ namespace glt
 		static Handle<eTargetType> Allocate()
 		{
 			// TODO: also check for deleter function pointers to be loaded
-			assert(*ppAllocFunc && "Pointers to OpenGL allocator functions have not been initialiized!");
-			if (!*ppAllocFunc)
-				throw("Pointers to OpenGL allocator functions have not been initialiized!");
-
+			// TODO: throw exception inside the function to which ppAllocFunc points by default
+			/*if (!*ppAllocFunc)
+				throw std::exception("Pointers to OpenGL allocator "
+					"functions have not been initialiized!");
+					*/
 			GLuint h = 0;
 			if constexpr (std::is_same_v<void(APIENTRYP *)(GLsizei, GLuint*), pp_gl_allocator<eTargetType>::value_type>)
 			{
@@ -142,11 +141,12 @@ namespace glt
 			else
 				static_assert(false, "Unhandled case!");
 
+			/* TODO: check handle at Buffers' (or other objects') constructors
 			if (!h)
 			{
 				assert(false && "Failed to allocate handle!");
 				throw("Failed to allocate handle");
-			}
+			}*/
 			return Handle<eTargetType>(h);
 
 		}
@@ -199,6 +199,10 @@ namespace glt
 
 	template <auto>
 	struct tag
+	{};
+
+	template <typename>
+	struct tag_t
 	{};
 
 	/*
@@ -430,38 +434,7 @@ namespace glt
 	*/
 
 
-	// attribute traits
-	template <class T, const char * glslName>
-	struct glslt
-	{
-		using type = typename T;
-		constexpr static const char * name = glslName;
-	};
-
-	template <class ... vAttribs>
-	using compound = std::tuple<vAttribs...>;
-
-	template <class T>
-	struct is_named_attr : std::bool_constant<false> {};
-
-	template <class T, const char * glslName>
-	struct is_named_attr<glslt<T, glslName>> : std::bool_constant<true> {};
-
-	template <class T>
-	constexpr inline bool is_named_attr_v = is_named_attr<T>();
-
-	template <class T>
-	struct is_compound_attr : std::bool_constant<false> {};
-
-	template <class ... T>
-	struct is_compound_attr<compound<T...>> : std::bool_constant<(sizeof...(T) > 1)> {};
-
-	// matrices are compound
-	template<glm::length_t C, glm::length_t R, typename T, glm::qualifier Q>
-	struct is_compound_attr<glm::mat<C, R, T, Q>> : std::bool_constant<true> {};
-
-	template <class T>
-	constexpr inline bool is_compound_attr_v = is_compound_attr<T>();
+	
 
 	////////////////////////////////////////////////////
 	// helpers. Move to another Module?
@@ -628,12 +601,12 @@ namespace glt
 	template <BufferTarget ... targets>
 	class MapStatus_<std::integer_sequence<BufferTarget, targets...>>
 	{
-		inline static std::map<BufferTarget, BufferMapStatus>
-			mapStatus_{ std::pair(targets, (BufferMapStatus)0) ... };
+		inline static std::map<BufferTarget, MapAccess>
+			mapStatus_{ std::pair(targets, (MapAccess)0) ... };
 
 	public:
 
-		static BufferMapStatus MappedStatus(BufferTarget target)
+		static MapAccess MappedStatus(BufferTarget target)
 		{
 			auto found = mapStatus_.find(target);
 			assert(found != mapStatus_.cend() && "Target is not registered!");
@@ -647,7 +620,7 @@ namespace glt
 			return (bool)MappedStatus(target);
 		}
 
-		static void SetMapStatus(BufferTarget target, BufferMapStatus type)
+		static void SetMapStatus(BufferTarget target, MapAccess type)
 		{
 			auto found = mapStatus_.find(target);
 			assert(found != mapStatus_.cend() && "Target is not registered!");
@@ -660,7 +633,7 @@ namespace glt
 	// TODO: unite with Buffer and replace with gltMapGuard?
 	// or use the same collection of template attribute params:
 	// 
-	template <typename T, BufferMapStatus S = BufferMapStatus::read_write>
+	template <typename T, MapAccess S = MapAccess::read_write>
 	class BufferMap
 	{
 		//const IBindable<BufferTarget> *handle_;
@@ -688,11 +661,12 @@ namespace glt
 		BufferMap(const BufferMap<T, S>&) = delete;
 		BufferMap& operator=(const BufferMap<T, S>&) = delete;
 
-		template <BufferMapStatus S2>
-		BufferMap(BufferMap<T, S2>&& other)
+		//template <MapAccess S2>
+		BufferMap(BufferMap<T, S>&& other)
 			: target_(other.target_),
 			start_(other.start_),
-			end_(other.end_)
+			end_(other.end_),
+			unmapped_(other.unmapped_)
 		{
 			other.start_ = nullptr;
 			other.end_ = nullptr;
@@ -712,6 +686,7 @@ namespace glt
 			target_ = other.target_;
 			start_ = other.start_;
 			end_ = other.end_;
+			unmapped_ = other.unmapped_;
 
 			other.start_ = nullptr;
 			other.end_ = nullptr;
@@ -823,7 +798,7 @@ namespace glt
 		void UnMap()
 		{
 			glUnmapBuffer((GLenum)target_);
-			MapStatus::SetMapStatus(target_, (BufferMapStatus)0);
+			MapStatus::SetMapStatus(target_, (MapAccess)0);
 			unmapped_ = true;
 			start_ = nullptr;
 			end_ = nullptr;
@@ -836,24 +811,29 @@ namespace glt
 		}
 	};
 
-	template <typename T, typename ... N>
+
+
+
+
+	// TODO: add function to return the offset for nth type
+	template <typename First, typename ... Rest>
 	class Buffer : public IBindable<BufferTarget>
 	{
-		static_assert(!std::disjunction_v<is_compound_attr<N>...>,
+		static_assert(!std::disjunction_v<is_compound_attr<Rest>...>,
 			"Only first type may be compound!");
 
-		constexpr static size_t n_arrays_ = sizeof...(N) + 1;
+		constexpr static size_t n_arrays_ = sizeof...(Rest) + 1;
 
 		Handle<BufferTarget> handle_;
 		BufferTarget last_bound_ = BufferTarget::none;
 		std::array<size_t, n_arrays_> inst_allocated_ =
 			init_array<size_t, n_arrays_>()(0);
 
-		BufferMapStatus mapped_ = BufferMapStatus(0);
+		MapAccess mapped_ = MapAccess(0);
 
 
 		// helper methods
-		// get total size of N elements of type C
+		// get total size of Rest elements of type C
 		template <typename C>
 		constexpr static size_t size_of_N(size_t Num)
 		{
@@ -863,7 +843,7 @@ namespace glt
 		template <size_t n>
 		constexpr static auto* NthType_()
 		{
-			using rawT = std::tuple_element_t<n, std::tuple<T, N...>>;
+			using rawT = std::tuple_element_t<n, std::tuple<First, Rest...>>;
 
 			// check here for specialized types (for instance, compound and named)
 
@@ -874,12 +854,19 @@ namespace glt
 
 
 	public:
-		template <size_t N>
-		using NthType_t = std::remove_pointer_t<decltype(NthType_<N>())>;
+
+		/*
+		template <size_t Rest>
+		using NthType_t = typename std::remove_pointer_t<decltype(NthType_<Rest>())>;
+		*/
+
 
 		Buffer(Handle<BufferTarget>&& handle = Allocator<BufferTarget>::Allocate())
 			: handle_(std::move(handle))
-		{}
+		{
+			if (!handle_)
+				throw std::exception("glt::Buffer::Invalid handle");
+		}
 
 		template <BufferTarget target>
 		void Bind(tag<target> t)
@@ -937,13 +924,13 @@ namespace glt
 		}
 
 		// TODO: case with named attributes
-		void AllocateMemory(to_type<size_t, T> inst0, to_type<size_t, N> ... instN, glBufUse usage)
+		void AllocateMemory(to_type<size_t, First> inst0, to_type<size_t, Rest> ... instN, BufferUse usage)
 		{
 			ValidateBind();
 
-			size_t total_sz = sizeof(T) * inst0; //size_of_N<T>(inst0);
-			if constexpr (sizeof...(N))
-				total_sz += ((sizeof(N) * instN) + ...); //(size_of_N<N>(instN) + ...);
+			size_t total_sz = sizeof(First) * inst0; //size_of_N<First>(inst0);
+			if constexpr (sizeof...(Rest))
+				total_sz += ((sizeof(Rest) * instN) + ...); //(size_of_N<Rest>(instN) + ...);
 
 			glBufferData((GLenum)last_bound_, total_sz, nullptr, (GLenum)usage);
 			// TODO: check for OpenGL errors
@@ -959,20 +946,18 @@ namespace glt
 
 		// default case for Buffer with one template argument
 		template <size_t indx = 0, 
-			typename T = void>//std::enable_if_t<is_equivalent_v<T, typename NthType_t<indx>>>>
-			//, typename T = typename NthType_t<indx>>
-		void BufferData(T* data, size_t size, size_t offset = 0)
+			typename UT = nth_element_t<indx, First, Rest...>>
+		void BufferData(UT* data, size_t size, size_t offset = 0)
 		{
-			static_assert(is_equivalent_v<NthType_t<indx>, T>,
+			static_assert(is_equivalent_v<nth_element_t<indx, First, Rest...>, UT>, 
 				"Input typename is not equivalent to the buffer's one!");
 			size_t total = size + offset;
 			if (total > inst_allocated_[indx])
 				throw std::range_error("Allocated range exceeded");
 
-
 			// TODO: choose Named or default
 			ValidateBind();
-			using DataType = T;
+			using DataType = UT;
 			GLintptr offset_bytes = sizeof(DataType) * offset,
 				size_bytes = sizeof(DataType) * size;
 			glBufferSubData((GLenum)last_bound_, offset_bytes, size_bytes, data);
@@ -986,40 +971,125 @@ namespace glt
 				UnBind(last_bound_);
 		}
 
-		// TODO: change read_write to Access
-		// N = 0 is default for a Buffer specialization with 1 attribute 
-		template <size_t N = 0, BufferMapStatus S = BufferMapStatus::read_write,
-			typename T = typename NthType_t<N>>
-			BufferMap<T, S> MapBuffer()
+
+		/*
+		BufferMap:
+		- when using glMapBuffer, the whole buffer is mapped. 
+		But in case the Buffer is batched (contains several arrays of different types),
+		a single pointer can't be used. User must be able to gain access to the 
+		starting pointer of each array within the buffer (or its mapped range).
+		0. How to ensure that the particular array's range has not been exceeded?
+		- functions that take data or expose pointers need to take size arguments
+		and check against range
+		- do not expose pointers at all?
+		1. What gl function to use when mapping buffer or its range?
+		- glMapBuffer always?
+		- glMapBuffer when accessing the whole buffer and glMapBufferRange for a part?
+		- Have 2 different functions for glMapBuffer and glMapBufferRange?
+		2. Who is responsible for exposing mapped pointers or recieving input data?
+		- BufferMap handles both data input and unmapping
+		- BufferMap serves as guard for unmapping data, Buffer handles data input
+		3. Make a separated function that expose pointers to be held during subsequent 
+		drawing operations (glMapBufferRange with persistent bit)?
+		*/
+		
+		// TODO: take user-defined type and check for equivalence?
+		// indx = 0 is default for a Buffer specialization with 1 attribute 
+		template <size_t indx = 0, MapAccess S = MapAccess::read_write,
+			typename UT = nth_element_t<indx, First, Rest...>>
+			BufferMap<UT, S> MapBuffer(tag_t<UT> = tag_t<UT>())
 		{
+			static_assert(is_equivalent_v<nth_element_t<indx, First, Rest...>, UT>,
+				"User-defined type is not equivalent to the buffer's one!");
+
 			// TODO: choose Named or default function
 			ValidateBind();
 
 			if (MapStatus::IsMapped(last_bound_))
-				throw("Target is already mapped!");
+				throw std::exception("Target is already mapped!");
 
 			// TODO: change to glMapBufferRange?
-			T* start = (T*)glMapBuffer((GLenum)last_bound_, (GLenum)S);
+			UT* start = (UT*)glMapBuffer((GLenum)last_bound_, (GLenum)S);
 			if (!start)
-				throw("glMapBuffer returned nullptr!");
+				throw std::exception("glMapBuffer returned nullptr!");
 
-			T* end = std::next(start, inst_allocated_[N]);
+			UT* end = std::next(start, inst_allocated_[indx]);
 
 			MapStatus::SetMapStatus(last_bound_, S);
 
-			return BufferMap<T, S>(start, end, last_bound_);
+			return BufferMap<UT, S>(start, end, last_bound_);
 		}
 
 	private:
 		void ValidateBind() const
 		{
 			if (!(bool)last_bound_ || !IsBound(last_bound_))
-			{
-				assert(false && "Allocating memory for non-active buffer!");
-				throw("Allocating memory for non-active buffer!");
-			}
+				throw std::exception("Allocating memory for non-active buffer!");
 		}
 	};
+	
 
+	/*
+	Implements glVertexAttribPointer usage
+	*/
+	template <class ... Attribs>
+	class VAO
+	{
+		HandleVAO handle_;
+
+
+	public:
+		VAO(HandleVAO&& handle = Allocator<VAOTarget>::Allocate())
+			: handle_(std::move(handle))
+		{
+			// if (!handle_)
+			//	throw std::exception("Invalid VAO handle");
+		}
+
+		/* glVertexAttribPointer:
+			const GLvoid *pointer - is the offset from the start of the buffer
+			object CURRENTLY bound.
+			It means that we need to provide the buffer argument in order to
+			check if it is currently bound and to retrieve the offset info!
+
+			What about Normalized parameter?????
+		*/
+
+		// default 
+		// Define vertex attribute pointer by index (Batched
+		template <size_t indx, typename ... T>
+		void AttributePointer(const Buffer<T...>& buffer, tag<indx>, 
+			to_type<bool, T> ... normalized)
+		{
+			using Type = nth_element_t<indx, Attribs...>;
+
+
+
+			// what about user-defined (inside shader) types?
+			if constexpr (!is_compound_attr_v<Type>)
+			{
+				glVertexAttribPointer((GLuint)indx,
+					vao_attrib_size<Type>(),
+					c_to_gl<Type>(), 
+					normalized,
+					0,	// 0 for non-compound attributes
+
+					)
+			}
+		}
+		
+
+		/*
+		Defines a vertex attribute of Name or at Index
+		1. by index
+		- Need to provide an index
+		- compare the Input type for equivalence with the type at Index
+		- using name
+		*/
+		template <size_t indx, typename Attr>
+		void AttributePointer(const Buffer<Attr>& buffer, bool normalized = false)
+		{
+
+		}
+	};
 }
-

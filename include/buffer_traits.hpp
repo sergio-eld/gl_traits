@@ -74,37 +74,6 @@ TODO: define all attribute validations here (at the beginning)
 #include "gltEnums.hpp"
 #include "gltHandle.hpp"
 
-template <class T, const char * glslName>
-struct glslt
-{
-	using type = typename T;
-	constexpr static const char * name = glslName;
-};
-
-template <class ... vAttribs>
-using compound = std::tuple<vAttribs...>;
-
-template <class T>
-struct is_named_attr : std::bool_constant<false> {};
-
-template <class T, const char * glslName>
-struct is_named_attr<glslt<T, glslName>> : std::bool_constant<true> {};
-
-template <class T>
-constexpr inline bool is_named_attr_v = is_named_attr<T>();
-
-template <class T>
-struct is_compound_attr : std::bool_constant<false> {};
-
-template <class ... T>
-struct is_compound_attr<compound<T...>> : std::bool_constant<true> {};
-
-// matrices are compound
-template<glm::length_t C, glm::length_t R, typename T, glm::qualifier Q>
-struct is_compound_attr<glm::mat<C, R, T, Q>> : std::bool_constant<true> {};
-
-template <class T>
-constexpr inline bool is_compound_attr_v = is_compound_attr<T>();
 
 ///////////////////////////
 //What is this for?
@@ -201,7 +170,7 @@ public:
 	}
 
 	template <BufferTarget target>
-	static void AllocateBuffer(const Handle<target>& handle, size_t sizeBytes, glBufUse usage)
+	static void AllocateBuffer(const Handle<target>& handle, size_t sizeBytes, BufferUse usage)
 	{
         if (!IsCurrentBuffer(handle))
         {
@@ -226,13 +195,13 @@ public:
 
 	//TODO: restrict usage for array_buffer
 	template<size_t sz, typename dataType>
-	static void BufferData(BufferTarget target, const dataType(&data)[sz], glBufUse usage)
+	static void BufferData(BufferTarget target, const dataType(&data)[sz], BufferUse usage)
 	{
 		glBufferData(target, sizeof(data), data, usage);
 	}
 
 	template <class dataType>
-	static void BufferData(BufferTarget target, const std::vector<dataType>& data, glBufUse usage)
+	static void BufferData(BufferTarget target, const std::vector<dataType>& data, BufferUse usage)
 	{
 		glBufferData((GLenum)target, data.size() * sizeof(dataType), data.data(), (GLenum)usage);
 	}
@@ -449,7 +418,7 @@ template <BufferTarget target, class ... attribs>
 class vbo_allocator
 {
 	const Handle<target> *handle_;
-	glBufUse usage_;
+	BufferUse usage_;
 
 	std::array<size_t, sizeof...(attribs)> instancesAllocated_;
 
@@ -458,7 +427,7 @@ public:
 		: handle_(handle)
 	{}
 
-	void AllocateMemory(to_type<size_t, attribs> ... attribInstances, glBufUse usage)
+	void AllocateMemory(to_type<size_t, attribs> ... attribInstances, BufferUse usage)
 	{
 		size_t totalSize = TotalSize(attribInstances...);
 		glt_buffers::AllocateBuffer(*handle_, totalSize, usage);
@@ -471,7 +440,7 @@ public:
 		return instancesAllocated_[attribNum];
 	}
 
-	glBufUse Usage() const
+	BufferUse Usage() const
 	{
 		return usage_;
 	}
@@ -770,7 +739,7 @@ public:
     }
 
 	template <class vertexInfo>
-	void BufferData(const std::vector<vertexInfo>& vertexes, glBufUse usage)
+	void BufferData(const std::vector<vertexInfo>& vertexes, BufferUse usage)
 	{
 		// TODO: compare is_equivalent. glm::vec4 is equivalent to float[4] or std::array<float, 4>
 

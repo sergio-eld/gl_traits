@@ -96,5 +96,11 @@ int main()
 
 	static_assert(glt::is_equivalent_v<glm::vec3, Coords>);
 
+	// check returned sizes
+	static_assert(glt::vao_attrib_size<glm::vec1>() == (glt::VAOAttribSize)1);
+	static_assert(glt::vao_attrib_size<glm::vec2>() == (glt::VAOAttribSize)2);
+	static_assert(glt::vao_attrib_size<glm::vec3>() == (glt::VAOAttribSize)3);
+	static_assert(glt::vao_attrib_size<glm::vec4>() == (glt::VAOAttribSize)4);
+
 	return 0;
 }

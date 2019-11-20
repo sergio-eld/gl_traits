@@ -53,7 +53,7 @@ class gltActiveTexture
 	constexpr static size_t max_gl_textures = MAX_GL_TEXTURES;
 #endif
 
-	static std::array<std::pair<glTextureTarget, const void*>, max_gl_textures> textureUnits_;
+	static std::array<std::pair<TextureTarget, const void*>, max_gl_textures> textureUnits_;
 	static size_t currentUnit_;
 
 public:
@@ -76,7 +76,7 @@ public:
 	}
 
 
-	template <glTextureTarget target>
+	template <TextureTarget target>
 	static void BindTexture(const Handle<target>& hTexture, size_t texUnit = ActiveTexUnit())
 	{
 		if (texUnit != ActiveTexUnit())
@@ -85,18 +85,18 @@ public:
 		textureUnits_[texUnit] = std::make_pair(target, (const void*)&hTexture);
 	}
 
-	static std::pair<glTextureTarget, const void*> CurrentTexUnit()
+	static std::pair<TextureTarget, const void*> CurrentTexUnit()
 	{
 		return textureUnits_[ActiveTexUnit()];
 	}
 
 	//ISSUE
 	//TODO: check implementation!
-	template <glTextureTarget target>
+	template <TextureTarget target>
 	static bool IsCurrentTexture(const Handle<target>& hTexture)
 	{
 		assert(hTexture.IsValid() && "hTexture is nullptr!");
-		std::pair<glTextureTarget, const void*> curUnit = CurrentTexUnit();
+		std::pair<TextureTarget, const void*> curUnit = CurrentTexUnit();
 
 		if (*(const Handle<target>*)curUnit.second != hTexture)
 			return false;
@@ -113,67 +113,67 @@ public:
 class gltTexParam_traits
 {
 	// Targets validation 
-	using gl_allowed_targets_1d = std::integer_sequence<glTextureTarget,
-		glTextureTarget::texture_1d,
-		glTextureTarget::proxy_texture_1d>;
+	using gl_allowed_targets_1d = std::integer_sequence<TextureTarget,
+		TextureTarget::texture_1d,
+		TextureTarget::proxy_texture_1d>;
 
-	using gl_allowed_targets_2d = std::integer_sequence<glTextureTarget,
-		glTextureTarget::texture_2d,
-		glTextureTarget::proxy_texture_2d,
-		glTextureTarget::texture_1d_array,
-		glTextureTarget::proxy_texture_1d_array,
-		glTextureTarget::texture_rectangle,
-		glTextureTarget::proxy_texture_rectangle,
-		glTextureTarget::texture_cube_map_positive_x,
-		glTextureTarget::texture_cube_map_negative_x,
-		glTextureTarget::texture_cube_map_positive_y,
-		glTextureTarget::texture_cube_map_negative_y,
-		glTextureTarget::texture_cube_map_positive_z,
-		glTextureTarget::texture_cube_map_negative_z,
-		glTextureTarget::proxy_texture_cube_map>;
+	using gl_allowed_targets_2d = std::integer_sequence<TextureTarget,
+		TextureTarget::texture_2d,
+		TextureTarget::proxy_texture_2d,
+		TextureTarget::texture_1d_array,
+		TextureTarget::proxy_texture_1d_array,
+		TextureTarget::texture_rectangle,
+		TextureTarget::proxy_texture_rectangle,
+		TextureTarget::texture_cube_map_positive_x,
+		TextureTarget::texture_cube_map_negative_x,
+		TextureTarget::texture_cube_map_positive_y,
+		TextureTarget::texture_cube_map_negative_y,
+		TextureTarget::texture_cube_map_positive_z,
+		TextureTarget::texture_cube_map_negative_z,
+		TextureTarget::proxy_texture_cube_map>;
 
-	using gl_allowed_targets_2d_multisample = std::integer_sequence<glTextureTarget,
-		glTextureTarget::texture_2d_multisample,
-		glTextureTarget::proxy_texture_2d_multisample>;
+	using gl_allowed_targets_2d_multisample = std::integer_sequence<TextureTarget,
+		TextureTarget::texture_2d_multisample,
+		TextureTarget::proxy_texture_2d_multisample>;
 
-	using gl_allowed_targets_3d = std::integer_sequence<glTextureTarget,
-		glTextureTarget::texture_3d,
-		glTextureTarget::proxy_texture_3d,
-		glTextureTarget::texture_2d_array,
-		glTextureTarget::proxy_texture_2d_array>;
+	using gl_allowed_targets_3d = std::integer_sequence<TextureTarget,
+		TextureTarget::texture_3d,
+		TextureTarget::proxy_texture_3d,
+		TextureTarget::texture_2d_array,
+		TextureTarget::proxy_texture_2d_array>;
 
-	using gl_allowed_targets_3d_multisample = std::integer_sequence<glTextureTarget,
-		glTextureTarget::texture_2d_multisample_array,
-		glTextureTarget::proxy_texture_2d_multisample_array
+	using gl_allowed_targets_3d_multisample = std::integer_sequence<TextureTarget,
+		TextureTarget::texture_2d_multisample_array,
+		TextureTarget::proxy_texture_2d_multisample_array
 	>;
 
 
 	//TODO: write unit tester
 	using map_allowed_targets = cexpr_generic_map<
 		//1d
-		cexpr_pair<auto_t<glTextureTarget::texture_1d>, gl_allowed_targets_1d>,
+		cexpr_pair<auto_t<TextureTarget::texture_1d>, gl_allowed_targets_1d>,
 
 		//2d
-		cexpr_pair<auto_t<glTextureTarget::texture_2d>, gl_allowed_targets_2d>,
-		cexpr_pair<auto_t<glTextureTarget::texture_1d_array>, gl_allowed_targets_2d>,
-		cexpr_pair<auto_t<glTextureTarget::texture_rectangle>, gl_allowed_targets_2d>,
+		cexpr_pair<auto_t<TextureTarget::texture_2d>, gl_allowed_targets_2d>,
+		cexpr_pair<auto_t<TextureTarget::texture_1d_array>, gl_allowed_targets_2d>,
+		cexpr_pair<auto_t<TextureTarget::texture_rectangle>, gl_allowed_targets_2d>,
 
 		//2d_multisample
-		cexpr_pair<auto_t<glTextureTarget::texture_2d_multisample>, gl_allowed_targets_2d_multisample>,
+		cexpr_pair<auto_t<TextureTarget::texture_2d_multisample>, gl_allowed_targets_2d_multisample>,
 
 
 		//3d
-		cexpr_pair<auto_t<glTextureTarget::texture_3d>, gl_allowed_targets_3d>,
-		cexpr_pair<auto_t<glTextureTarget::texture_2d_array>, gl_allowed_targets_3d>,
+		cexpr_pair<auto_t<TextureTarget::texture_3d>, gl_allowed_targets_3d>,
+		cexpr_pair<auto_t<TextureTarget::texture_2d_array>, gl_allowed_targets_3d>,
 
 		//3d_multisample
-		cexpr_pair<auto_t<glTextureTarget::texture_2d_multisample_array>, gl_allowed_targets_3d_multisample>
+		cexpr_pair<auto_t<TextureTarget::texture_2d_multisample_array>, gl_allowed_targets_3d_multisample>
 	>;
 
-	template <glTextureTarget target>
+	template <TextureTarget target>
 	using allowed_targets_ = typename map_allowed_targets::found_pair<auto_t<target>>::value;
 
-	template<glTextureTarget target, glTextureTarget texStorage, class allowed = typename allowed_targets_<target>>
+	template<TextureTarget target, TextureTarget texStorage, class allowed = typename allowed_targets_<target>>
 	struct target_validate;
 
 	// values validation
@@ -235,7 +235,7 @@ class gltTexParam_traits
 	struct glTexParam_base
 	{
 		//TODO: static_assert param_name and param_v pair
-		constexpr static void TexParameter(glTextureTarget target, gl_param_name&& pname, gl_param_v&& val) noexcept
+		constexpr static void TexParameter(TextureTarget target, gl_param_name&& pname, gl_param_v&& val) noexcept
 		{
 			glTexParameteri((int)target, pname, val);
 		}
@@ -259,7 +259,7 @@ class gltTexParam_traits
 public:
 
 	// with handle
-	template <glTextureTarget target>
+	template <TextureTarget target>
 	class glTexParam_base_target_virtual
 	{
 	protected:
@@ -278,7 +278,7 @@ public:
 
 private:
 
-	template <glTextureTarget target, class gl_param_name, class gl_param_v>
+	template <TextureTarget target, class gl_param_name, class gl_param_v>
 	struct glTexParam_base_target : virtual protected glTexParam_base_target_virtual<target>
 	{
 		//TODO: static_assert param_name and param_v pair
@@ -291,10 +291,10 @@ private:
 		}
 	};
 
-	template <glTextureTarget target, class gl_param_name, class allowed_vals = typename pname_values::found_pair<gl_param_name>::value>
+	template <TextureTarget target, class gl_param_name, class allowed_vals = typename pname_values::found_pair<gl_param_name>::value>
 	struct glTexParamCollect_target;
 
-	template <glTextureTarget target, class gl_param_name, class ... allowed_vals>
+	template <TextureTarget target, class gl_param_name, class ... allowed_vals>
 	struct glTexParamCollect_target<target, gl_param_name, std::tuple<allowed_vals...>> :
 		public glTexParam_impl<glTexParam_base_target<target, gl_param_name, allowed_vals>...> {};
 
@@ -304,14 +304,14 @@ public:
 	struct glTexParametersPredefined : public glTexParam_impl<glTexParamCollect<gl_param_names> ...>
 	{};
 
-	template <glTextureTarget target, class ... gl_param_names>
+	template <TextureTarget target, class ... gl_param_names>
 	struct glTexParametersPredefined_target : public glTexParam_impl<glTexParamCollect_target<target, gl_param_names> ...>
 	{};
 
 public:
 
-	template<glTextureTarget target, glTextureTarget texStorage, glTextureTarget ... allowed>
-	struct target_validate<target, texStorage, std::integer_sequence<glTextureTarget, allowed...>>
+	template<TextureTarget target, TextureTarget texStorage, TextureTarget ... allowed>
+	struct target_validate<target, texStorage, std::integer_sequence<TextureTarget, allowed...>>
 	{
 		constexpr static bool value = is_any<texStorage, allowed...>;
 	};
@@ -330,7 +330,7 @@ using gltTexParam = gltTexParam_traits::glTexParametersPredefined<gl_depth_stenc
 
 
 // questinable. What do I gain?
-template <glTextureTarget target>
+template <TextureTarget target>
 using gltTexParam_target = gltTexParam_traits::glTexParametersPredefined_target<target, gl_depth_stencil_texture_mode,
 	gl_texture_compare_func,
 	gl_texture_compare_mode,
@@ -349,7 +349,7 @@ class texture_traits
 	
 public:
 
-	template <glTextureTarget target>
+	template <TextureTarget target>
 	static Handle<target> GenTexture()
 	{
 		GLuint handle = 0;
@@ -358,7 +358,7 @@ public:
 		return Handle<target>(handle);
 	}
 
-	template <glTextureTarget target, size_t ... indx>
+	template <TextureTarget target, size_t ... indx>
 	static std::array<Handle<target>, sizeof...(indx)> GenTextures(std::index_sequence<indx...>&&)
 	{
 		constexpr size_t sz = sizeof...(indx);
@@ -373,7 +373,7 @@ public:
 	
 
 	//temporary
-	template <glTextureTarget texStorage, glTextureTarget target>
+	template <TextureTarget texStorage, TextureTarget target>
 	static void TexImage2D(const Handle<target>& handle, size_t detailLevel,
 		GLint internalFormat,
 		size_t width,
@@ -395,7 +395,7 @@ public:
 	}
 
 
-	template <glTextureTarget target>
+	template <TextureTarget target>
 	static void GenerateMipMap() noexcept
 	{
 		glGenerateMipmap((GLenum)target);
@@ -404,7 +404,7 @@ public:
 };
 
 
-template <glTextureTarget target, glTextureTarget texStorage = target>
+template <TextureTarget target, TextureTarget texStorage = target>
 class gltTexture : virtual public gltTexParam_traits::glTexParam_base_target_virtual<target>, 
 	public gltTexParam_target<target>
 {

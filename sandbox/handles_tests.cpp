@@ -31,7 +31,7 @@ int CheckHandles()
 #include <chrono>
 #include <map>
 
-
+constexpr char coord[] = "coord";
 
 int main()
 {
@@ -43,6 +43,19 @@ int main()
 	is_compound_attr_v<compound<glm::vec4>>;
 	is_compound_attr_v<compound<glm::vec4, glm::vec2>>;
 
+	// move this to another module
+	// recover n_th type (also recovering from glslt)
+	using tuple_test = std::tuple<compound<float>, glm::vec2, glslt<glm::vec3, coord>>;
+
+	static_assert(std::is_same_v<compound<float>,
+		nth_element_t<0, compound<float>, glm::vec2, glslt<glm::vec3, coord>>>);
+
+	static_assert(std::is_same_v<glm::vec2,
+		nth_element_t<1, float, glm::vec2, glslt<glm::vec3, coord>>>);
+	static_assert(std::is_same_v<glm::vec3,
+		nth_element_t<2, float, glm::vec2, glslt<glm::vec3, coord>>>);
+	/////////////////////////////////////////////////////////////////////
+
     SmartGLFW sglfw{4, 4};
     SmartGLFWwindow window{ SCR_WIDTH, SCR_HEIGHT, "testing buffers" };
 
@@ -52,8 +65,8 @@ int main()
 
     int res = CheckHandles<BufferTarget,
         glFrameBufferTarget,
-        glTextureTarget,
-        glVertexArrayTarget,
+        TextureTarget,
+        VAOTarget,
         glTransformFeedBackTarget,
         glQueryTarget,
         glProgramPipeLineTarget,
@@ -81,7 +94,7 @@ int main()
 	Buffer<glm::vec3, glm::vec2> buf{};
 	//buf.Bind(tag<BufferTarget::array_buffer>());
 	buf.Bind(BufferTarget::array_buffer);
-	buf.AllocateMemory(16, 16, glBufUse::static_draw);
+	buf.AllocateMemory(16, 16, BufferUse::static_draw);
 
 	try
 	{

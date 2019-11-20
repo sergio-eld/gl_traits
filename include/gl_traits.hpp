@@ -6,12 +6,20 @@ Typesafe enum classes and function wrappers allow to eliminate at compile-time t
 following errors:
 - 
 - 
+- restrict range of possible values for input, i.e. 
+glVertexAttribPointer size may be 1, 2, 3, 4, or GL_BGRA. Declaring enum will restrict
+implicit conversions from other integer values
+
 
 Additional wrapper classes enforce a workflow that makes easier to avoid or detect
 the following run-time errors:
--
+- 
 -
 
+Each class should have 2 levels of indirection:
+0. TypeSafe: no runtime checks
+1. With runtime checks: i.e. ensure that object which functions are being invoked
+is currently active or bound if required by version of OpenGL specification
 
 */
 

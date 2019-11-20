@@ -24,6 +24,7 @@ message(STATUS ${OPENGL_LIBRARIES})
 find_package(glm REQUIRED)
 message(STATUS "glm found: ${glm_FOUND}")
 
+# TODO: header-only library?
 add_library(${PROJECT_NAME}
 	OBJECT
 		include/gl_traits.hpp
@@ -31,20 +32,20 @@ add_library(${PROJECT_NAME}
 		include/gltEnums.hpp
 		include/gltHandle.hpp
 		
-		include/traits_common.hpp
-		include/buffer_traits.hpp
-		include/texture_traits.hpp
-		include/uniform_traits.hpp
-		include/glt_definitions.hpp
+		# include/traits_common.hpp
+		# include/buffer_traits.hpp
+		# include/texture_traits.hpp
+		# include/uniform_traits.hpp
+		# include/glt_definitions.hpp
 
 		src/gl_traits.cpp
 
-		src/shader_traits.cpp
+		# src/shader_traits.cpp
 	)
 	
 target_link_libraries(${PROJECT_NAME}
 	PUBLIC
-		pod_reflection
+		# pod_reflection
 		#dhconstexpr_lib
 		
 		glm

@@ -4,6 +4,7 @@
 
 #include "glad/glad.h"
 
+// how to remove this dependency?
 #include "glm/glm.hpp"
 
 #include <type_traits>
@@ -60,7 +61,7 @@ namespace glt
 
 	enum class BufferTarget : int;
 	enum class glFrameBufferTarget : int;
-	enum class glTextureTarget : int;
+	enum class TextureTarget : int;
 	enum class glShaderTarget : int;
 
 	enum class glTransformFeedBackTarget : int; // GL_TRANSFORM_FEEDBACK only
@@ -70,7 +71,7 @@ namespace glt
 	// types only to be used as a paramaeter for Handle<T>, to find allocator and deleter functions 
 	enum class glProgramTarget : int;           // empty
 
-	enum class glVertexArrayTarget : int;       // empty
+	enum class VAOTarget : int;       // empty
 	enum class glProgramPipeLineTarget : int;   // empty
 	enum class glRenderBufferTarget : int;      // empty
 	enum class glSamplerTarget : int;           // empty
@@ -81,8 +82,8 @@ namespace glt
 
 	template <> struct pp_gl_allocator<BufferTarget> : glt_constant<&glGenBuffers> {};
 	template <> struct pp_gl_allocator<glFrameBufferTarget> : glt_constant<&glGenFramebuffers> {};
-	template <> struct pp_gl_allocator<glTextureTarget> : glt_constant<&glGenTextures> {};
-	template <> struct pp_gl_allocator<glVertexArrayTarget> : glt_constant<&glGenVertexArrays> {};
+	template <> struct pp_gl_allocator<TextureTarget> : glt_constant<&glGenTextures> {};
+	template <> struct pp_gl_allocator<VAOTarget> : glt_constant<&glGenVertexArrays> {};
 
 	template <> struct pp_gl_allocator<glTransformFeedBackTarget> : glt_constant<&glGenTransformFeedbacks> {};
 	template <> struct pp_gl_allocator<glQueryTarget> : glt_constant<&glGenQueries> {};
@@ -105,8 +106,8 @@ namespace glt
 
 	template <> struct pp_gl_deleter<BufferTarget> : glt_constant<&glDeleteBuffers> {};
 	template <> struct pp_gl_deleter<glFrameBufferTarget> : glt_constant<&glDeleteFramebuffers> {};
-	template <> struct pp_gl_deleter<glTextureTarget> : glt_constant<&glDeleteTextures> {};
-	template <> struct pp_gl_deleter<glVertexArrayTarget> : glt_constant<&glDeleteVertexArrays> {};
+	template <> struct pp_gl_deleter<TextureTarget> : glt_constant<&glDeleteTextures> {};
+	template <> struct pp_gl_deleter<VAOTarget> : glt_constant<&glDeleteVertexArrays> {};
 
 	template <> struct pp_gl_deleter<glTransformFeedBackTarget> : glt_constant<&glDeleteTransformFeedbacks> {};
 	template <> struct pp_gl_deleter<glQueryTarget> : glt_constant<&glDeleteQueries> {};
@@ -126,8 +127,8 @@ namespace glt
 	constexpr inline bool has_func_bind_v = std::bool_constant<std::disjunction_v<
 		std::is_same<glObjType, BufferTarget>,
 		std::is_same<glObjType, glFrameBufferTarget>,
-		std::is_same<glObjType, glTextureTarget>,
-		std::is_same<glObjType, glVertexArrayTarget>,
+		std::is_same<glObjType, TextureTarget>,
+		std::is_same<glObjType, VAOTarget>,
 		std::is_same<glObjType, glTransformFeedBackTarget>
 		>>::value;
 
@@ -137,15 +138,15 @@ namespace glt
 
 	template <> struct pp_gl_binder<BufferTarget> : glt_constant<&glBindBuffer> {};
 	template <> struct pp_gl_binder<glFrameBufferTarget> : glt_constant<&glBindFramebuffer> {};
-	template <> struct pp_gl_binder<glTextureTarget> : glt_constant<&glBindTexture> {};
+	template <> struct pp_gl_binder<TextureTarget> : glt_constant<&glBindTexture> {};
 	template <> struct pp_gl_binder<glTransformFeedBackTarget> : glt_constant<&glBindTransformFeedback> {};
 
-	template <> struct pp_gl_binder<glVertexArrayTarget> : glt_constant<&glBindVertexArray> {};
+	template <> struct pp_gl_binder<VAOTarget> : glt_constant<&glBindVertexArray> {};
 
 	template <typename glObjType>
 	constexpr inline auto pp_gl_binder_v = pp_gl_binder<glObjType>::value;
 
-	// buffer targets // remove underscore later
+	// buffer targets 
 	enum class BufferTarget : int
 	{
 		none = 0,
@@ -231,7 +232,7 @@ namespace glt
 		(const Handle<TargetType>&(T<TargetType>::*)() const)	// cast function pointer to type
 			&T<TargetType>::GetHandle)>> : std::true_type {};	// function pointer
 
-	enum class glBufUse : int
+	enum class BufferUse : int
 	{
 		stream_draw = GL_STREAM_DRAW,
 		stream_read = GL_STREAM_READ,
@@ -246,7 +247,7 @@ namespace glt
 
 
 	// texture targets // remove underscore
-	enum class glTextureTarget : int
+	enum class TextureTarget : int
 	{
 		//for glBindTexture
 		texture_1d = GL_TEXTURE_1D,							//+
@@ -284,19 +285,19 @@ namespace glt
 	};
 
 
-	enum class glShaderTarget : int
+	enum class ShaderTarget : int
 	{
-		compute_shader = GL_COMPUTE_SHADER,
-		vertex_shader = GL_VERTEX_SHADER,
-		tess_control_shader = GL_TESS_CONTROL_SHADER,
-		tess_evaluation_shader = GL_TESS_EVALUATION_SHADER,
-		geometry_shader = GL_GEOMETRY_SHADER,
-		fragment_shader = GL_FRAGMENT_SHADER
+		compute = GL_COMPUTE_SHADER,
+		vertex = GL_VERTEX_SHADER,
+		tess_control = GL_TESS_CONTROL_SHADER,
+		tess_evaluation = GL_TESS_EVALUATION_SHADER,
+		geometry = GL_GEOMETRY_SHADER,
+		fragment = GL_FRAGMENT_SHADER
 	};
 
 
 	// glEnable arguments
-	enum class glCapability : int
+	enum class Capability : int
 	{
 		blend = GL_BLEND,
 		clip_distance0 = GL_CLIP_DISTANCE0,
@@ -326,11 +327,36 @@ namespace glt
 		program_point_size = GL_PROGRAM_POINT_SIZE
 	};
 
-	enum class BufferMapStatus : int
+	enum class MapAccess : int
 	{
 		read_only = GL_READ_ONLY,
 		write_only = GL_WRITE_ONLY,
 		read_write = GL_READ_WRITE
+	};
+
+	enum class MapAccessBit : GLbitfield
+	{
+		read = GL_MAP_READ_BIT,
+		write = GL_MAP_WRITE_BIT,
+		persistent = GL_MAP_PERSISTENT_BIT,
+		coherent = GL_MAP_COHERENT_BIT,
+
+		// modifying flags
+		invalidate_range = GL_MAP_INVALIDATE_RANGE_BIT,
+		invalidate_buffer = GL_MAP_INVALIDATE_BUFFER_BIT,
+		flush_explicit = GL_MAP_FLUSH_EXPLICIT_BIT,
+		unsynchronized = GL_MAP_UNSYNCHRONIZED_BIT,
+
+	};
+
+	enum class VAOAttribSize : GLint
+	{
+		zero = 0,
+		one = 1,
+		two = 2,
+		three = 3,
+		four = 4,
+		bgra = GL_BGRA
 	};
 
 	template <typename cType>
@@ -351,7 +377,90 @@ namespace glt
 	template <typename cType>
 	constexpr inline glType c_to_gl_v = c_to_gl<cType>::value;
 
+	//////////////////////////////////////////////////
+	// attribute traits
+	/////////////////////////////////////////////////
+
+	template <class T, const char * glslName>
+	struct glslt
+	{
+		using type = typename T;
+		constexpr static const char * name = glslName;
+	};
+
+	template <class ... vAttribs>
+	using compound = std::tuple<vAttribs...>;
+
+	template <class T>
+	struct is_named_attr : std::bool_constant<false> {};
+
+	template <class T, const char * glslName>
+	struct is_named_attr<glslt<T, glslName>> : std::bool_constant<true> {};
+
+	template <class T>
+	constexpr inline bool is_named_attr_v = is_named_attr<T>();
+
+	template <class T>
+	struct is_tuple : std::false_type {};
+
+	template <class ... T>
+	struct is_tuple<std::tuple<T...>> : std::true_type {};
+
+	template <class T>
+	constexpr inline bool is_tuple_v = is_tuple<T>();
+
+	template <class T>
+	struct is_compound_attr : std::bool_constant<false> {};
+
+	template <class ... T>
+	struct is_compound_attr<compound<T...>> : std::bool_constant<(sizeof...(T) > 1)> {};
+
+	// matrices are compound
+	template<glm::length_t C, glm::length_t R, typename T, glm::qualifier Q>
+	struct is_compound_attr<glm::mat<C, R, T, Q>> : std::bool_constant<true> {};
+
+	template <class T>
+	constexpr inline bool is_compound_attr_v = is_compound_attr<T>();
+	
+	// get n_th attribute type
+	template <size_t N, class Tuple, class T = std::tuple_element_t<N, Tuple>>
+	struct nth_element
+	{
+		using type = T;
+	};
+
+	// case failure
+	template <size_t N, class NotTuple>
+	struct nth_element<N, NotTuple, void>
+	{
+		using type = void;
+	};
+
+	template <size_t N, class T, class ... Attribs>
+	struct nth_element<N, std::tuple<Attribs...>, T>
+	{
+		using type = T;
+	};
+
+	template <size_t N, class T, const char* name, class ... Attribs>
+	struct nth_element<N, std::tuple<Attribs...>, glslt<T, name>>
+	{
+		using type = T;
+	};
 
 
+	// convinience wrapper to provide just raw pack
+	template <size_t N, class ... T>
+	using nth_element_t = typename nth_element<N, std::tuple<T...>>::type;
+
+
+	// get size of elements in a vector for AttributePointer
+	template <class>
+	struct vao_attrib_size 
+		: std::integral_constant<VAOAttribSize, VAOAttribSize::one> {};
+
+	template <glm::length_t L, typename T, glm::qualifier Q>
+	struct vao_attrib_size<glm::vec<L, T, Q>> 
+		: std::integral_constant<VAOAttribSize, (VAOAttribSize)L> {};
 }
 

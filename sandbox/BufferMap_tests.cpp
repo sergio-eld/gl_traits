@@ -3,11 +3,13 @@
 
 using namespace glt;
 
+struct Coord
+{
+	glm::vec3 xyz;
+};
 
 int main()
 {
-	vertex v{ glm::vec3(), glm::vec2() };
-
 	std::is_aggregate_v<vertex>;
 	std::is_constructible_v<vertex, glm::vec3()>;
 
@@ -31,11 +33,11 @@ int main()
 		std::vector<glm::vec2> cube_tex_coords = glm_cube_texCoords();
 
 		buffer.Bind(tag<BufferTarget::array_buffer>());
-		buffer.AllocateMemory(cube_positions.size(), cube_tex_coords.size(), glBufUse::static_draw);
+		buffer.AllocateMemory(cube_positions.size(), cube_tex_coords.size(), BufferUse::static_draw);
 		buffer.BufferData<0>(cube_positions.data(), cube_positions.size());
 
-		BufferMap<glm::vec3, BufferMapStatus::read_only> mapped =
-			buffer.MapBuffer<0, BufferMapStatus::read_only>();
+		BufferMap<glm::vec3, MapAccess::read_only> mapped =
+			buffer.MapBuffer<0, MapAccess::read_only>();
 
 		auto iter_position = cube_positions.cbegin();
 		for (auto map_iter : mapped)
@@ -46,7 +48,7 @@ int main()
 			}
 
 		mapped.UnMap();
-		mapped = buffer.MapBuffer<0, BufferMapStatus::read_only>();
+		mapped = buffer.MapBuffer<0, MapAccess::read_only>();
 	}
 
 	// Loading user-defined vertexes
@@ -57,14 +59,36 @@ int main()
 
 		CmpdBuffer buffer{};
 		buffer.Bind(tag<BufferTarget::array_buffer>());
-		buffer.AllocateMemory(vertices.size(), glBufUse::static_draw);
+		buffer.AllocateMemory(vertices.size(), BufferUse::static_draw);
 
+		/*
 		static_assert(std::is_same_v<CmpdBuffer::NthType_t<0>, compound<glm::vec3, glm::vec2>>);
 		static_assert(glt::is_equivalent_v<compound<glm::vec3, glm::vec2>, vertex>);
-		static_assert(glt::is_equivalent_v<CmpdBuffer::NthType_t<0>, vertex>);
+		static_assert(glt::is_equivalent_v<CmpdBuffer::NthType_t<0>, vertex>);*/
 
 		buffer.BufferData(vertices.data(), vertices.size());
 
+		// BufferMap<Coord, MapAccess::read_only> mapped = // assertion fails, not equivalent
+		//	buffer.MapBuffer<0, MapAccess::read_only>(glt::tag_t<Coord>());
+
+		try 
+		{
+			BufferMap<vertex, MapAccess::read_only> mapped =
+				buffer.MapBuffer<0, MapAccess::read_only>(tag_t<vertex>());
+
+			auto iter_position = vertices.cbegin();
+			for (const auto& map_iter : mapped)
+				if (map_iter != *iter_position++)
+				{
+					std::cerr << "Mapped data differs from initial!" << std::endl;
+					return -1;
+				}
+		}
+		catch (const std::exception& e)
+		{
+			std::cout << e.what() << std::endl;
+			return -1;
+		}
 
 
 	}
