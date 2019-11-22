@@ -381,6 +381,7 @@ namespace glt
 	// attribute traits
 	/////////////////////////////////////////////////
 
+	/*
 	template <class T, const char * glslName>
 	struct glslt
 	{
@@ -421,8 +422,24 @@ namespace glt
 
 	template <class T>
 	constexpr inline bool is_compound_attr_v = is_compound_attr<T>();
-	
-	// get n_th attribute type
+
+	template <class Compound>
+	struct compound_attr_count : glt_constant<size_t(0)> 
+	{
+		// warning not compound ?
+	};
+
+	template <class ... Attr>
+	struct compound_attr_count<compound<Attr...>> : glt_constant<sizeof...(Attr)> {};
+
+	template <class Compound>
+	constexpr inline size_t compound_attr_count_v =
+		compound_attr_count<Compound>();
+		*/
+
+	// TODO: specialization for glm::matrix?
+	/* Gets Nth attribute Type. For glslt (Named) attributes returns underlying Type */
+	/*
 	template <size_t N, class Tuple, class T = std::tuple_element_t<N, Tuple>>
 	struct nth_element
 	{
@@ -436,31 +453,150 @@ namespace glt
 		using type = void;
 	};
 
+	// case tuple/compound
 	template <size_t N, class T, class ... Attribs>
 	struct nth_element<N, std::tuple<Attribs...>, T>
 	{
 		using type = T;
 	};
 
+	// case named
 	template <size_t N, class T, const char* name, class ... Attribs>
 	struct nth_element<N, std::tuple<Attribs...>, glslt<T, name>>
 	{
 		using type = T;
 	};
 
-
-	// convinience wrapper to provide just raw pack
+	// convinience wrapper with variadic input
 	template <size_t N, class ... T>
 	using nth_element_t = typename nth_element<N, std::tuple<T...>>::type;
+	*/
 
 
-	// get size of elements in a vector for AttributePointer
+	/* Get Attribute Type by index and/or sub-index*/
+	/*
+	template <size_t indx, size_t subindx, class ... Attrs>
+	class nth_attribute
+	{
+		using Attr = nth_element_t<indx, Attrs...>;
+		constexpr static bool is_compound_ = is_compound_attr_v<typename Attr>;
+		constexpr static size_t num_attr_comp = compound_attr_count_v<typename Attr>;
+	public:
+
+		static_assert(indx < sizeof...(Attrs), "Index is out of range!");
+		static_assert(!subindx || is_compound_,
+			"Invalid sub-index: Typename at index is not compound!");
+		static_assert(!is_compound_ ||
+			subindx < num_attr_comp, "Sub-index is out of range!");
+
+		using type = std::conditional_t<is_compound_,
+			typename nth_element<subindx, Attr>::type,
+			typename Attr>;
+	};
+
+	template <size_t indx, size_t subindx, class ... Attrs>
+	using nth_attribute_t = typename nth_attribute<indx, subindx, Attrs...>::type;
+
+	template <size_t indx, size_t subindx, template <class ...> class C, class ... Attr>
+	using get_nth_attribute_t = nth_attribute_t<indx, subindx, Attr...>;
+	*/
+
+	/* Get size of an Attribute for glVertexAttributePointer */
 	template <class>
-	struct vao_attrib_size 
+	struct vao_attrib_size
 		: std::integral_constant<VAOAttribSize, VAOAttribSize::one> {};
 
 	template <glm::length_t L, typename T, glm::qualifier Q>
-	struct vao_attrib_size<glm::vec<L, T, Q>> 
+	struct vao_attrib_size<glm::vec<L, T, Q>>
 		: std::integral_constant<VAOAttribSize, (VAOAttribSize)L> {};
-}
 
+
+
+	////////////////////////////////////
+	// helpers
+	////////////////////////////////////
+	/*
+	template <typename To, typename From>
+	using convert_to = To;
+
+	template <typename To, auto indx>
+	using convert_v_to = To;
+
+	template <typename T, T ... vals>
+	constexpr T get_max(std::integer_sequence<T, vals...> =
+		std::integer_sequence<T, vals...>())
+	{
+		T arr[sizeof...(vals)]{ vals... },
+			max = 0;
+		for (size_t i = 0; i != sizeof...(vals); ++i)
+			max = arr[i] > max ? arr[i] : max;
+		return max;
+	}
+
+
+	template <size_t indx, class ... T>
+	constexpr std::ptrdiff_t get_member_offset()
+	{
+		static_assert(indx < sizeof...(T), "Index is out of range!");
+
+		if constexpr (!indx)
+			return 0;
+
+		std::ptrdiff_t res = 0,
+			sizes[]{ sizeof(T)... };
+
+		for (size_t i = 1; i <= indx; ++i)
+		{
+			res += sizes[i - 1];
+			if (!(res % 4))
+				continue;
+
+			if (sizes[i] > 4 - res % 4)
+				res += 4 - res % 4;
+		}
+
+		return res;
+	}
+
+	template <size_t indx, class>
+	struct get_tuple_member_offset;
+
+	template <size_t indx, class ... T>
+	struct get_tuple_member_offset<indx, std::tuple<T...>>
+		: std::integral_constant<std::ptrdiff_t, get_member_offset<indx, T...>()> {};
+
+	template <size_t indx, class Tuple>
+	constexpr inline std::ptrdiff_t get_tuple_member_offset_v =
+		get_tuple_member_offset<indx, Tuple>();
+
+			
+
+	template <class Tuple>
+	constexpr size_t class_size_from_tuple()
+	{
+		if constexpr (!is_tuple_v<Tuple>)
+			// TODO: add warning?
+			return sizeof(Tuple);
+		else
+		{
+			constexpr size_t lastIndx = std::tuple_size_v<Tuple> -1;
+			using LastType = std::tuple_element_t<lastIndx, Tuple>;
+
+			constexpr size_t offset = get_tuple_member_offset_v<lastIndx, Tuple>,
+				res = offset + sizeof(LastType);
+
+			return (sizeof(LastType) % 4) ? res + 4 - sizeof(LastType) % 4 : res;
+		}
+
+	}
+
+	template <class Tuple>
+	constexpr inline size_t class_size_from_tuple_v =
+		class_size_from_tuple<Tuple>();
+*/
+
+	////////////////////////////////////
+
+
+
+}

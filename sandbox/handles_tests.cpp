@@ -47,6 +47,7 @@ int main()
 	// recover n_th type (also recovering from glslt)
 	using tuple_test = std::tuple<compound<float>, glm::vec2, glslt<glm::vec3, coord>>;
 
+	/*
 	static_assert(std::is_same_v<compound<float>,
 		nth_element_t<0, compound<float>, glm::vec2, glslt<glm::vec3, coord>>>);
 
@@ -54,6 +55,7 @@ int main()
 		nth_element_t<1, float, glm::vec2, glslt<glm::vec3, coord>>>);
 	static_assert(std::is_same_v<glm::vec3,
 		nth_element_t<2, float, glm::vec2, glslt<glm::vec3, coord>>>);
+		*/
 	/////////////////////////////////////////////////////////////////////
 
     SmartGLFW sglfw{4, 4};
@@ -79,7 +81,7 @@ int main()
     // TODO: add glShaderTarget test;
 
 
-    //bound_handle_base<BufferTarget, BufferTarget::array_buffer>::Bind(tag<BufferTarget::array_buffer>(), hBuf);
+    //bound_handle_base<BufferTarget, BufferTarget::array_buffer>::Bind(tag_v<BufferTarget::array_buffer>(), hBuf);
     bound_handle_base<BufferTarget, BufferTarget::array_buffer>::binding;
 
     has_gl_binding_v<BufferTarget::array_buffer>;
@@ -89,10 +91,10 @@ int main()
 	Handle<BufferTarget> hBuf = Allocator<BufferTarget>::Allocate();
 
 
-	//bound_handle<BufferTargetList>::Bind(tag<BufferTarget::array_buffer>(), hBuf);
+	//bound_handle<BufferTargetList>::Bind(tag_v<BufferTarget::array_buffer>(), hBuf);
 
 	Buffer<glm::vec3, glm::vec2> buf{};
-	//buf.Bind(tag<BufferTarget::array_buffer>());
+	//buf.Bind(tag_v<BufferTarget::array_buffer>());
 	buf.Bind(BufferTarget::array_buffer);
 	buf.AllocateMemory(16, 16, BufferUse::static_draw);
 
@@ -105,7 +107,7 @@ int main()
 		std::cerr << e.what() << std::endl;
 	}
 	bool isCurrent = buf.IsBound(BufferTarget::array_buffer);
-		//bound_handle<BufferTargetList>::IsBound(tag<BufferTarget::array_buffer>(), buf);
+		//bound_handle<BufferTargetList>::IsBound(tag_v<BufferTarget::array_buffer>(), buf);
 
     return res;
 }

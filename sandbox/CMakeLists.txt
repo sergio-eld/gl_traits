@@ -31,6 +31,9 @@ target_include_directories(gl_sandbox
 # VBO cases
 
 set(VBO_USE_CASES
+	"traits_common"
+	"traits_attribute_compound"
+	"traits_attribute_nth_attribute"
 	"equivalence"
 	"handles_tests"
 	"BufferMap_tests"

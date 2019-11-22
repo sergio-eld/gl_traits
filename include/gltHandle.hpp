@@ -2,6 +2,8 @@
 
 #include "gltEnums.hpp"
 
+#include "traits.hpp"
+
 #include <map>
 
 namespace glt
@@ -197,13 +199,6 @@ namespace glt
 		virtual const Handle<eTargetType>& GetHandle() const = 0;
 	};
 
-	template <auto>
-	struct tag
-	{};
-
-	template <typename>
-	struct tag_t
-	{};
 
 	/*
 	Depending on OpenGL spec version and extensions, Named methods for GL objects
@@ -238,7 +233,7 @@ namespace glt
 		constexpr static auto ppBindFunc = pp_gl_binder_v<eTargetType>;
 		constexpr static auto binding = get_binding_v<target>;
 
-		static void Bind(tag<target>, const IBindable<eTargetType>& obj)
+		static void Bind(tag_v<target>, const IBindable<eTargetType>& obj)
 		{
 			const Handle<eTargetType>& handle = obj.GetHandle();
 			assert(*ppBindFunc && "OpenGL Bind function has not been initialized!");
@@ -247,7 +242,7 @@ namespace glt
 			raw_handle_ = handle_accessor<eTargetType>()(handle);
 		}
 
-		static void UnBind(tag<target>, const IBindable<eTargetType>& obj)
+		static void UnBind(tag_v<target>, const IBindable<eTargetType>& obj)
 		{
 			const Handle<eTargetType>& handle = obj.GetHandle();
 			if (handle != raw_handle_)
@@ -261,7 +256,7 @@ namespace glt
 			raw_handle_ = 0;
 		}
 
-		static bool IsBound(tag<target>, const IBindable<eTargetType>& obj)
+		static bool IsBound(tag_v<target>, const IBindable<eTargetType>& obj)
 		{
 			const Handle<eTargetType>& handle = obj.GetHandle();
 			// TODO: assert that returned by glGet object is equal to raw_handle_;
@@ -296,9 +291,9 @@ namespace glt
 	{
 		using this_t = bound_handle<std::integer_sequence<eTargetType, vals...>>;
 
-		using pBindFunc = void(*)(tag<(eTargetType)0>, const IBindable<eTargetType>&);
-		using pIsBoundFunc = bool(*)(tag<(eTargetType)0>, const IBindable<eTargetType>&);
-		using pUnbindFunc = void(*)(tag<(eTargetType)0>, const IBindable<eTargetType>&);
+		using pBindFunc = void(*)(tag_v<(eTargetType)0>, const IBindable<eTargetType>&);
+		using pIsBoundFunc = bool(*)(tag_v<(eTargetType)0>, const IBindable<eTargetType>&);
+		using pUnbindFunc = void(*)(tag_v<(eTargetType)0>, const IBindable<eTargetType>&);
 
 		inline static std::map<eTargetType, void(*)()> pBindFuncsMap_
 		{
@@ -326,7 +321,7 @@ namespace glt
 				"Target is not registered!");
 
 			pBindFunc pBind = reinterpret_cast<pBindFunc>(found->second);
-			(pBind)(tag<(eTargetType)0>(), handle);
+			(pBind)(tag_v<(eTargetType)0>(), handle);
 
 		}
 
@@ -338,7 +333,7 @@ namespace glt
 				"Target is not registered!");
 
 			pIsBoundFunc pIsBound = reinterpret_cast<pIsBoundFunc>(found->second);
-			return (pIsBound)(tag<(eTargetType)0>(), handle);
+			return (pIsBound)(tag_v<(eTargetType)0>(), handle);
 		}
 
 		static void UnBindRT(eTargetType target, const IBindable<eTargetType>& handle)
@@ -349,7 +344,7 @@ namespace glt
 				"Target is not registered!");
 
 			pUnbindFunc pUnBind = reinterpret_cast<pUnbindFunc>(found->second);
-			(pUnBind)(tag<(eTargetType)0>(), handle);
+			(pUnBind)(tag_v<(eTargetType)0>(), handle);
 		}
 
 	};
@@ -417,7 +412,7 @@ namespace glt
 		or deduce:
 			- explicitly passing the index number
 			- if attribute type is unique
-			- for named may use tag dispatching
+			- for named may use tag_v dispatching
 
 	Cases:
 	- VBO of unnamed attributes
@@ -440,11 +435,7 @@ namespace glt
 	// helpers. Move to another Module?
 	////////////////////////////////////////////////////
 
-	template <typename To, typename From>
-	using to_type = To;
-
-	template <typename To, size_t indx>
-	using type_from_indx = To;
+	
 
 	template <typename T, size_t sz, class = decltype(std::make_index_sequence<sz>())>
 	struct gen_tuple;
@@ -452,7 +443,7 @@ namespace glt
 	template <typename T, size_t sz, size_t ... indx>
 	struct gen_tuple<T, sz, std::index_sequence<indx...>>
 	{
-		using type = std::tuple<type_from_indx<T, indx> ...>;
+		using type = std::tuple<convert_v_to<T, indx> ...>;
 	};
 
 	template <typename T, size_t sz>
@@ -466,7 +457,7 @@ namespace glt
 	{
 		constexpr static std::array<T, sz> init(T def_value)
 		{
-			return std::array<T, sz>{ type_from_indx<T, Indx>(def_value) ... };
+			return std::array<T, sz>{ convert_v_to<T, Indx>(def_value) ... };
 		}
 
 		constexpr std::array<T, sz> operator()(T def_value) const
@@ -487,30 +478,11 @@ namespace glt
 			arr[i] = val;
 		}
 
-		constexpr static void modify(std::array<T, sz>& arr, const type_from_indx<T, indx>& ... vals)
+		constexpr static void modify(std::array<T, sz>& arr, const convert_v_to<T, indx>& ... vals)
 		{
 			(set<indx>(arr, vals), ...);
 		}
 	};
-
-	// extension for std::is_constructible, but using aggregate initialization
-	template <class T, class Tuple, class = std::void_t<>>
-	struct is_initializable : std::false_type {};
-
-	template <class T, class ... Types>
-	struct is_initializable < T,
-		std::tuple<Types...>,
-		std::void_t<decltype(T{ Types()... }) >>
-		: std::true_type
-	{};
-
-	template <class T, class ... From>
-	using is_initializable_from = is_initializable<T, std::tuple<From...>>;
-
-	template <class T, class ... From>
-	constexpr inline bool is_initializable_from_v =
-		is_initializable<T, std::tuple<From...>>::value;
-
 
 	/*
 	To check if Attribute is equivalent to Input type.
@@ -544,52 +516,6 @@ namespace glt
 	"-> n": resolves to case n;
 	"??(n)": specialization of case n
 	*/
-
-	/*
-	Recover std::tuple from compound type or user-defined type.
-	For user-defined case need to provide InitFrom tuple, that contains
-	types to try aggregate initialization from
-
-	TODO: Rename?
-	*/
-	template <class Attr, class InitFrom = std::void_t<>>
-	struct recover_tuple : std::false_type
-	{
-		using type = std::tuple<Attr>;
-	};
-
-	template <class ... Attr>
-	struct recover_tuple<std::tuple<Attr...>> : std::true_type
-	{
-		using type = std::tuple<Attr...>;
-	};
-
-	// Checks if Attribute is equivalent to std::tuple<InitList...>
-	template <class Attr, class ... InitList>
-	struct recover_tuple<Attr, std::tuple<InitList...>>
-		: std::bool_constant<is_initializable_from_v<Attr, InitList...>>
-	{
-		using type = std::conditional_t<is_initializable_from_v<Attr, InitList...>,
-			std::tuple<InitList...>, Attr>;
-	};
-
-	
-	/*-------------
-	Checking Attr and In types for equivalence:
-	sizeof(Attr) == sizeof(Attr) &&
-	std::is_same_v<recover_tuple_t<A>, recover_tuple_t<I>>
-	-------------*/
-	template <class Attr, class In, class InitAttr = std::void_t<>>
-	struct is_equivalent
-		: std::bool_constant<(
-			sizeof(Attr) == sizeof(In) &&
-			std::is_same_v<typename recover_tuple<Attr, InitAttr>::type,
-			typename recover_tuple<In, typename recover_tuple<Attr, InitAttr>::type>::type>
-			)> {};
-
-	template <class Attr, class In>
-	constexpr inline bool is_equivalent_v = is_equivalent<Attr, In>::value;
-
 
 	////////////////////////////////////////////////////
 	////////////////////////////////////////////////////
@@ -812,54 +738,65 @@ namespace glt
 	};
 
 
+	/*
+	This class is used to Set VertexAttributePointer
+	*/
+	// TODO: compound specialization?
+	template <class Attrib>
+	class VertexAttrib
+	{
 
+		std::ptrdiff_t offset_;
+
+		// TODO: stride // stride = sizeof(Atrrib)
+
+	public:
+		constexpr static size_t stride_ = class_size_from_tuple_v<Attrib>;
+
+		// TODO: move to private
+		constexpr VertexAttrib(std::ptrdiff_t offset, size_t stride = 0)
+			: offset_(offset)
+		{}
+
+		VertexAttrib(const VertexAttrib<Attrib>&) = delete;
+		VertexAttrib& operator=(const VertexAttrib<Attrib>&) = delete;
+
+		constexpr VertexAttrib(VertexAttrib<Attrib>&& other)
+			: offset_(other.offset_)
+		{}
+
+		VertexAttrib& operator=(VertexAttrib<Attrib>&& other)
+		{
+			offset_ = other.offset_;
+		}
+
+		~VertexAttrib()
+		{}
+	private:
+		
+
+	};
 
 
 	// TODO: add function to return the offset for nth type
-	template <typename First, typename ... Rest>
+	template <typename ... Attr>
 	class Buffer : public IBindable<BufferTarget>
 	{
-		static_assert(!std::disjunction_v<is_compound_attr<Rest>...>,
-			"Only first type may be compound!");
+		/* 
+		static_assert(!std::disjunction_v<is_compound_attr<Attr>...>,
+			"Only first type may be compound!");*/
 
-		constexpr static size_t n_arrays_ = sizeof...(Rest) + 1;
+		constexpr static size_t num_attribs_ = sizeof...(Attr);
 
 		Handle<BufferTarget> handle_;
 		BufferTarget last_bound_ = BufferTarget::none;
-		std::array<size_t, n_arrays_> inst_allocated_ =
-			init_array<size_t, n_arrays_>()(0);
+		std::array<size_t, num_attribs_> inst_allocated_ =
+			init_array<size_t, num_attribs_>()(0);
 
+		// remove this? Another class is responsible for mapping state check
 		MapAccess mapped_ = MapAccess(0);
 
-
-		// helper methods
-		// get total size of Rest elements of type C
-		template <typename C>
-		constexpr static size_t size_of_N(size_t Num)
-		{
-			return sizeof(C) * Num;
-		}
-
-		template <size_t n>
-		constexpr static auto* NthType_()
-		{
-			using rawT = std::tuple_element_t<n, std::tuple<First, Rest...>>;
-
-			// check here for specialized types (for instance, compound and named)
-
-			return (rawT*)nullptr;
-		}
-
-
-
-
 	public:
-
-		/*
-		template <size_t Rest>
-		using NthType_t = typename std::remove_pointer_t<decltype(NthType_<Rest>())>;
-		*/
-
 
 		Buffer(Handle<BufferTarget>&& handle = Allocator<BufferTarget>::Allocate())
 			: handle_(std::move(handle))
@@ -869,7 +806,7 @@ namespace glt
 		}
 
 		template <BufferTarget target>
-		void Bind(tag<target> t)
+		void Bind(tag_v<target> t)
 		{
 			last_bound_ = target;
 			gltActiveBufferTargets::Bind(t, *this);
@@ -883,9 +820,9 @@ namespace glt
 		}
 
 		template <BufferTarget target>
-		bool IsBound(tag<target>) const
+		bool IsBound(tag_v<target>) const
 		{
-			return gltActiveBufferTargets::IsBound(tag<target>(), *this);
+			return gltActiveBufferTargets::IsBound(tag_v<target>(), *this);
 		}
 
 		// RunTime wrapper
@@ -895,7 +832,7 @@ namespace glt
 		}
 
 		template <BufferTarget target>
-		void UnBind(tag<target> t)
+		void UnBind(tag_v<target> t)
 		{
 			last_bound_ = BufferTarget::none;
 			gltActiveBufferTargets::UnBind(t, *this);
@@ -923,33 +860,45 @@ namespace glt
 			return last_bound_;
 		}
 
+
+
+		/*
+		What to choose? glBufferData or glBufferStorage?
+		BufferStorage size is immutable and memory cannot be reallocated
+		- In case of glBufferData was used, would buffer resizing lead to invalidating
+		the data contained withing? --> Yes
+		- In case of glBufferStorage is used, it is safer to restrict access to AllocateMemory
+		function and call it inside the constructor.
+		- For glBufferStorage does it make sence to make a size-aware class similar to 
+		std::array?
+		*/
 		// TODO: case with named attributes
-		void AllocateMemory(to_type<size_t, First> inst0, to_type<size_t, Rest> ... instN, BufferUse usage)
+		void AllocateMemory(/* convert_to<size_t, First> inst0,*/ convert_to<size_t, Attr> ... instN, BufferUse usage)
 		{
 			ValidateBind();
 
-			size_t total_sz = sizeof(First) * inst0; //size_of_N<First>(inst0);
-			if constexpr (sizeof...(Rest))
-				total_sz += ((sizeof(Rest) * instN) + ...); //(size_of_N<Rest>(instN) + ...);
+			size_t total_sz = ((sizeof(Attr) * instN) + ...);// sizeof(First) * inst0; //size_of_N<First>(inst0);
+			// if constexpr (sizeof...(Attr))
+			//	total_sz += ((sizeof(Attr) * instN) + ...); //(size_of_N<Attr>(instN) + ...);
 
 			glBufferData((GLenum)last_bound_, total_sz, nullptr, (GLenum)usage);
 			// TODO: check for OpenGL errors
-			modify_array<size_t, n_arrays_>::modify(inst_allocated_, inst0, instN...);
+			modify_array<size_t, num_attribs_>::modify(inst_allocated_, /*inst0,*/ instN...);
 		}
 
 		size_t InstancesAllocated(size_t indx) const
 		{
-			if (indx >= n_arrays_)
+			if (indx >= num_attribs_)
 				throw std::out_of_range("Buffer's array index is out of range!");
 			return inst_allocated_[indx];
 		}
 
 		// default case for Buffer with one template argument
 		template <size_t indx = 0, 
-			typename UT = nth_element_t<indx, First, Rest...>>
+			typename UT = nth_element_t<indx, /*First,*/ Attr...>>
 		void BufferData(UT* data, size_t size, size_t offset = 0)
 		{
-			static_assert(is_equivalent_v<nth_element_t<indx, First, Rest...>, UT>, 
+			static_assert(is_equivalent_v<nth_element_t<indx, /*First,*/ Attr...>, UT>, 
 				"Input typename is not equivalent to the buffer's one!");
 			size_t total = size + offset;
 			if (total > inst_allocated_[indx])
@@ -964,12 +913,7 @@ namespace glt
 
 		}
 
-		~Buffer()
-		{
-			// check if is still bound
-			if ((bool)last_bound_ && IsBound(last_bound_))
-				UnBind(last_bound_);
-		}
+
 
 
 		/*
@@ -996,10 +940,10 @@ namespace glt
 		// TODO: take user-defined type and check for equivalence?
 		// indx = 0 is default for a Buffer specialization with 1 attribute 
 		template <size_t indx = 0, MapAccess S = MapAccess::read_write,
-			typename UT = nth_element_t<indx, First, Rest...>>
+			typename UT = nth_element_t<indx, /*First,*/ Attr...>>
 			BufferMap<UT, S> MapBuffer(tag_t<UT> = tag_t<UT>())
 		{
-			static_assert(is_equivalent_v<nth_element_t<indx, First, Rest...>, UT>,
+			static_assert(is_equivalent_v<nth_element_t<indx, /*First,*/ Attr...>, UT>,
 				"User-defined type is not equivalent to the buffer's one!");
 
 			// TODO: choose Named or default function
@@ -1020,6 +964,46 @@ namespace glt
 			return BufferMap<UT, S>(start, end, last_bound_);
 		}
 
+
+		// TODO: refactor assertions. Ambiguous errors in wrong order
+		template <size_t indx, size_t indx_compound = 0>
+		std::ptrdiff_t GetOffset(tag_s<indx>, tag_s<indx_compound> = tag_s<indx_compound>()) const
+		{
+			using AttrType = nth_element_t<indx, /*First,*/ Attr...>;
+			static_assert(indx < num_attribs_, "Index is out of range!");
+			constexpr size_t type_sizes[sizeof...(Attr) + 1]{ /*sizeof(First),*/ sizeof(Attr)... };
+
+			std::ptrdiff_t res = 0;
+
+			for (size_t i = 0; i != indx; ++i)
+				res += type_sizes[i] * inst_allocated_[i];
+
+			if constexpr (indx_compound)
+			{
+				static_assert(is_compound_attr_v<AttrType>,
+					"Non-compound elements do not support sub-indexes");
+				static_assert(indx_compound < compound_attr_count<AttrType>(),
+					"Sub-index is out of range!");
+				res += get_tuple_member_offset<indx_compound, AttrType>();
+			}
+			return res;
+		}
+
+		template <size_t indx, size_t sub_indx = 0, class A = 
+			std::conditional_t<(indx < num_attribs_), nth_element_t<indx, Attr...>, void>>
+		VertexAttrib<A> Attribute(tag_s<indx>) const
+		{
+			static_assert(indx < num_attribs_, "Index is out of range!");
+			return VertexAttrib<A>(GetOffset(tag_s<indx>()));
+		}
+
+		~Buffer()
+		{
+			// check if is still bound
+			if ((bool)last_bound_ && IsBound(last_bound_))
+				UnBind(last_bound_);
+		}
+
 	private:
 		void ValidateBind() const
 		{
@@ -1037,6 +1021,17 @@ namespace glt
 	{
 		HandleVAO handle_;
 
+		/*
+		glVertexAttributePointer(
+		0. GLuint index,
+		1. GLenum type,
+		2. GLboolean normalized,
+		3. GLsizei stride,
+		4. const void* offset
+		)
+
+
+		*/
 
 	public:
 		VAO(HandleVAO&& handle = Allocator<VAOTarget>::Allocate())
@@ -1058,8 +1053,8 @@ namespace glt
 		// default 
 		// Define vertex attribute pointer by index (Batched
 		template <size_t indx, typename ... T>
-		void AttributePointer(const Buffer<T...>& buffer, tag<indx>, 
-			to_type<bool, T> ... normalized)
+		void AttributePointer(const Buffer<T...>& buffer, tag_v<indx>, 
+			convert_to<bool, T> ... normalized)
 		{
 			using Type = nth_element_t<indx, Attribs...>;
 

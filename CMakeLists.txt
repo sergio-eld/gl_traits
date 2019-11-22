@@ -30,6 +30,7 @@ add_library(${PROJECT_NAME}
 		include/gl_traits.hpp
 		
 		include/gltEnums.hpp
+		include/traits.hpp
 		include/gltHandle.hpp
 		
 		# include/traits_common.hpp

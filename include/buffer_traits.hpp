@@ -55,7 +55,7 @@ Comment of "1.e". Not typesafe
     or deduce:
         - explicitly passing the index number
         - if attribute type is unique
-        - for named may use tag dispatching
+        - for named may use tag_v dispatching
 
 Cases:
 - VBO of unnamed attributes
@@ -81,10 +81,10 @@ TODO: define all attribute validations here (at the beginning)
 
 // this does not consider padding for types less than 4 bytes
 template <size_t indx, class tuple, class seq = typename indx_seq<indx>>
-struct get_offset;
+struct get_tuple_offset;
 
 template <typename ... attribs>
-struct get_offset<0, std::tuple<attribs...>, std::index_sequence<>>
+struct get_tuple_offset<0, std::tuple<attribs...>, std::index_sequence<>>
 {
     constexpr static size_t value = 0;
 };
@@ -102,13 +102,13 @@ template <class tuple>
 constexpr inline size_t tuple_size_v = tuple_size<tuple>::value;
 
 template <size_t indx, class ... attribs, size_t ... i>
-struct get_offset<indx, std::tuple<attribs...>, std::index_sequence<i...>>
+struct get_tuple_offset<indx, std::tuple<attribs...>, std::index_sequence<i...>>
 {
     constexpr static size_t value = sum<sizeof(nth_type<i, attribs...>) ...>;
 };
 
 template <size_t indx, class tuple>
-constexpr inline size_t get_offset_v = get_offset<indx, tuple>::value;
+constexpr inline size_t get_offset_v = get_tuple_offset<indx, tuple>::value;
 
 ///////////////////////////
 
@@ -236,11 +236,11 @@ public:
 	// TODO: specialization for glm::vec and glm::mat?
 	// TODO: specializtion for compound?
 	// TODO: check currently bound VBO?
-	// use tag dispatching?
+	// use tag_v dispatching?
 	// not compound, do I need stride as parameter?
 	// store normalize parameter in a attrib_class (create new)
 	template <typename Attrib>
-	static void VertexAttribPointer(Attrib&& tag, const Handle<glVertexArrayTarget::vao>& handle,
+	static void VertexAttribPointer(Attrib&& tag_v, const Handle<glVertexArrayTarget::vao>& handle,
 		size_t indx,
 		size_t offsetBytes,
 		bool normalize = false)
@@ -267,7 +267,7 @@ public:
 		static void VertexAttribPointer(const Handle<glVertexArrayTarget::vao>& handle,
 			//size_t firstIndx,		// compounds starts from 0 by default
 			//size_t offsetBytes,	// offset is calculated from compound types
-			const std::tuple<to_type<bool, Attribs>...>& normalize)
+			const std::tuple<convert_to<bool, Attribs>...>& normalize)
 		{
 			constexpr size_t stride = attrib_traits<compound<Attribs...>>::stride;
 			using tuple = typename std::tuple<Attribs...>;
@@ -287,10 +287,10 @@ public:
 
 	// TODO: think of a better way to pass normalized parameters
 	template <typename ... Attribs>
-	static void VertexAttribPointer(compound<Attribs...>&& tag, const Handle<glVertexArrayTarget::vao>& handle,
+	static void VertexAttribPointer(compound<Attribs...>&& tag_v, const Handle<glVertexArrayTarget::vao>& handle,
 		//size_t firstIndx,		// compounds starts from 0 by default
 		//size_t offsetBytes,	// offset is calculated from compound types
-		const std::tuple<to_type<bool, Attribs>...>& normalize)
+		const std::tuple<convert_to<bool, Attribs>...>& normalize)
 	{
 		bool is_current = IsCurrentVAO(handle);
 		assert(is_current && "Setting attribute pointer for non-active VAO");
@@ -427,7 +427,7 @@ public:
 		: handle_(handle)
 	{}
 
-	void AllocateMemory(to_type<size_t, attribs> ... attribInstances, BufferUse usage)
+	void AllocateMemory(convert_to<size_t, attribs> ... attribInstances, BufferUse usage)
 	{
 		size_t totalSize = TotalSize(attribInstances...);
 		glt_buffers::AllocateBuffer(*handle_, totalSize, usage);
@@ -447,7 +447,7 @@ public:
 
 private:
 
-	constexpr static size_t TotalSize(to_type<size_t, attribs> ... attribInstances)
+	constexpr static size_t TotalSize(convert_to<size_t, attribs> ... attribInstances)
 	{
 		// explicitly get size of each atribute, it can be compound (contain several consequent attribs)
 		return ((attrib_traits<attribs>::stride * attribInstances) + ...);
@@ -459,7 +459,7 @@ private:
 	}
 
 	template <size_t ... indx>
-	void UpdateAllocatedInfo(to_type<size_t, attribs> ... attribInstances, std::index_sequence<indx...>&&)
+	void UpdateAllocatedInfo(convert_to<size_t, attribs> ... attribInstances, std::index_sequence<indx...>&&)
 	{
 		(SetAllocatedInfo(indx, attribInstances), ...);
 	}
