@@ -29,6 +29,9 @@ class SmartGLFW
 public:
 	SmartGLFW(int verMajor, int verMinor);
 
+    SmartGLFW(const SmartGLFW&) = delete;
+    SmartGLFW& operator=(const SmartGLFW&) = delete;
+
 	void MakeContextCurrent(GLFWwindow* window);
 	void LoadOpenGL();
 

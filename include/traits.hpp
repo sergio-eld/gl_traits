@@ -22,12 +22,31 @@ namespace glt
 	template <size_t n, class ... T>
 	using nth_element_t = std::tuple_element_t<n, std::tuple<T...>>;
 
-	template <size_t n, class Tuple>
-	struct tuple_nth_element
-	{
-		static_assert(is_tuple_v<Tuple>, "Only std::tuple is allowed!");
-		using type = std::tuple_element_t<n, Tuple>;
-	};
+    /* Get nth template parameter from a generic templated class (from std::tuple by default) */
+    template <size_t n, class Tuple>
+    struct nth_parameter
+    {
+        static_assert(is_tuple_v<Tuple>, "Template argument is not a class template!");
+        using type = std::tuple_element_t<n, Tuple>;
+    };
+
+    template <size_t n, template <typename ...> class Holder, typename ... P>
+    struct nth_parameter<n, Holder<P...>>
+    {
+        using type = std::tuple_element_t<n, std::tuple<P...>>;
+    };
+
+    template <size_t n, class Holder>
+    using nth_parameter_t = typename nth_parameter<n, Holder>::type;
+    
+    template <class NotTemplated>
+    struct templ_params_count : std::integral_constant<size_t, 0> {};
+
+    template <template <typename ...> class Holder, typename ... P>
+    struct templ_params_count<Holder<P...>> : std::integral_constant<size_t, sizeof...(P)> {};
+
+    template <class Holder>
+    constexpr inline size_t templ_params_count_v = templ_params_count<Holder>();
 
 	/* Convert one type to another. Used when expanding parameter pack.
 	Example: set n = sizeof...(T) arguments in a Foo<T..>::bar;
@@ -80,12 +99,13 @@ namespace glt
 	struct is_initializable : std::false_type {};
 
 	template <class T, class ... Types>
-	struct is_initializable < T,
+	struct is_initializable<T,
 		std::tuple<Types...>,
 		std::void_t<decltype(T{ Types()... }) >>
 		: std::true_type
 	{};
 
+    /* Version for variadic input */
 	template <class T, class ... From>
 	using is_initializable_from = is_initializable<T, std::tuple<From...>>;
 
@@ -97,7 +117,11 @@ namespace glt
 	// attribute traits
 	/////////////////////////////////////////////////
 
-	/* Wrapper typename to represent named Attribute */
+	/* Wrapper typename to represent named Attribute.
+    Can be: 
+    - A simple glm or basic C type;
+    - user-defined structure (defined in shader source)
+    */
 	template <class T, const char * glslName>
 	struct glslt
 	{
@@ -114,6 +138,12 @@ namespace glt
 	template <class T>
 	constexpr inline bool is_named_attr_v = is_named_attr<T>();
 
+    /* Used as a template argument for a Buffer class typename, that takes
+    a list of attributes an argument. 
+    Also is used as a template argument for BufferStorage*/
+    template <class ... Attribs>
+    using AttrList = std::tuple<Attribs...>;
+
 	/* Alias for compound attributes. vAttribs can be named glslt types */
 	template <class ... vAttribs>
 	using compound = std::tuple<vAttribs...>;
@@ -121,6 +151,7 @@ namespace glt
 	template <class T>
 	struct is_compound_attr : std::bool_constant<false> {};
 
+    /* compound attribute with just 1 Atribute is not compound */
 	template <class ... T>
 	struct is_compound_attr<compound<T...>> : std::bool_constant<(sizeof...(T) > 1)> {};
 
@@ -136,13 +167,13 @@ namespace glt
 	/* Get number of attributes within the compound one. 
 	0 (and warning?) if attribute is not compound */
 	template <class Compound>
-	struct compound_attr_count : glt_constant<size_t(0)>
+	struct compound_attr_count : std::integral_constant<size_t, size_t(0)>
 	{
 		// warning not compound ?
 	};
 
 	template <class ... Attr>
-	struct compound_attr_count<compound<Attr...>> : glt_constant<sizeof...(Attr)> {};
+	struct compound_attr_count<compound<Attr...>> : std::integral_constant<size_t, sizeof...(Attr)> {};
 
 	template <class Compound>
 	constexpr inline size_t compound_attr_count_v =	compound_attr_count<Compound>();
@@ -151,25 +182,25 @@ namespace glt
 	Typename parameter may be a:
 	- tuple or compound (default)
 	- Buffer or any class holds attributes
-	- glslt compound attribute
+
+    TODO: recover Type from named type?
 	*/
-	template <size_t indx, class Tuple>
-	struct nth_attribute
+	template <size_t indx, class Holder>
+    struct nth_attribute;
+    /*
 	{
 		using type = nth_element_t<indx, Tuple>;
-	};
+	};*/
 
 	template <size_t indx, template <typename ...> class Holder, typename ... Attr>
 	struct nth_attribute<indx, Holder<Attr...>>
 	{
-		using type = nth_element_t<indx, std::tuple<Attr...>>;
+		using type = nth_element_t<indx, Attr...>;
 	};
 
-	template <size_t indx, const char * attrName, class ... Attr>
-	struct nth_attribute<indx, glslt<compound<Attr...>, attrName>>
-	{
-		using type = nth_element_t<indx, std::tuple<Attr...>>;
-	};
+
+    template <size_t indx, class T>
+    using nth_attribute_t = typename nth_attribute<indx, T>::type;
 
 
 	//////////////////////////////////////////////////
@@ -191,13 +222,6 @@ namespace glt
 		for (size_t i = 1; i <= indx; ++i)
 		{
 			res += sizes[i - 1];
-			/*
-			if (!(res % 4))
-				continue;
-
-			if (sizes[i] > 4 - res % 4)
-				res += 4 - res % 4;
-				*/
 
 			if ((res % 4) &&
 				sizes[i] > 4 - res % 4)
@@ -250,10 +274,33 @@ namespace glt
 	// equivalence traits
 	/////////////////////////////////////////////////
 
+    template <class T, class NotTuple>
+    struct is_tuple_equivalent : std::false_type 
+    {
+        static_assert(!is_tuple_v<T>, "First argument must not be a tuple!");
+        // TODO: warning for 2nd class is not a tuple?
+    };
+
+    /* Get if class T (non-tuple) is equivalent to std::tuple<Args...>. 
+    True if T is initializable from Args and size of T is equal 
+    to the size of a potential class with identical alignment of Args members */
+    template <class T, class ... Args>
+    struct is_tuple_equivalent<T, std::tuple<Args...>> 
+        : std::bool_constant<(class_size_from_tuple_v<std::tuple<Args...>> == sizeof(T)) &&
+        is_initializable_from_v<T, Args...>>
+    {
+        static_assert(!is_tuple_v<T>, "First argument must not be a tuple!");
+    };
+    
+    template <class T, class Tuple>
+    constexpr inline bool is_tuple_equivalent_v = is_tuple_equivalent<T, Tuple>();
+
 	/*
 	Recover std::tuple from compound type or user-defined type.
 	For user-defined case need to provide InitFrom tuple, that contains
-	types to try aggregate initialization from
+	types to try aggregate initialization from. 
+
+    If failed to recover false_type, type = std::tuple<Attr>
 
 	TODO: Rename?
 	*/
@@ -272,30 +319,30 @@ namespace glt
 	// Checks if Attribute is equivalent to std::tuple<InitList...>
 	template <class Attr, class ... InitList>
 	struct recover_tuple<Attr, std::tuple<InitList...>>
-		: std::bool_constant<is_initializable_from_v<Attr, InitList...>>
+		: std::bool_constant<(class_size_from_tuple_v<std::tuple<InitList...>> == sizeof(Attr)) &&
+        is_initializable_from_v<Attr, InitList...>>
 	{
-		using type = std::conditional_t<is_initializable_from_v<Attr, InitList...>,
+		using type = std::conditional_t<(class_size_from_tuple_v<std::tuple<InitList...>> == sizeof(Attr)) &&
+            is_initializable_from_v<Attr, InitList...>,
 			std::tuple<InitList...>, Attr>;
 	};
+
+    template <class Attr, class InitFrom = std::void_t<>>
+    using recover_tuple_t = typename recover_tuple<Attr, InitFrom>::type;
 
 
 	/*-------------
 	Checking Attr and In types for equivalence:
-	// TODO: wrapp sizeof(Attr) to get the size of a class with same fields
-	// as the tuple's parameters
-	sizeof(Attr) == sizeof(Attr) &&
-	std::is_same_v<recover_tuple_t<A>, recover_tuple_t<I>>
+    Two classes are equivalent if their recovered tuples are the same.
 	-------------*/
-	template <class Attr, class In, class InitAttr = std::void_t<>>
-	struct is_equivalent
-		: std::bool_constant<(
-			std::is_same_v<Attr, In> ||
-			class_size_from_tuple_v<Attr> == sizeof(In) &&
-			std::is_same_v<typename recover_tuple<Attr, InitAttr>::type,
-			typename recover_tuple<In, typename recover_tuple<Attr, InitAttr>::type>::type>
-			)> {};
+    template <class Attr, class In, class InitAttr = std::void_t<>>
+    struct is_equivalent
+        : std::bool_constant<
+            std::is_same_v<recover_tuple_t<Attr, InitAttr>,
+            recover_tuple_t<In, recover_tuple_t<Attr, InitAttr>>>
+            > {};
 
-	template <class Attr, class In>
-	constexpr inline bool is_equivalent_v = is_equivalent<Attr, In>::value;
+	template <class Attr, class In, class InitAttr = std::void_t<>>
+	constexpr inline bool is_equivalent_v = is_equivalent<Attr, In, InitAttr>::value;
 
 }
