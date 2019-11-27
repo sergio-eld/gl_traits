@@ -11,7 +11,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # Substitute with find_package?
 add_subdirectory(third_party/pod_reflection)
-add_subdirectory(third_party/dhconstexpr_lib)
+#add_subdirectory(third_party/dhconstexpr_lib)
 
 
 # TODO: check if glad was generated with EXPORT
@@ -24,24 +24,30 @@ message(STATUS ${OPENGL_LIBRARIES})
 find_package(glm REQUIRED)
 message(STATUS "glm found: ${glm_FOUND}")
 
+# TODO: header-only library?
 add_library(${PROJECT_NAME}
 	OBJECT
 		include/gl_traits.hpp
-		include/traits_common.hpp
-		include/buffer_traits.hpp
-		include/texture_traits.hpp
-		include/uniform_traits.hpp
-		include/glt_definitions.hpp
+		
+		include/gltEnums.hpp
+		include/traits.hpp
+		include/gltHandle.hpp
+		
+		# include/traits_common.hpp
+		# include/buffer_traits.hpp
+		# include/texture_traits.hpp
+		# include/uniform_traits.hpp
+		# include/glt_definitions.hpp
 
 		src/gl_traits.cpp
 
-		src/shader_traits.cpp
+		# src/shader_traits.cpp
 	)
 	
 target_link_libraries(${PROJECT_NAME}
 	PUBLIC
-		pod_reflection
-		dhconstexpr_lib
+		# pod_reflection
+		#dhconstexpr_lib
 		
 		glm
 		glad::glad

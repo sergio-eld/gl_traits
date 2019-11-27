@@ -29,6 +29,9 @@ class SmartGLFW
 public:
 	SmartGLFW(int verMajor, int verMinor);
 
+    SmartGLFW(const SmartGLFW&) = delete;
+    SmartGLFW& operator=(const SmartGLFW&) = delete;
+
 	void MakeContextCurrent(GLFWwindow* window);
 	void LoadOpenGL();
 
@@ -72,7 +75,38 @@ struct vertex
 {
 	glm::vec3 posCoords;
 	glm::vec2 textureCoords;
+
+	bool operator==(const vertex& other) const
+	{
+		return posCoords == other.posCoords &&
+			textureCoords == other.textureCoords;
+	}
+
+	bool operator!=(const vertex& other) const
+	{
+		return !operator==(other);
+	}
+
 };
+
+struct vertexR
+{
+	glm::vec2 textureCoords;
+	glm::vec3 posCoords;
+
+	bool operator==(const vertex& other) const
+	{
+		return posCoords == other.posCoords &&
+			textureCoords == other.textureCoords;
+	}
+
+	bool operator!=(const vertex& other) const
+	{
+		return !operator==(other);
+	}
+
+};
+
 
 std::vector<glm::vec3> glm_cube_positions();
 std::vector<glm::vec2> glm_cube_texCoords();

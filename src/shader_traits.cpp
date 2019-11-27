@@ -1,6 +1,8 @@
 #include "gl_traits.hpp"
 
-GLuint shader_traits::GenShaderPrivate(glTargetShader target)
+/*
+
+GLuint shader_traits::GenShaderPrivate(glShaderTarget target)
 {
 	return glCreateShader((GLenum)target);
 }
@@ -35,19 +37,20 @@ std::string shader_traits::ShaderInfoLogPrivate(GLuint shader)
 	return std::string(std::begin(buffer), std::end(buffer));
 }
 
-gltHandle<glShaderProgram::program> shader_traits::GenProgram()
+Handle<glProgramTarget::program> shader_traits::GenProgram()
 {
 	return glCreateProgram();
 }
 
-void shader_traits::LinkProgram(const gltHandle<glShaderProgram::program>& prog)
+void shader_traits::LinkProgram(const Handle<glProgramTarget::program>& prog)
 {
 	glLinkProgram(prog);
 }
 
-bool shader_traits::LinkStatus(const gltHandle<glShaderProgram::program>& prog)
+bool shader_traits::LinkStatus(const Handle<glProgramTarget::program>& prog)
 {
 	int success = 0;
 	glGetProgramiv(prog, GL_LINK_STATUS, &success);
 	return (bool)success;
 }
+*/

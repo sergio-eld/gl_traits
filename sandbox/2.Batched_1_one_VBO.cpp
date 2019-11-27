@@ -9,14 +9,11 @@ int main()
 {
 
 	std::cout << path.generic_string() << std::endl;
-	SmartGLFW glfw{ 3, 3 };
+	SmartGLFW glfw{ 4, 5 };
 	SmartGLFWwindow window{ SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL" };
 
 	glfw.MakeContextCurrent(window);
 	glfw.LoadOpenGL();
-
-	glEnable(GL_DEPTH_TEST);
-
 
 	// build and compile our shader program
 	// ------------------------------------
@@ -26,29 +23,28 @@ int main()
 	auto posCoords = glm_cube_positions();
 	auto texCoords = glm_cube_texCoords();	// for batched 1st array
 
-
 	glt::VAO<glm::vec3, glm::vec2> vao{};
 	vao.Bind();
 
-	glt::Buffer<glm::vec3> vboPos{};
-	vboPos.Bind(glt::tag_v<glt::BufferTarget::array>());
-	vboPos.AllocateMemory(posCoords.size(), glt::BufferUse::static_draw);
-	vboPos.BufferData(posCoords.data(), posCoords.size());
+	glt::Buffer<glm::vec3, glm::vec2> vbo{};
+	vbo.Bind(glt::tag_v<glt::BufferTarget::array>());
+	vbo.AllocateMemory(posCoords.size(), texCoords.size(), glt::BufferUse::static_draw);
 
-	vao.AttributePointer(vboPos.Attribute(glt::tag_s<0>()), glt::tag_s<0>());
+	vbo.BufferData(posCoords.data(), posCoords.size());
+	vbo.BufferData<1>(texCoords.data(), texCoords.size());
 
-	glt::Buffer<glm::vec2> vboTex{};
-	vboTex.Bind(glt::tag_v<glt::BufferTarget::array>());
-	vboTex.AllocateMemory(texCoords.size(), glt::BufferUse::static_draw);
-	vboTex.BufferData(texCoords.data(), texCoords.size());
+	// position attribute
+	vao.AttributePointer(vbo.Attribute(glt::tag_s<0>()), glt::tag_s<0>());
 
-	vao.AttributePointer(vboTex.Attribute(glt::tag_s<0>()), glt::tag_s<1>());
+	// texture coord attribute
+	vao.AttributePointer(vbo.Attribute(glt::tag_s<1>()), glt::tag_s<1>());
 
 	vao.EnableVertexAttribPointer(0);
 	vao.EnableVertexAttribPointer(1);
 
-	vboTex.UnBind(glt::tag_v<glt::BufferTarget::array>());
-	
+	vbo.UnBind(glt::tag_v<glt::BufferTarget::array>());
+
+
 	/////////////////////////////////////////////////////////////////////
 	// The rest part is identical to other use cases
 	/////////////////////////////////////////////////////////////////////
@@ -138,8 +134,7 @@ int main()
 		ourShader.setMat4("projection", projection);
 
 		// render box
-		vao.Bind();
-		// glBindVertexArray(vao);
+		//glBindVertexArray(vao);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 

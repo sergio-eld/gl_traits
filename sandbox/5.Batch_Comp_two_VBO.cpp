@@ -1,4 +1,5 @@
-﻿#include "helpers.hpp"
+﻿
+#include "helpers.hpp"
 
 #include "glm/matrix.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -23,32 +24,42 @@ int main()
 	Shader ourShader{ (path.generic_string() + "vshader.vs").c_str(),
 		(path.generic_string() + "fshader.fs").c_str() };
 
-	auto posCoords = glm_cube_positions();
+	// texture coordinates from batched array, vertex coords - from compound second
 	auto texCoords = glm_cube_texCoords();	// for batched 1st array
-
+	auto vertices = cube_vertexes();		// for compound 2nd array
+	std::vector<vertexR> vertices2{ vertices.size() };
+	for (size_t i = 0; i != vertices.size(); ++i)
+	{
+		vertices2[i].posCoords = vertices[i].posCoords;
+		vertices2[i].textureCoords = vertices[i].textureCoords;
+	}
 
 	glt::VAO<glm::vec3, glm::vec2> vao{};
 	vao.Bind();
 
-	glt::Buffer<glm::vec3> vboPos{};
-	vboPos.Bind(glt::tag_v<glt::BufferTarget::array>());
-	vboPos.AllocateMemory(posCoords.size(), glt::BufferUse::static_draw);
-	vboPos.BufferData(posCoords.data(), posCoords.size());
-
-	vao.AttributePointer(vboPos.Attribute(glt::tag_s<0>()), glt::tag_s<0>());
-
 	glt::Buffer<glm::vec2> vboTex{};
-	vboTex.Bind(glt::tag_v<glt::BufferTarget::array>());
+	glt::Buffer<glt::compound<glm::vec2, glm::vec3>> vboVert{};
+
+	vboTex.Bind(glt::BufferTarget::array);
 	vboTex.AllocateMemory(texCoords.size(), glt::BufferUse::static_draw);
 	vboTex.BufferData(texCoords.data(), texCoords.size());
 
+	// bind textures
 	vao.AttributePointer(vboTex.Attribute(glt::tag_s<0>()), glt::tag_s<1>());
+
+	vboVert.Bind(glt::BufferTarget::array);
+	vboVert.AllocateMemory(vertices2.size(), glt::BufferUse::static_draw);
+	vboVert.BufferData(vertices2.data(), vertices2.size());
+
+	// bind vertex coords
+	vao.AttributePointer(vboVert.Attribute(glt::tag_indx<0, 1>()), glt::tag_s<0>());
 
 	vao.EnableVertexAttribPointer(0);
 	vao.EnableVertexAttribPointer(1);
 
-	vboTex.UnBind(glt::tag_v<glt::BufferTarget::array>());
-	
+	vboVert.UnBind(glt::BufferTarget::array);
+
+
 	/////////////////////////////////////////////////////////////////////
 	// The rest part is identical to other use cases
 	/////////////////////////////////////////////////////////////////////
