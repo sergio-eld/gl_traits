@@ -74,6 +74,9 @@ namespace glt
 	template <size_t S>
 	using tag_s = tag_v<S>;
 
+	template <const char* c>
+	using tag_c = tag_v<c>;
+
 	template <size_t i, size_t subi>
 	struct tag_indx
 	{};

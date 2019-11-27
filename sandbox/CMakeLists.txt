@@ -41,6 +41,8 @@ set(VBO_USE_CASES
 	"3.Compound_one_VBO"	# ok
 	"4.Batch_Comp_one_VBO"	# ok
 	"5.Batch_Comp_two_VBO"	# ok
+	
+	
 )
 
 foreach(USE_CASE ${VBO_USE_CASES})

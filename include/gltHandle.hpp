@@ -113,6 +113,7 @@ namespace glt
 
     using HandleBuffer = Handle<BufferTarget>;
     using HandleVAO = Handle<VAOTarget>;
+	using HandleProg = Handle<glProgramTarget>;
 
     // TODO: add responsibility to delete handle?
     // TODO: unbind handle when deleting?
@@ -1190,4 +1191,38 @@ namespace glt
 
 		}
 	};
+
+
+	/*
+	n - number of args. What types of Uniforms exist?
+	*/
+	template <class, size_t n = 0>
+	class Uniform;
+
+	template <const char *uniformName, typename T>
+	class Uniform<glslt<T, uniformName>>
+	{
+		GLint handle_ = -1;
+
+	public:
+
+		Uniform(const HandleProg& prog)
+			: handle_(glGetUniformLocation(handle_accessor<glProgramTarget>()(prog),
+				uniformName))
+		{
+			assert(handle_ != -1 && "Uniform::Failed to get Uniform location!");
+		}
+
+		// for vectors
+		template <class = std::enable_if_t<is_glm_vec_v<T>>>
+		void Update(tag_c<uniformName>, const T& value) const
+		{
+			constexpr void(__stdcall **pFunc)(GLint, GLsizei, const void*) =
+				uniform_update_func_v<T>;
+
+			(*pFunc)(handle_, elements_count_v<T>, &value);
+		}
+	};
+
+
 }

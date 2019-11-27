@@ -5,15 +5,16 @@ This library is intended to provide typesafety for OpenGL functions and enumerat
 Typesafe enum classes and function wrappers allow to eliminate at compile-time the 
 following errors:
 - 
-- 
+- Accessing/Modifying Uniforms that do not exist within a shader program
 - restrict range of possible values for input, i.e. 
 glVertexAttribPointer size may be 1, 2, 3, 4, or GL_BGRA. Declaring enum will restrict
 implicit conversions from other integer values
+- invalid input for glVertexAttribPointer
 
 
 Additional wrapper classes enforce a workflow that makes easier to avoid or detect
 the following run-time errors:
-- 
+- memory leaks (enforce RAII)
 -
 
 Each class should have 2 levels of indirection:

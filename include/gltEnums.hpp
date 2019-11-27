@@ -69,7 +69,7 @@ namespace glt
 
 
 	// types only to be used as a paramaeter for Handle<T>, to find allocator and deleter functions 
-	enum class glProgramTarget : int;           // empty
+	enum class glProgramTarget : int {}; // empty
 
 	enum class VAOTarget : int;       // empty
 	enum class glProgramPipeLineTarget : int;   // empty
@@ -406,5 +406,63 @@ namespace glt
 	/*
 	template <class T>
 	constexpr inline VAOAttribSize vao_attrib_size_v = vao_attrib_size<T>();*/
+
+	template <class T>
+	struct elements_count : glt_constant<(size_t)1> {};
+
+	template <glm::length_t L, typename T, glm::qualifier Q>
+	struct elements_count<glm::vec<L, T, Q>> : glt_constant<L> {};
+
+	template <class T>
+	constexpr inline size_t elements_count_v = elements_count<T>();
+
+	template <class T>
+	struct is_glm_vec : std::false_type {};
+
+	template <glm::length_t L, typename T, glm::qualifier Q>
+	struct is_glm_vec<glm::vec<L, T, Q>> : std::true_type {};
+
+	template <class T>
+	constexpr inline bool is_glm_vec_v = is_glm_vec<T>();
+
+	// glUniform funcs map
+	template <class T>
+	struct uniform_update_func;
+	/*
+	{
+		static_assert(false, 
+			"Typename does not have a corresponding glUniform function!");
+	};*/
+
+	template <> struct uniform_update_func<glm::vec1> : glt_constant<&glUniform1fv> {};
+	template <> struct uniform_update_func<glm::vec2> : glt_constant<&glUniform2fv> {};
+	template <> struct uniform_update_func<glm::vec3> : glt_constant<&glUniform3fv> {};
+	template <> struct uniform_update_func<glm::vec4> : glt_constant<&glUniform4fv> {};
+
+	template <> struct uniform_update_func<glm::ivec1> : glt_constant<&glUniform1iv> {};
+	template <> struct uniform_update_func<glm::ivec2> : glt_constant<&glUniform2iv> {};
+	template <> struct uniform_update_func<glm::ivec3> : glt_constant<&glUniform3iv> {};
+	template <> struct uniform_update_func<glm::ivec4> : glt_constant<&glUniform4iv> {};
+
+	template <> struct uniform_update_func<glm::uvec1> : glt_constant<&glUniform1uiv> {};
+	template <> struct uniform_update_func<glm::uvec2> : glt_constant<&glUniform2uiv> {};
+	template <> struct uniform_update_func<glm::uvec3> : glt_constant<&glUniform3uiv> {};
+	template <> struct uniform_update_func<glm::uvec4> : glt_constant<&glUniform4uiv> {};
+
+	template <> struct uniform_update_func<glm::mat2> : glt_constant<&glUniformMatrix2fv> {};
+	template <> struct uniform_update_func<glm::mat3> : glt_constant<&glUniformMatrix3fv> {};
+	template <> struct uniform_update_func<glm::mat4> : glt_constant<&glUniformMatrix4fv> {};
+
+	template <> struct uniform_update_func<glm::mat2x3> : glt_constant<&glUniformMatrix2x3fv> {};
+	template <> struct uniform_update_func<glm::mat3x2> : glt_constant<&glUniformMatrix3x2fv> {};
+
+	template <> struct uniform_update_func<glm::mat2x4> : glt_constant<&glUniformMatrix2x4fv> {};
+	template <> struct uniform_update_func<glm::mat4x2> : glt_constant<&glUniformMatrix4x2fv> {};
+
+	template <> struct uniform_update_func<glm::mat4x3> : glt_constant<&glUniformMatrix4x3fv> {};
+	template <> struct uniform_update_func<glm::mat3x4> : glt_constant<&glUniformMatrix3x4fv> {};
+
+	template <class T>
+	constexpr inline auto uniform_update_func_v = uniform_update_func<T>();
 
 }
