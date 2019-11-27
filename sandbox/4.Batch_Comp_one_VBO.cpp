@@ -7,7 +7,7 @@
 
 int main()
 {
-
+    
 	std::cout << path.generic_string() << std::endl;
 	SmartGLFW glfw{ 3, 3 };
 	SmartGLFWwindow window{ SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL" };
@@ -23,32 +23,42 @@ int main()
 	Shader ourShader{ (path.generic_string() + "vshader.vs").c_str(),
 		(path.generic_string() + "fshader.fs").c_str() };
 
-	auto posCoords = glm_cube_positions();
+	// texture coordinates from batched array, vertex coords - from compound second
 	auto texCoords = glm_cube_texCoords();	// for batched 1st array
+	auto vertices = cube_vertexes();		// for compound 2nd array
+	std::vector<vertexR> vertices2{ vertices.size() };
+	for (size_t i = 0; i != vertices.size(); ++i)
+	{
+		vertices2[i].posCoords = vertices[i].posCoords;
+		vertices2[i].textureCoords = vertices[i].textureCoords;
+	}
 
+	// first array is garbage
+	// compound = vertex with members in reversed order
+	glt::Buffer<glm::vec2, glt::compound<glm::vec2, glm::vec3>> vbo{};
+
+
+	vbo.Bind(glt::BufferTarget::array);
+
+	vbo.AllocateMemory(texCoords.size(), vertices2.size(), glt::BufferUse::static_draw);
+	vbo.BufferData<1>(vertices2.data(), vertices2.size());
+
+	vbo.BufferData<0>(texCoords.data(), texCoords.size());
 
 	glt::VAO<glm::vec3, glm::vec2> vao{};
 	vao.Bind();
+	// bind vertex coords
+	vao.AttributePointer(vbo.Attribute(glt::tag_indx<1, 1>()), glt::tag_s<0>()); 
 
-	glt::Buffer<glm::vec3> vboPos{};
-	vboPos.Bind(glt::tag_v<glt::BufferTarget::array>());
-	vboPos.AllocateMemory(posCoords.size(), glt::BufferUse::static_draw);
-	vboPos.BufferData(posCoords.data(), posCoords.size());
+	// bind texture coords
+	// vao.AttributePointer(vbo.Attribute(glt::tag_indx<1, 0>()), glt::tag_s<1>());
 
-	vao.AttributePointer(vboPos.Attribute(glt::tag_s<0>()), glt::tag_s<0>());
-
-	glt::Buffer<glm::vec2> vboTex{};
-	vboTex.Bind(glt::tag_v<glt::BufferTarget::array>());
-	vboTex.AllocateMemory(texCoords.size(), glt::BufferUse::static_draw);
-	vboTex.BufferData(texCoords.data(), texCoords.size());
-
-	vao.AttributePointer(vboTex.Attribute(glt::tag_s<0>()), glt::tag_s<1>());
+	// second case 	// bind texture coords
+	vao.AttributePointer(vbo.Attribute(glt::tag_s<0>()), glt::tag_s<1>());
 
 	vao.EnableVertexAttribPointer(0);
 	vao.EnableVertexAttribPointer(1);
 
-	vboTex.UnBind(glt::tag_v<glt::BufferTarget::array>());
-	
 	/////////////////////////////////////////////////////////////////////
 	// The rest part is identical to other use cases
 	/////////////////////////////////////////////////////////////////////
@@ -148,7 +158,7 @@ int main()
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
-
+	
 	return 0;
 
 }

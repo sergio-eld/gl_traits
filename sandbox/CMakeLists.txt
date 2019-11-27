@@ -11,7 +11,6 @@ message(STATUS "PlatformPath found: ${PlatformPath_FOUND}")
 add_library(gl_sandbox
 	STATIC
 		$<TARGET_OBJECTS:gl_traits>
-		# assertions.cpp
 		helpers.hpp
 		helpers.cpp
 	)
@@ -20,7 +19,6 @@ target_link_libraries(gl_sandbox
 	PUBLIC
 		gl_traits
 		glfw
-		#PlatformPath
 	)
 	
 target_include_directories(gl_sandbox
@@ -36,12 +34,13 @@ set(VBO_USE_CASES
 	"traits_attribute_nth_attribute"
 	"traits_equivalence"
 	"buffer_fetch_attributes"
-	# "equivalence"
 	"handles_tests"
-	"BufferMap_tests"
-	#"1.Batched_2_dif_VBO" 
-	#"2.Batched_2_one_VBO" 
-	#"3.Compound_one_VBO"
+	"BufferMap_tests"	
+	"1.Batched_2_dif_VBO" 	# ok
+	"2.Batched_1_one_VBO"	# ok
+	"3.Compound_one_VBO"	# ok
+	"4.Batch_Comp_one_VBO"	# ok
+	"5.Batch_Comp_two_VBO"	# ok
 )
 
 foreach(USE_CASE ${VBO_USE_CASES})

@@ -1,43 +1,46 @@
 ﻿#include "helpers.hpp"
 
+#include "glm/matrix.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtc/type_ptr.hpp"
+
+
 int main()
 {
-    
+
 	std::cout << path.generic_string() << std::endl;
-	SmartGLFW glfw{ 3, 3 };
+	SmartGLFW glfw{ 4, 5 };
 	SmartGLFWwindow window{ SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL" };
 
 	glfw.MakeContextCurrent(window);
 	glfw.LoadOpenGL();
 
-	glEnable(GL_DEPTH_TEST);
-
-
-	// build and compile our shader zprogram
+	// build and compile our shader program
 	// ------------------------------------
 	Shader ourShader{ (path.generic_string() + "vshader.vs").c_str(),
 		(path.generic_string() + "fshader.fs").c_str() };
 
-	Handle<glVertexArrayTarget::vao> vao{ glt_buffers::GenVAO() };
-	glt_buffers::BindVAO(vao);
+	auto vertices = cube_vertexes();
 
-	auto vertexes = cube_vertexes();
+	glt::VAO<glm::vec3, glm::vec2> vao{};
+	vao.Bind();
 
-	using vertex_attr = comp_attr<glm::vec3, glm::vec2>;
+	glt::Buffer<glt::compound<glm::vec3, glm::vec2>> vbo{};
+	vbo.Bind(glt::tag_v<glt::BufferTarget::array>());
+	vbo.AllocateMemory(vertices.size(), glt::BufferUse::static_draw);
 
-	glVBOCompound<glm::vec3, glm::vec2> vboVertexes{
-		glt_buffers::GenBuffer<BufferTarget::array_buffer>() };
+	vbo.BufferData(vertices.data(), vertices.size());
 
-	//glVBOCompound<glm::vec3, glm::vec2>::has_named_attribs;
+	// position attribute
+	vao.AttributePointer(vbo.Attribute(glt::tag_indx<0, 0>()), glt::tag_s<0>());
 
-	vboVertexes.Bind();
-	vboVertexes.AllocateMemory(vertexes.size(), glBufUse::static_draw);
-	vboVertexes.BufferData<0>(vertexes);
+	// texture coord attribute
+	vao.AttributePointer(vbo.Attribute(glt::tag_indx<0, 1>()), glt::tag_s<1>());
 
-	glt_buffers::VertexAttribPointer(vertex_attr(), vao, std::make_tuple(false, false));
+	vao.EnableVertexAttribPointer(0);
+	vao.EnableVertexAttribPointer(1);
 
-	glt_buffers::EnableVertexAttribArray(vao, 0);
-	glt_buffers::EnableVertexAttribArray(vao, 1);
+	vbo.UnBind(glt::tag_v<glt::BufferTarget::array>());
 
 
 	/////////////////////////////////////////////////////////////////////
@@ -129,7 +132,7 @@ int main()
 		ourShader.setMat4("projection", projection);
 
 		// render box
-		glBindVertexArray(vao);
+		//glBindVertexArray(vao);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 
@@ -138,7 +141,7 @@ int main()
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
-    
+
 	return 0;
 
 }

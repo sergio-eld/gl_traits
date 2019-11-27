@@ -89,6 +89,25 @@ struct vertex
 
 };
 
+struct vertexR
+{
+	glm::vec2 textureCoords;
+	glm::vec3 posCoords;
+
+	bool operator==(const vertex& other) const
+	{
+		return posCoords == other.posCoords &&
+			textureCoords == other.textureCoords;
+	}
+
+	bool operator!=(const vertex& other) const
+	{
+		return !operator==(other);
+	}
+
+};
+
+
 std::vector<glm::vec3> glm_cube_positions();
 std::vector<glm::vec2> glm_cube_texCoords();
 std::vector<vertex> cube_vertexes();

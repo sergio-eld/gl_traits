@@ -236,6 +236,8 @@ namespace glt
         static void Bind(tag_v<target>, const IBindable<eTargetType>& obj)
         {
             const Handle<eTargetType>& handle = obj.GetHandle();
+
+			// TODO: remove check from here. Assign function pointers to default function
             assert(*ppBindFunc && "OpenGL Bind function has not been initialized!");
 
             (*ppBindFunc)((GLenum)target, handle_accessor<eTargetType>()(handle));
@@ -930,8 +932,11 @@ namespace glt
             // TODO: choose Named or default
             ValidateBind();
             using DataType = UT;
-            GLintptr offset_bytes = sizeof(DataType) * offset,
-                size_bytes = sizeof(DataType) * size;
+
+			GLintptr offset_bytes = GetOffset(tag_s<indx>()) + 
+				sizeof(UT) * offset,
+				size_bytes = sizeof(UT) * size;
+
             glBufferSubData((GLenum)last_bound_, offset_bytes, size_bytes, data);
 
         }
@@ -1025,15 +1030,16 @@ namespace glt
                 return VertexAttrib<A>(GetOffset(tag_s<indx>()));
         }
 
+		// TODO: remove tag_s with tag taking 2 indices
         /* Fetch a subIndex's Attribute from a compound attribute at index */
         template <size_t indx, size_t subIndx, class Compound =
             std::conditional_t<(indx < num_attribs_), nth_element_t<indx, Attr...>, void>,
             class A = std::conditional_t<std::is_void_v<Compound>, void, nth_parameter_t<subIndx, Compound>>>
-            VertexAttrib<A> Attribute(tag_s<indx>, tag_s<subIndx>) const
+            VertexAttrib<A> Attribute(tag_indx<indx, subIndx>) const
         {
             static_assert(indx < num_attribs_, "Index is out of range!");
 
-            return VertexAttrib<A>(GetOffset(tag_s<indx>(), tag_s<subIndx>()), sizeof(A));
+            return VertexAttrib<A>(GetOffset(tag_s<indx>(), tag_s<subIndx>()), sizeof(Compound));
         }
 
         ~Buffer()
@@ -1067,12 +1073,42 @@ namespace glt
     using BufferL = typename BufferListWrapper<AttrList>::type;
     
 
+	class ActiveVAO
+	{
+		inline static GLuint vao_ = 0;
+
+	public:
+
+		static bool IsBound(const HandleVAO& handle)
+		{
+			return handle == vao_;
+		}
+
+		static void Bind(const HandleVAO& handle)
+		{
+			vao_ = handle_accessor<VAOTarget>()(handle);
+			glBindVertexArray(vao_);
+		}
+
+		static void UnBind()
+		{
+			vao_ = 0;
+			glBindVertexArray(0);
+		}
+
+	};
+
 	/*
 	Implements glVertexAttribPointer usage
+
+	// TODO: exclude compound attributes, VAO is agnostic to how a buffer stores data
 	*/
 	template <class ... Attribs>
 	class VAO
 	{
+		// What about glm::mat????
+		static_assert(!std::disjunction_v<is_compound_attr<Attribs>...>,
+			"Compaund attributes are not allowed in VAO!");
 		HandleVAO handle_;
 
 		/*
@@ -1098,18 +1134,48 @@ namespace glt
 				throw std::exception("Invalid VAO handle");
 		}
 
+		void Bind() const
+		{
+			ActiveVAO::Bind(handle_);
+		}
+
+		void UnBind() const
+		{
+			ActiveVAO::UnBind();
+		}
+
         // TODO: generate overloaded functions for all the Attributes?
-        template <size_t indx, typename A = nth_element_t<indx, Attribs...>>
-        void AttributePointer(VertexAttrib<A>&& attrib, tag_s<indx>, bool normalize)
+		// No runtime safety:
+		// - VAO does not know if it is bound or not;
+		// - VAO does not know if a Vertex Attribute belongs to a bound Buffer
+        template <size_t indx, typename A>
+        void AttributePointer(VertexAttrib<A>&& attrib, tag_s<indx>, bool normalize = false)
         {
+			static_assert(std::is_same_v<A, nth_element_t<indx, Attribs...>>,
+				"AttributePointer::Invalid Attribute type for provided index!");
+			assert(ActiveVAO::IsBound(handle_) &&
+				"Setting Vertex Attribute for non-active VAO");
+
+			auto sz = (GLint)vao_attrib_size<A>()();
+			GLenum glType = (GLenum)c_to_gl_v<A>;
+			GLsizei stride = attrib.Stride();
+			void *voffset = (void*)attrib.Offset();
+
             glVertexAttribPointer((GLuint)indx,
-                vao_attrib_size<A>(),
-                c_to_gl_v<A>,
+				sz,
+				glType,
                 normalize,
-                attrib.Stride(),
-                attrib.Offset());
+				stride,
+                voffset);
         }
 
+		void EnableVertexAttribPointer(size_t indx) const
+		{
+			assert(ActiveVAO::IsBound(handle_));
+
+			// TODO: move to another class
+			glEnableVertexAttribArray((GLuint)indx);
+		}
 
 		/*
 		Defines a vertex attribute of Name or at Index

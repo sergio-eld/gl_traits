@@ -39,13 +39,13 @@ struct FetchTester<glt::AttrList<Attr...>, std::index_sequence<indx...>>
 
     FetchTester(glt::convert_to<size_t, Attr> ... sizes, glt::BufferUse use)
     {
-        buffer.Bind(glt::BufferTarget::array_buffer);
+        buffer.Bind(glt::BufferTarget::array);
         buffer.AllocateMemory(sizes..., use);
     }
 
     FetchTester(size_t sizes, glt::BufferUse use)
     {
-        buffer.Bind(glt::BufferTarget::array_buffer);
+        buffer.Bind(glt::BufferTarget::array);
         buffer.AllocateMemory(glt::convert_to<size_t, Attr>(sizes)..., use);
     }
 

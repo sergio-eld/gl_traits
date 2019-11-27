@@ -81,21 +81,21 @@ int main()
     // TODO: add glShaderTarget test;
 
 
-    //bound_handle_base<BufferTarget, BufferTarget::array_buffer>::Bind(tag_v<BufferTarget::array_buffer>(), hBuf);
-    bound_handle_base<BufferTarget, BufferTarget::array_buffer>::binding;
+    //bound_handle_base<BufferTarget, BufferTarget::array>::Bind(tag_v<BufferTarget::array>(), hBuf);
+    bound_handle_base<BufferTarget, BufferTarget::array>::binding;
 
-    has_gl_binding_v<BufferTarget::array_buffer>;
-    get_binding_v<BufferTarget::array_buffer>;
+    has_gl_binding_v<BufferTarget::array>;
+    get_binding_v<BufferTarget::array>;
 
 
 	Handle<BufferTarget> hBuf = Allocator<BufferTarget>::Allocate();
 
 
-	//bound_handle<BufferTargetList>::Bind(tag_v<BufferTarget::array_buffer>(), hBuf);
+	//bound_handle<BufferTargetList>::Bind(tag_v<BufferTarget::array>(), hBuf);
 
 	Buffer<glm::vec3, glm::vec2> buf{};
-	//buf.Bind(tag_v<BufferTarget::array_buffer>());
-	buf.Bind(BufferTarget::array_buffer);
+	//buf.Bind(tag_v<BufferTarget::array>());
+	buf.Bind(BufferTarget::array);
 	buf.AllocateMemory(16, 16, BufferUse::static_draw);
 
 	try
@@ -106,8 +106,8 @@ int main()
 	{
 		std::cerr << e.what() << std::endl;
 	}
-	bool isCurrent = buf.IsBound(BufferTarget::array_buffer);
-		//bound_handle<BufferTargetList>::IsBound(tag_v<BufferTarget::array_buffer>(), buf);
+	bool isCurrent = buf.IsBound(BufferTarget::array);
+		//bound_handle<BufferTargetList>::IsBound(tag_v<BufferTarget::array>(), buf);
 
     return res;
 }

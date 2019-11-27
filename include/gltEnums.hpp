@@ -150,37 +150,37 @@ namespace glt
 	enum class BufferTarget : int
 	{
 		none = 0,
-		array_buffer = GL_ARRAY_BUFFER,
-		atomic_counter_buffer = GL_ATOMIC_COUNTER_BUFFER,
-		copy_read_buffer = GL_COPY_READ_BUFFER,
-		copy_write_buffer = GL_COPY_WRITE_BUFFER,
-		dispatch_indirect_buffer = GL_DISPATCH_INDIRECT_BUFFER,
-		draw_indirect_buffer = GL_DRAW_INDIRECT_BUFFER,
-		element_array_buffer = GL_ELEMENT_ARRAY_BUFFER,
-		pixel_pack_buffer = GL_PIXEL_PACK_BUFFER,
-		pixel_unpack_buffer = GL_PIXEL_UNPACK_BUFFER,
-		query_buffer = GL_QUERY_BUFFER,
-		shader_storage_buffer = GL_SHADER_STORAGE_BUFFER,
-		texture_buffer = GL_TEXTURE_BUFFER,
-		transform_feedback_buffer = GL_TRANSFORM_FEEDBACK_BUFFER,
-		uniform_buffer = GL_UNIFORM_BUFFER
+		array = GL_ARRAY_BUFFER,
+		atomic_counter = GL_ATOMIC_COUNTER_BUFFER,
+		copy_read = GL_COPY_READ_BUFFER,
+		copy_write = GL_COPY_WRITE_BUFFER,
+		dispatch_indirect = GL_DISPATCH_INDIRECT_BUFFER,
+		draw_indirect = GL_DRAW_INDIRECT_BUFFER,
+		element_array = GL_ELEMENT_ARRAY_BUFFER,
+		pixel_pack = GL_PIXEL_PACK_BUFFER,
+		pixel_unpack = GL_PIXEL_UNPACK_BUFFER,
+		query = GL_QUERY_BUFFER,
+		shader_storage = GL_SHADER_STORAGE_BUFFER,
+		texture = GL_TEXTURE_BUFFER,
+		transform_feedback = GL_TRANSFORM_FEEDBACK_BUFFER,
+		uniform = GL_UNIFORM_BUFFER
 	};
 
 	using BufferTargetList = std::integer_sequence<BufferTarget,
-		BufferTarget::array_buffer,
-		BufferTarget::atomic_counter_buffer,
-		BufferTarget::copy_read_buffer,
-		BufferTarget::copy_write_buffer,
-		BufferTarget::dispatch_indirect_buffer,
-		BufferTarget::draw_indirect_buffer,
-		BufferTarget::element_array_buffer,
-		BufferTarget::pixel_pack_buffer,
-		BufferTarget::pixel_unpack_buffer,
-		BufferTarget::query_buffer,
-		BufferTarget::shader_storage_buffer,
-		BufferTarget::texture_buffer,
-		BufferTarget::transform_feedback_buffer,
-		BufferTarget::uniform_buffer>;
+		BufferTarget::array,
+		BufferTarget::atomic_counter,
+		BufferTarget::copy_read,
+		BufferTarget::copy_write,
+		BufferTarget::dispatch_indirect,
+		BufferTarget::draw_indirect,
+		BufferTarget::element_array,
+		BufferTarget::pixel_pack,
+		BufferTarget::pixel_unpack,
+		BufferTarget::query,
+		BufferTarget::shader_storage,
+		BufferTarget::texture,
+		BufferTarget::transform_feedback,
+		BufferTarget::uniform>;
 
 
 	enum class glBufferBinding : int
@@ -206,18 +206,18 @@ namespace glt
 	constexpr inline bool has_gl_binding_v = !std::is_same_v<get_binding<A>::type, void*>;
 
 	// TODO: generate this maps using python
-	template <> struct get_binding<BufferTarget::array_buffer> : glt_constant<glBufferBinding::array_buffer_binding> {};
-	template <> struct get_binding<BufferTarget::atomic_counter_buffer> : glt_constant<glBufferBinding::atomic_buffer_binding> {};
-	template <> struct get_binding<BufferTarget::copy_read_buffer> : glt_constant<glBufferBinding::copy_read_buffer_binding> {};
-	template <> struct get_binding<BufferTarget::copy_write_buffer> : glt_constant<glBufferBinding::copy_write_buffer_binding> {};
-	template <> struct get_binding<BufferTarget::dispatch_indirect_buffer> : glt_constant<glBufferBinding::dispatch_indirect_buffer_binding> {};
-	template <> struct get_binding<BufferTarget::draw_indirect_buffer> : glt_constant<glBufferBinding::draw_indirect_buffer_binding> {};
-	template <> struct get_binding<BufferTarget::element_array_buffer> : glt_constant<glBufferBinding::element_array_buffer_binding> {};
-	template <> struct get_binding<BufferTarget::pixel_pack_buffer> : glt_constant<glBufferBinding::pixel_pack_buffer_binding> {};
-	template <> struct get_binding<BufferTarget::pixel_unpack_buffer> : glt_constant<glBufferBinding::pixel_unpack_buffer_binding> {};
-	template <> struct get_binding<BufferTarget::shader_storage_buffer> : glt_constant<glBufferBinding::shader_storage_buffer_binding> {};
-	template <> struct get_binding<BufferTarget::transform_feedback_buffer> : glt_constant<glBufferBinding::transform_feedback_buffer_binding> {};
-	template <> struct get_binding<BufferTarget::uniform_buffer> : glt_constant<glBufferBinding::uniform_buffer_binding> {};
+	template <> struct get_binding<BufferTarget::array> : glt_constant<glBufferBinding::array_buffer_binding> {};
+	template <> struct get_binding<BufferTarget::atomic_counter> : glt_constant<glBufferBinding::atomic_buffer_binding> {};
+	template <> struct get_binding<BufferTarget::copy_read> : glt_constant<glBufferBinding::copy_read_buffer_binding> {};
+	template <> struct get_binding<BufferTarget::copy_write> : glt_constant<glBufferBinding::copy_write_buffer_binding> {};
+	template <> struct get_binding<BufferTarget::dispatch_indirect> : glt_constant<glBufferBinding::dispatch_indirect_buffer_binding> {};
+	template <> struct get_binding<BufferTarget::draw_indirect> : glt_constant<glBufferBinding::draw_indirect_buffer_binding> {};
+	template <> struct get_binding<BufferTarget::element_array> : glt_constant<glBufferBinding::element_array_buffer_binding> {};
+	template <> struct get_binding<BufferTarget::pixel_pack> : glt_constant<glBufferBinding::pixel_pack_buffer_binding> {};
+	template <> struct get_binding<BufferTarget::pixel_unpack> : glt_constant<glBufferBinding::pixel_unpack_buffer_binding> {};
+	template <> struct get_binding<BufferTarget::shader_storage> : glt_constant<glBufferBinding::shader_storage_buffer_binding> {};
+	template <> struct get_binding<BufferTarget::transform_feedback> : glt_constant<glBufferBinding::transform_feedback_buffer_binding> {};
+	template <> struct get_binding<BufferTarget::uniform> : glt_constant<glBufferBinding::uniform_buffer_binding> {};
 
 	// get gl Binding value from gl Target value (to access corresponing function pointer)
 	template <auto A>
@@ -258,7 +258,7 @@ namespace glt
 		texture_rectangle = GL_TEXTURE_RECTANGLE,			//+	
 		texture_cube_map = GL_TEXTURE_CUBE_MAP,				//?
 		texture_cube_map_array = GL_TEXTURE_CUBE_MAP_ARRAY,	//??
-		texture_buffer = GL_TEXTURE_BUFFER,					//??
+		texture = GL_TEXTURE_BUFFER,					//??
 		texture_2d_multisample = GL_TEXTURE_2D_MULTISAMPLE,				//+
 		texture_2d_multisample_array = GL_TEXTURE_2D_MULTISAMPLE_ARRAY,	//+
 
@@ -373,133 +373,26 @@ namespace glt
 	template <> struct c_to_gl<GLfloat> : glt_constant<glType::gl_float> {};
 	template <> struct c_to_gl<GLdouble> : glt_constant<glType::gl_double> {};
 
+	template <typename cType>
+	struct c_to_gl_find
+	{
+		constexpr static glType value = c_to_gl<cType>();
+	};
+
+	template <glm::length_t L, typename T, glm::qualifier Q>
+	struct c_to_gl_find<glm::vec<L ,T, Q>>
+	{
+		constexpr static glType value = c_to_gl<T>();
+	};
+
+
 	// TODO: add glm types recognition
 	template <typename cType>
-	constexpr inline glType c_to_gl_v = c_to_gl<cType>::value;
+	constexpr inline glType c_to_gl_v = c_to_gl_find<cType>::value;
 
 	//////////////////////////////////////////////////
 	// attribute traits
 	/////////////////////////////////////////////////
-
-	/*
-	template <class T, const char * glslName>
-	struct glslt
-	{
-		using type = typename T;
-		constexpr static const char * name = glslName;
-	};
-
-	template <class ... vAttribs>
-	using compound = std::tuple<vAttribs...>;
-
-	template <class T>
-	struct is_named_attr : std::bool_constant<false> {};
-
-	template <class T, const char * glslName>
-	struct is_named_attr<glslt<T, glslName>> : std::bool_constant<true> {};
-
-	template <class T>
-	constexpr inline bool is_named_attr_v = is_named_attr<T>();
-
-	template <class T>
-	struct is_tuple : std::false_type {};
-
-	template <class ... T>
-	struct is_tuple<std::tuple<T...>> : std::true_type {};
-
-	template <class T>
-	constexpr inline bool is_tuple_v = is_tuple<T>();
-
-	template <class T>
-	struct is_compound_attr : std::bool_constant<false> {};
-
-	template <class ... T>
-	struct is_compound_attr<compound<T...>> : std::bool_constant<(sizeof...(T) > 1)> {};
-
-	// matrices are compound
-	template<glm::length_t C, glm::length_t R, typename T, glm::qualifier Q>
-	struct is_compound_attr<glm::mat<C, R, T, Q>> : std::bool_constant<true> {};
-
-	template <class T>
-	constexpr inline bool is_compound_attr_v = is_compound_attr<T>();
-
-	template <class Compound>
-	struct compound_attr_count : glt_constant<size_t(0)> 
-	{
-		// warning not compound ?
-	};
-
-	template <class ... Attr>
-	struct compound_attr_count<compound<Attr...>> : glt_constant<sizeof...(Attr)> {};
-
-	template <class Compound>
-	constexpr inline size_t compound_attr_count_v =
-		compound_attr_count<Compound>();
-		*/
-
-	// TODO: specialization for glm::matrix?
-	/* Gets Nth attribute Type. For glslt (Named) attributes returns underlying Type */
-	/*
-	template <size_t N, class Tuple, class T = std::tuple_element_t<N, Tuple>>
-	struct nth_element
-	{
-		using type = T;
-	};
-
-	// case failure
-	template <size_t N, class NotTuple>
-	struct nth_element<N, NotTuple, void>
-	{
-		using type = void;
-	};
-
-	// case tuple/compound
-	template <size_t N, class T, class ... Attribs>
-	struct nth_element<N, std::tuple<Attribs...>, T>
-	{
-		using type = T;
-	};
-
-	// case named
-	template <size_t N, class T, const char* name, class ... Attribs>
-	struct nth_element<N, std::tuple<Attribs...>, glslt<T, name>>
-	{
-		using type = T;
-	};
-
-	// convinience wrapper with variadic input
-	template <size_t N, class ... T>
-	using nth_element_t = typename nth_element<N, std::tuple<T...>>::type;
-	*/
-
-
-	/* Get Attribute Type by index and/or sub-index*/
-	/*
-	template <size_t indx, size_t subindx, class ... Attrs>
-	class nth_attribute
-	{
-		using Attr = nth_element_t<indx, Attrs...>;
-		constexpr static bool is_compound_ = is_compound_attr_v<typename Attr>;
-		constexpr static size_t num_attr_comp = compound_attr_count_v<typename Attr>;
-	public:
-
-		static_assert(indx < sizeof...(Attrs), "Index is out of range!");
-		static_assert(!subindx || is_compound_,
-			"Invalid sub-index: Typename at index is not compound!");
-		static_assert(!is_compound_ ||
-			subindx < num_attr_comp, "Sub-index is out of range!");
-
-		using type = std::conditional_t<is_compound_,
-			typename nth_element<subindx, Attr>::type,
-			typename Attr>;
-	};
-
-	template <size_t indx, size_t subindx, class ... Attrs>
-	using nth_attribute_t = typename nth_attribute<indx, subindx, Attrs...>::type;
-
-	template <size_t indx, size_t subindx, template <class ...> class C, class ... Attr>
-	using get_nth_attribute_t = nth_attribute_t<indx, subindx, Attr...>;
-	*/
 
 	/* Get size of an Attribute for glVertexAttributePointer */
 	template <class>
@@ -510,93 +403,8 @@ namespace glt
 	struct vao_attrib_size<glm::vec<L, T, Q>>
 		: std::integral_constant<VAOAttribSize, (VAOAttribSize)L> {};
 
-
-
-	////////////////////////////////////
-	// helpers
-	////////////////////////////////////
 	/*
-	template <typename To, typename From>
-	using convert_to = To;
-
-	template <typename To, auto indx>
-	using convert_v_to = To;
-
-	template <typename T, T ... vals>
-	constexpr T get_max(std::integer_sequence<T, vals...> =
-		std::integer_sequence<T, vals...>())
-	{
-		T arr[sizeof...(vals)]{ vals... },
-			max = 0;
-		for (size_t i = 0; i != sizeof...(vals); ++i)
-			max = arr[i] > max ? arr[i] : max;
-		return max;
-	}
-
-
-	template <size_t indx, class ... T>
-	constexpr std::ptrdiff_t get_member_offset()
-	{
-		static_assert(indx < sizeof...(T), "Index is out of range!");
-
-		if constexpr (!indx)
-			return 0;
-
-		std::ptrdiff_t res = 0,
-			sizes[]{ sizeof(T)... };
-
-		for (size_t i = 1; i <= indx; ++i)
-		{
-			res += sizes[i - 1];
-			if (!(res % 4))
-				continue;
-
-			if (sizes[i] > 4 - res % 4)
-				res += 4 - res % 4;
-		}
-
-		return res;
-	}
-
-	template <size_t indx, class>
-	struct get_tuple_member_offset;
-
-	template <size_t indx, class ... T>
-	struct get_tuple_member_offset<indx, std::tuple<T...>>
-		: std::integral_constant<std::ptrdiff_t, get_member_offset<indx, T...>()> {};
-
-	template <size_t indx, class Tuple>
-	constexpr inline std::ptrdiff_t get_tuple_member_offset_v =
-		get_tuple_member_offset<indx, Tuple>();
-
-			
-
-	template <class Tuple>
-	constexpr size_t class_size_from_tuple()
-	{
-		if constexpr (!is_tuple_v<Tuple>)
-			// TODO: add warning?
-			return sizeof(Tuple);
-		else
-		{
-			constexpr size_t lastIndx = std::tuple_size_v<Tuple> -1;
-			using LastType = std::tuple_element_t<lastIndx, Tuple>;
-
-			constexpr size_t offset = get_tuple_member_offset_v<lastIndx, Tuple>,
-				res = offset + sizeof(LastType);
-
-			return (sizeof(LastType) % 4) ? res + 4 - sizeof(LastType) % 4 : res;
-		}
-
-	}
-
-	template <class Tuple>
-	constexpr inline size_t class_size_from_tuple_v =
-		class_size_from_tuple<Tuple>();
-*/
-
-	////////////////////////////////////
-
-
+	template <class T>
+	constexpr inline VAOAttribSize vao_attrib_size_v = vao_attrib_size<T>();*/
 
 }

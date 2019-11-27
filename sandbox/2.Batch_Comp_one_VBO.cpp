@@ -7,7 +7,7 @@
 
 int main()
 {
-
+    
 	std::cout << path.generic_string() << std::endl;
 	SmartGLFW glfw{ 3, 3 };
 	SmartGLFWwindow window{ SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL" };
@@ -18,37 +18,31 @@ int main()
 	glEnable(GL_DEPTH_TEST);
 
 
-	// build and compile our shader program
+	// build and compile our shader zprogram
 	// ------------------------------------
 	Shader ourShader{ (path.generic_string() + "vshader.vs").c_str(),
 		(path.generic_string() + "fshader.fs").c_str() };
 
-	auto posCoords = glm_cube_positions();
-	auto texCoords = glm_cube_texCoords();	// for batched 1st array
+	auto vertices = cube_vertexes();
 
+	// first array is garbage
+	glt::Buffer<float, glt::compound<glm::vec3, glm::vec2>> vbo{};
 
-	glt::VAO<glm::vec3, glm::vec2> vao{};
+	vbo.Bind(glt::BufferTarget::array);
+	vbo.AllocateMemory(450, vertices.size(), glt::BufferUse::static_draw);
+	vbo.BufferData<1>(vertices.data(), vertices.size());
+
+	glt::VAO<float, glm::vec2, glm::vec3> vao{};
 	vao.Bind();
+	vao.AttributePointer(vbo.Attribute(glt::tag_s<1>(), glt::tag_s<0>()),
+		glt::tag_s<1>(), false);
 
-	glt::Buffer<glm::vec3> vboPos{};
-	vboPos.Bind(glt::tag_v<glt::BufferTarget::array>());
-	vboPos.AllocateMemory(posCoords.size(), glt::BufferUse::static_draw);
-	vboPos.BufferData(posCoords.data(), posCoords.size());
+	vao.AttributePointer(vbo.Attribute(glt::tag_s<1>(), glt::tag_s<1>()),
+		glt::tag_s<2>(), false);
 
-	vao.AttributePointer(vboPos.Attribute(glt::tag_s<0>()), glt::tag_s<0>());
-
-	glt::Buffer<glm::vec2> vboTex{};
-	vboTex.Bind(glt::tag_v<glt::BufferTarget::array>());
-	vboTex.AllocateMemory(texCoords.size(), glt::BufferUse::static_draw);
-	vboTex.BufferData(texCoords.data(), texCoords.size());
-
-	vao.AttributePointer(vboTex.Attribute(glt::tag_s<0>()), glt::tag_s<1>());
-
-	vao.EnableVertexAttribPointer(0);
 	vao.EnableVertexAttribPointer(1);
+	vao.EnableVertexAttribPointer(2);
 
-	vboTex.UnBind(glt::tag_v<glt::BufferTarget::array>());
-	
 	/////////////////////////////////////////////////////////////////////
 	// The rest part is identical to other use cases
 	/////////////////////////////////////////////////////////////////////
@@ -138,7 +132,6 @@ int main()
 		ourShader.setMat4("projection", projection);
 
 		// render box
-		vao.Bind();
 		// glBindVertexArray(vao);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
@@ -148,7 +141,7 @@ int main()
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
-
+	
 	return 0;
 
 }

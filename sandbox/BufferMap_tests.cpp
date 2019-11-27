@@ -1,6 +1,7 @@
 ﻿
 #include "helpers.hpp"
 
+
 using namespace glt;
 
 struct Coord
@@ -32,7 +33,7 @@ int main()
 		std::vector<glm::vec3> cube_positions = glm_cube_positions();
 		std::vector<glm::vec2> cube_tex_coords = glm_cube_texCoords();
 
-		buffer.Bind(tag_v<BufferTarget::array_buffer>());
+		buffer.Bind(tag_v<BufferTarget::array>());
 		buffer.AllocateMemory(cube_positions.size(), cube_tex_coords.size(), BufferUse::static_draw);
 		buffer.BufferData<0>(cube_positions.data(), cube_positions.size());
 
@@ -66,7 +67,7 @@ int main()
 		std::vector<vertex> vertices = cube_vertexes();
 
 		CmpdBuffer buffer{};
-		buffer.Bind(tag_v<BufferTarget::array_buffer>());
+		buffer.Bind(tag_v<BufferTarget::array>());
 		buffer.AllocateMemory(vertices.size(), BufferUse::static_draw);
 
 		// testing offset. TODO: move to another unit test
