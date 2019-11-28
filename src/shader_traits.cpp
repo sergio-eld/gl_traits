@@ -2,7 +2,7 @@
 
 /*
 
-GLuint shader_traits::GenShaderPrivate(glShaderTarget target)
+GLuint shader_traits::GenShaderPrivate(ShaderTarget target)
 {
 	return glCreateShader((GLenum)target);
 }

@@ -62,7 +62,7 @@ namespace glt
 	enum class BufferTarget : int;
 	enum class glFrameBufferTarget : int;
 	enum class TextureTarget : int;
-	enum class glShaderTarget : int;
+	enum class ShaderTarget : int;
 
 	enum class glTransformFeedBackTarget : int; // GL_TRANSFORM_FEEDBACK only
 	enum class glQueryTarget : int;             // used in glBeginQuery
@@ -95,7 +95,7 @@ namespace glt
 	template <> struct pp_gl_allocator<glProgramTarget> : glt_constant<&glCreateProgram> {};
 
 	// takes argument 
-	template <> struct pp_gl_allocator<glShaderTarget> : glt_constant<&glCreateShader> {};
+	template <> struct pp_gl_allocator<ShaderTarget> : glt_constant<&glCreateShader> {};
 
 	template <typename glObjType>
 	constexpr inline auto pp_gl_allocator_v = pp_gl_allocator<glObjType>::value;
@@ -117,7 +117,7 @@ namespace glt
 	template <> struct pp_gl_deleter<glSamplerTarget> : glt_constant<&glDeleteSamplers> {};
 
 
-	template <> struct pp_gl_deleter<glShaderTarget> : glt_constant<&glDeleteShader> {};
+	template <> struct pp_gl_deleter<ShaderTarget> : glt_constant<&glDeleteShader> {};
 	template <> struct pp_gl_deleter<glProgramTarget> : glt_constant<&glDeleteProgram> {};
 
 	template <typename glObjType>

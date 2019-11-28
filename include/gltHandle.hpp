@@ -13,8 +13,13 @@ namespace glt
     struct Allocator;
 
     template <typename eTargetType>
-    struct handle_accessor;
+    class handle_accessor;
 
+	/*
+	Handle is unique. Frees OpenGL resources on destruction.
+
+	Need to implement shared handle?
+	*/
     template <typename eTargetType>
     class Handle//<target, typename decltype(target)>
     {
@@ -22,7 +27,7 @@ namespace glt
         GLuint handle_;// = 0;
 
         friend struct Allocator<eTargetType>;
-        friend struct handle_accessor<eTargetType>;
+        friend class handle_accessor<eTargetType>;
 
     public:
 
@@ -113,8 +118,11 @@ namespace glt
 
     using HandleBuffer = Handle<BufferTarget>;
     using HandleVAO = Handle<VAOTarget>;
+	using HandleShader = Handle<ShaderTarget>;
 	using HandleProg = Handle<glProgramTarget>;
 
+	// TODO: change invocation routine 
+	// (make one class, generating all the Allocation functions and using tags?)
     // TODO: add responsibility to delete handle?
     // TODO: unbind handle when deleting?
     template <typename eTargetType>
@@ -123,7 +131,7 @@ namespace glt
         // retrieve pointer to allocator function pointer
         constexpr static auto ppAllocFunc = pp_gl_allocator<eTargetType>::value;
 
-        //template <typename = std::enable_if_t<!std::is_same_v<glShaderTarget, decltype(target)>>>
+        //template <typename = std::enable_if_t<!std::is_same_v<ShaderTarget, decltype(target)>>>
         static Handle<eTargetType> Allocate()
         {
             // TODO: also check for deleter function pointers to be loaded
@@ -142,7 +150,7 @@ namespace glt
             //else if constexpr (std::is_same_v<GLuint(APIENTRYP *)(GLenum), pp_gl_allocator<eTargetType>::value_type>)
             //    return Handle<eTargetType>((*ppAllocFunc)((GLenum)target));
             else
-                static_assert(false, "Unhandled case!");
+                static_assert(false, "Allocator::Unhandled case!");
 
             /* TODO: check handle at Buffers' (or other objects') constructors
             if (!h)
@@ -154,7 +162,7 @@ namespace glt
 
         }
 
-        //template <typename = std::enable_if_t<!std::is_same_v<glShaderTarget, decltype(target)>>>
+        //template <typename = std::enable_if_t<!std::is_same_v<ShaderTarget, decltype(target)>>>
         Handle<eTargetType> operator()() const
         {
             return Allocate();
@@ -163,21 +171,21 @@ namespace glt
     };
 
     template <>
-    struct Allocator<glShaderTarget>
+    struct Allocator<ShaderTarget>
     {
-        constexpr static auto ppAllocFunc = pp_gl_allocator_v<glShaderTarget>;
+        constexpr static auto ppAllocFunc = pp_gl_allocator_v<ShaderTarget>;
 
-        static Handle<glShaderTarget> Allocate(glShaderTarget target)
+        static Handle<ShaderTarget> Allocate(ShaderTarget target)
         {
             // TODO: also check for deleter function pointers to be loaded
             assert(*ppAllocFunc && "Pointers to OpenGL allocator functions have not been initialiized!");
             if (!*ppAllocFunc)
                 throw("Pointers to OpenGL allocator functions have not been initialiized!");
 
-            return Handle<glShaderTarget>((*ppAllocFunc)((GLenum)target));
+            return Handle<ShaderTarget>((*ppAllocFunc)((GLenum)target));
         }
 
-        Handle<glShaderTarget> operator()(glShaderTarget target) const
+        Handle<ShaderTarget> operator()(ShaderTarget target) const
         {
             return Allocate(target);
         }
@@ -185,14 +193,30 @@ namespace glt
     };
 
     template <typename eTargetType>
-    struct handle_accessor
+    class handle_accessor
     {
+		GLuint raw_handle_ = 0;
+	public:
+		handle_accessor() = default;
+		handle_accessor(const Handle<eTargetType>& handle)
+			: raw_handle_(handle)
+		{}
+
+		/*
         GLuint operator()(const Handle<eTargetType>& handle) const
         {
             return handle;
         }
+		*/
+
+		operator GLint() const
+		{
+			assert(raw_handle_ && "handle_accessor::Invalid handle!");
+			return raw_handle_;
+		}
     };
 
+	// TODO: replace with traits? (checking for "is_bindable" and "has_GetHandle")
     // base class for every object, that has glBind(target, handle) function
     template <typename eTargetType>
     struct IBindable
@@ -241,8 +265,8 @@ namespace glt
 			// TODO: remove check from here. Assign function pointers to default function
             assert(*ppBindFunc && "OpenGL Bind function has not been initialized!");
 
-            (*ppBindFunc)((GLenum)target, handle_accessor<eTargetType>()(handle));
-            raw_handle_ = handle_accessor<eTargetType>()(handle);
+            (*ppBindFunc)((GLenum)target, handle_accessor(handle));
+            raw_handle_ = handle_accessor(handle);
         }
 
         static void UnBind(tag_v<target>, const IBindable<eTargetType>& obj)
@@ -1087,7 +1111,7 @@ namespace glt
 
 		static void Bind(const HandleVAO& handle)
 		{
-			vao_ = handle_accessor<VAOTarget>()(handle);
+			vao_ = handle_accessor(handle);
 			glBindVertexArray(vao_);
 		}
 
@@ -1192,11 +1216,131 @@ namespace glt
 		}
 	};
 
+	template <ShaderTarget target>
+	class Shader
+	{
+		HandleShader handle_;
+		bool compiled_ = false;
+
+	public:
+
+		// default case
+		Shader(HandleShader&& handle = Allocator<ShaderTarget>::Allocate(target))
+			: handle_(std::move(handle))
+		{}
+
+		template <size_t length>
+		Shader(const char(&source)[length],
+			HandleShader&& handle = Allocator<ShaderTarget>::Allocate(target))
+			: handle_(std::move(handle)),
+			compiled_(Compile_(source, length))
+		{
+			assert(IsValid() && "Shader::Failed to compile shader!");
+		}
+
+		Shader(const char* source, size_t length,
+			HandleShader&& handle = Allocator<ShaderTarget>::Allocate(target))
+			: handle_(std::move(handle)),
+			compiled_(Compile_(source, length))
+		{
+			assert(IsValid() && "Shader::Failed to compile shader!");
+		}
+
+		Shader(const std::string& source,
+			HandleShader&& handle = Allocator<ShaderTarget>::Allocate(target))
+			: handle_(std::move(handle)),
+			compiled_(Compile_(source.data(), source.size()))
+		{
+			assert(IsValid() && "Shader::Failed to compile shader!");
+		}
+
+		// shaders actually may be allowed to be copied, but what about the handle?
+		Shader(const Shader&) = delete;
+		Shader& operator=(const Shader&) = delete;
+
+		bool Compile(const std::string& source)
+		{
+			compiled_ = Compile_(source.data(), source.length());
+			return IsValid();
+		}
+
+		bool Compile(const char *source, size_t length)
+		{
+			compiled_ = Compile_(source, length);
+			return IsValid();
+		}
+
+		template <size_t length>
+		bool Compile(const char(&source)[length])
+		{
+			compiled_ = Compile_(source, length);
+			return IsValid();
+		}
+
+		bool IsValid() const
+		{
+			return compiled_;
+		}
+
+		bool operator!() const
+		{
+			return !IsValid();
+		}
+
+		const HandleShader& GetHandle() const
+		{
+			return handle_;
+		}
+
+	private:
+
+		bool Compile_(const char* source, size_t length)
+		{
+			assert(handle_.IsValid() && "Shader::Invalid shader handle!");
+			
+			glShaderSource(handle_accessor(handle_), 1, &source, (GLint*)&length);
+			glCompileShader(handle_accessor(handle_));
+			GLint res = false;
+			glGetShaderiv(handle_accessor(handle_), GL_COMPILE_STATUS, &res);
+
+			return (bool)res;
+		}
+
+	};
+
+	using VertexShader = Shader<ShaderTarget::vertex>;
+	using FragmentShader = Shader<ShaderTarget::fragment>;
+
+	// Checks and sets an active Shader Program
+	class ActiveProgram
+	{
+		inline static GLuint raw_handle_ = 0;
+
+	public:
+
+		static bool IsActive(const HandleProg& handle)
+		{
+			return handle == raw_handle_;
+		}
+
+		static void Use(const HandleProg& handle)
+		{
+			glUseProgram(handle_accessor(handle));
+			raw_handle_ = handle_accessor(handle);
+		}
+
+		static void Reset()
+		{
+			glUseProgram(0);
+			raw_handle_ = 0;
+		}
+
+	};
 
 	/*
 	n - number of args. What types of Uniforms exist?
 	*/
-	template <class, size_t n = 0>
+	template <class T, size_t n = 0>
 	class Uniform;
 
 	template <const char *uniformName, typename T>
@@ -1207,8 +1351,7 @@ namespace glt
 	public:
 
 		Uniform(const HandleProg& prog)
-			: handle_(glGetUniformLocation(handle_accessor<glProgramTarget>()(prog),
-				uniformName))
+			: handle_(GetHandle(prog))
 		{
 			assert(handle_ != -1 && "Uniform::Failed to get Uniform location!");
 		}
@@ -1222,7 +1365,112 @@ namespace glt
 
 			(*pFunc)(handle_, elements_count_v<T>, &value);
 		}
+
+	private:
+		static GLint GetHandle(const HandleProg& prog)
+		{
+			assert(ActiveProgram::IsActive(prog) && 
+				"Uniform::Trying to access a uniform when Program is not active!");
+			return glGetUniformLocation(handle_accessor(prog),
+				uniformName);
+		}
 	};
 
+	
+
+	template <class VAOdescr, class UniformCollect, class ...>
+	class Program;
+
+	template <class ... Attribs, class UniformCollect>
+	class Program<VAO<Attribs...>, UniformCollect>
+	{
+		HandleProg handle_;
+
+		bool linked_ = false;
+		// VAO<Attribs> vao_;
+
+	public:
+		// default
+		Program(HandleProg&& handle = Allocator<glProgramTarget>::Allocate())
+			: handle_(std::move(handle))
+		{
+			assert(handle_.IsValid() && "Program::Invalid handle!");
+		}
+
+		Program(const Program&) = delete;
+		Program& operator=(const Program&) = delete;
+
+		template <ShaderTarget ... targets>
+		Program(const VertexShader& vShader, const FragmentShader& fShader,
+			const Shader<targets>& ... otherShaders,
+			HandleProg&& handle = Allocator<glProgramTarget>::Allocate())
+			: handle_(std::move(handle)),
+			linked_(Link_(vShader, fShader, otherShaders...))
+		{
+			assert(IsValid() && "Program::Failed to link program!");
+		}
+
+		bool IsActive() const
+		{
+			return ActiveProgram::IsActive(handle_);
+		}
+
+		void Use() const
+		{
+			ActiveProgram::Use(handle_);
+		}
+
+		void UnUse() const
+		{
+			if (!IsActive())
+				throw std::exception("Program::Deactivating"
+					" a program wich is not currently active!");
+			ActiveProgram::Reset();
+		}
+
+		bool IsValid() const
+		{
+			return linked_;
+		}
+
+		bool operator!() const
+		{
+			return !IsValid();
+		}
+
+		template <ShaderTarget ... targets>
+		bool Link(const VertexShader& vShader, const FragmentShader& fShader,
+			const Shader<targets>& ... otherShaders)
+		{
+			linked_ = Link_(vShader, fShader, otherShaders...);
+			return IsValid();
+		}
+
+	private:
+
+		template <ShaderTarget ... targets>
+		bool Link_(const VertexShader& vShader, const FragmentShader& fShader,
+			const Shader<targets>& ... otherShaders) const
+		{
+			assert(handle_.IsValid() && "Program::Invalid handle!");
+
+			glAttachShader(handle_accessor(handle_),
+				handle_accessor(vShader.GetHandle()));
+
+			glAttachShader(handle_accessor(handle_),
+				handle_accessor(fShader.GetHandle()));
+
+			if constexpr(sizeof...(targets))
+				(glAttachShader(handle_accessor(handle_),
+					handle_accessor(otherShaders.GetHandle())), ...);
+
+			glLinkProgram(handle_accessor(handle_));
+
+			GLint res = false;
+			glGetProgramiv(handle_accessor(handle_), GL_LINK_STATUS, &res);
+			return (bool)res;
+		}
+
+	};
 
 }

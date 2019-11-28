@@ -35,13 +35,14 @@ set(VBO_USE_CASES
 	"traits_equivalence"
 	"buffer_fetch_attributes"
 	"handles_tests"
-	"BufferMap_tests"	
+	"BufferMap_tests"
 	"1.Batched_2_dif_VBO" 	# ok
 	"2.Batched_1_one_VBO"	# ok
 	"3.Compound_one_VBO"	# ok
 	"4.Batch_Comp_one_VBO"	# ok
 	"5.Batch_Comp_two_VBO"	# ok
 	
+	"uniforms_test"	# based on 3.Compound_one_VBO
 	
 )
 

@@ -151,7 +151,7 @@ struct GLT_API gl_state
 /*
 class GLT_API shader_traits
 {
-	static GLuint GenShaderPrivate(glShaderTarget target);
+	static GLuint GenShaderPrivate(ShaderTarget target);
 	static bool CompileStatusPrivate(GLuint handle);
 	static bool CompileShaderPrivate(GLuint handle, const std::string& source);
 	static void AttachShaderPrivate(GLuint prog, GLuint shader);
@@ -164,32 +164,32 @@ public:
 	static void LinkProgram(const Handle<glProgramTarget::program>& prog);
 	static bool LinkStatus(const Handle<glProgramTarget::program>& prog);
 
-	template <glShaderTarget target>
+	template <ShaderTarget target>
 	static Handle<target> GenShader()
 	{
 		return GenShaderPrivate(target);
 	}
 
-	template <glShaderTarget target>
+	template <ShaderTarget target>
 	static bool CompileStatus(const Handle<target>& handle)
 	{
 		return CompileStatusPrivate(handle);
 	}
 
-	template <glShaderTarget target>
+	template <ShaderTarget target>
 	static std::string ShaderInfoLog(const Handle<target>& handle)
 	{
 		return ShaderInfoLogPrivate(handle);
 	}
 
 
-	template <glShaderTarget target>
+	template <ShaderTarget target>
 	static bool CompileShader(const Handle<target>& handle, const std::string& source)
 	{
 		return CompileShaderPrivate(handle, source);
 	}
 
-	template <glShaderTarget target>
+	template <ShaderTarget target>
 	static void AttachShader(const Handle<glProgramTarget::program>& prog, const Handle<target>& handleShader)
 	{
 		AttachShaderPrivate(prog, handleShader);
@@ -198,7 +198,7 @@ public:
 };
 
 
-template <glShaderTarget target>
+template <ShaderTarget target>
 class gltShader
 {
 	Handle<target> handle_ = shader_traits::GenShader<target>();
@@ -223,7 +223,7 @@ public:
 		
 	}
 
-	void Compile(const std::string& source)
+	void Compile_(const std::string& source)
 	{
 		compiled_ = shader_traits::CompileShader(handle_, source);
 		if (!compiled_)
@@ -274,10 +274,10 @@ public:
 	gltShaderProgram()
 	{}
 
-	template <glShaderTarget ... shaders>
+	template <ShaderTarget ... shaders>
 	gltShaderProgram(Handle<glProgramTarget::program>&& handle,
-		const gltShader<glShaderTarget::gl_vertex_shader>& vShader,
-		const gltShader<glShaderTarget::gl_fragment_shader>& fShader, 
+		const gltShader<ShaderTarget::gl_vertex_shader>& vShader,
+		const gltShader<ShaderTarget::gl_fragment_shader>& fShader, 
 		const gltShader<shaders>& ... otherShaders)
 		: handle_(std::move(handle)),
 		attachedVertex_(true),
@@ -292,7 +292,7 @@ public:
 		handle_ = std::move(handle);
 	}
 
-	template <glShaderTarget ... shTarget>
+	template <ShaderTarget ... shTarget>
 	void AttachShaders(const gltShader<shTarget>& ... shaders)
 	{
 		(shader_traits::AttachShader<shTarget>(handle_, shaders), ...);
