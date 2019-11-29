@@ -33,6 +33,10 @@ set(VBO_USE_CASES
 	"traits_attribute_compound"
 	"traits_attribute_nth_attribute"
 	"traits_equivalence"
+	
+	"uniforms_test" # TODO: implement for just unifroms. Update and Query values
+	
+	"map_uniform_funcs"
 	"buffer_fetch_attributes"
 	"handles_tests"
 	"BufferMap_tests"
@@ -41,9 +45,7 @@ set(VBO_USE_CASES
 	"3.Compound_one_VBO"	# ok
 	"4.Batch_Comp_one_VBO"	# ok
 	"5.Batch_Comp_two_VBO"	# ok
-	
-	"uniforms_test"	# based on 3.Compound_one_VBO
-	
+		
 )
 
 foreach(USE_CASE ${VBO_USE_CASES})

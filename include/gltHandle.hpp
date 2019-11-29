@@ -1336,15 +1336,17 @@ namespace glt
 		}
 
 	};
+	
+	
 
-	/*
-	n - number of args. What types of Uniforms exist?
-	*/
-	template <class T, size_t n = 0>
-	class Uniform;
 
-	template <const char *uniformName, typename T>
-	class Uniform<glslt<T, uniformName>>
+	template <class glslt_T, class T = unwrap_glslt_t<glslt_T>,
+		class = decltype(std::make_index_sequence<elements_count_v<T>>())>
+		class Uniform;
+
+	// glUniform1* and glUniform1*v
+	template <class T, const char *name>
+	class Uniform<glslt<T, name>, T>
 	{
 		GLint handle_ = -1;
 
@@ -1356,33 +1358,119 @@ namespace glt
 			assert(handle_ != -1 && "Uniform::Failed to get Uniform location!");
 		}
 
-		// for vectors
-		template <class = std::enable_if_t<is_glm_vec_v<T>>>
-		void Update(tag_c<uniformName>, const T& value) const
+		void Update(tag_c<name>, T val) const
 		{
-			constexpr void(__stdcall **pFunc)(GLint, GLsizei, const void*) =
-				uniform_update_func_v<T>;
+			// TODO: implement
+		}
 
-			(*pFunc)(handle_, elements_count_v<T>, &value);
+		void Update(tag_c<name>, const glm::vec<1, T>& val) const
+		{
+			// TODO: implement
 		}
 
 	private:
 		static GLint GetHandle(const HandleProg& prog)
 		{
-			assert(ActiveProgram::IsActive(prog) && 
+			assert(ActiveProgram::IsActive(prog) &&
 				"Uniform::Trying to access a uniform when Program is not active!");
 			return glGetUniformLocation(handle_accessor(prog),
 				uniformName);
 		}
 	};
 
-	
+	// glUniform1-4* and glUniform1-4*v
+	template <glm::length_t L, typename T, const char *name, size_t ... indx>
+	class Uniform<glslt<glm::vec<L, T>, name>, 
+		glm::vec<L, T>, 
+		std::index_sequence<indx...>>
+	{
+		GLint handle_ = -1;
 
-	template <class VAOdescr, class UniformCollect, class ...>
-	class Program;
+	public:
 
-	template <class ... Attribs, class UniformCollect>
-	class Program<VAO<Attribs...>, UniformCollect>
+		Uniform(const HandleProg& prog)
+			: handle_(GetHandle(prog))
+		{
+			assert(handle_ != -1 && "Uniform::Failed to get Uniform location!");
+		}
+
+		void Update(tag_c<name>, convert_v_to<T, indx> ... val) const
+		{
+			// TODO: implement
+		}
+
+		void Update(tag_c<name>, const glm::vec<L, T>& val) const
+		{
+			// TODO: implement
+		}
+
+	private:
+		static GLint GetHandle(const HandleProg& prog)
+		{
+			assert(ActiveProgram::IsActive(prog) &&
+				"Uniform::Trying to access a uniform when Program is not active!");
+			return glGetUniformLocation(handle_accessor(prog),
+				uniformName);
+		}
+	};
+
+	// glUniformMatrix
+	template <glm::length_t C, glm::length_t R, typename T, 
+		const char *name>
+	class Uniform<glslt<glm::mat<C, R, T>, name>,
+		glm::mat<C, R, T>>
+	{
+		GLint handle_ = -1;
+
+	public:
+
+		Uniform(const HandleProg& prog)
+			: handle_(GetHandle(prog))
+		{
+			assert(handle_ != -1 && "Uniform::Failed to get Uniform location!");
+		}
+
+		void Update(tag_c<name>, const glm::mat<C, R, T>& val) const
+		{
+			// TODO: implement
+		}
+
+	private:
+		static GLint GetHandle(const HandleProg& prog)
+		{
+			assert(ActiveProgram::IsActive(prog) &&
+				"Uniform::Trying to access a uniform when Program is not active!");
+			return glGetUniformLocation(handle_accessor(prog),
+				uniformName);
+		}
+	};
+
+	template <class TupleArgs,
+		class = decltype(std::make_index_sequence<std::tuple_size_v<TupleArgs>>())>
+		class UniformCollection;
+
+	template <class ... Attribs, size_t ... indx>
+	class UniformCollection<std::tuple<Attribs...>, std::index_sequence<indx...>>
+		: Uniform<Attribs> ...
+	{
+
+		template <size_t i>
+		using UnifBase = Uniform<nth_element_t<i, Attribs...>>;
+
+	public:
+
+		UniformCollection(const HandleProg& handle)
+			: Uniform<Attribs>(handle)...
+		{}
+
+		using UnifBase<indx>::Update...;
+	};
+
+	//template <class VAOdescr, class UniformCollect, class ...>
+	//class Program;
+
+	//template <class ... Attribs, class UniformCollect>
+	class Program//<VAO<Attribs...>, UniformCollect>
 	{
 		HandleProg handle_;
 
@@ -1400,6 +1488,7 @@ namespace glt
 		Program(const Program&) = delete;
 		Program& operator=(const Program&) = delete;
 
+		// TODO: fix. will not compile with additional shaders
 		template <ShaderTarget ... targets>
 		Program(const VertexShader& vShader, const FragmentShader& fShader,
 			const Shader<targets>& ... otherShaders,
@@ -1408,6 +1497,11 @@ namespace glt
 			linked_(Link_(vShader, fShader, otherShaders...))
 		{
 			assert(IsValid() && "Program::Failed to link program!");
+		}
+
+		const HandleProg& GetHandle() const
+		{
+			return handle_;
 		}
 
 		bool IsActive() const

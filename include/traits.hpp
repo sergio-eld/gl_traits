@@ -10,6 +10,8 @@ namespace glt
 	// common traits
 	//////////////////////////////////////////////////
 
+
+
 	template <class T>
 	struct is_tuple : std::false_type {};
 
@@ -47,6 +49,27 @@ namespace glt
 
     template <class Holder>
     constexpr inline size_t templ_params_count_v = templ_params_count<Holder>();
+
+	/* Class with generated template functions, inherited from
+	base class template:
+	1. Declare template collection class.
+
+	template <class TupledArgs, class IndxSequence =
+			decltype(std::make_index_sequence<std::tuple_size_v<TupledArgs>>())>
+		class collection;
+
+	2. Expand collection class, inheriting from base class template.
+
+	template <class ... Args, size_t ... indx>
+	class collection<std::tuple<Args...>, std::index_sequence<indx...>>
+		: base<Args> ...
+	{
+		template <size_t i>
+		using base_i = base<nth_element_t<i, Args...>>;
+
+		using base_i<indx>::MemFunc...;
+	};
+	*/
 
 	/* Convert one type to another. Used when expanding parameter pack.
 	Example: set n = sizeof...(T) arguments in a Foo<T..>::bar;
@@ -144,6 +167,34 @@ namespace glt
 
 	template <class T>
 	constexpr inline bool is_named_attr_v = is_named_attr<T>();
+
+	template <class T>
+	struct unwrap_glslt
+	{
+		using type = T;
+	};
+
+	template <class T, const char *name>
+	struct unwrap_glslt<glslt<T, name>>
+	{
+		using type = T;
+	};
+
+	template <class T>
+	using unwrap_glslt_t = typename unwrap_glslt<T>::type;
+
+	template <class>
+	struct get_glslt_name;
+
+	template <class T, const char * glslName>
+	struct get_glslt_name<glslt<T, glslName>>
+	{
+		constexpr static const char * value = glslName;
+	};
+
+	template <class T>
+	constexpr inline const char * get_glslt_name_v = get_glslt_name<T>::value;
+
 
     /* Used as a template argument for a Buffer class typename, that takes
     a list of attributes an argument. 

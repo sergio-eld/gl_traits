@@ -413,6 +413,9 @@ namespace glt
 	template <glm::length_t L, typename T, glm::qualifier Q>
 	struct elements_count<glm::vec<L, T, Q>> : glt_constant<L> {};
 
+	template <glm::length_t C, glm::length_t R, typename T, glm::qualifier Q>
+	struct elements_count<glm::mat<C, R, T, Q>> : glt_constant<C> {};
+
 	template <class T>
 	constexpr inline size_t elements_count_v = elements_count<T>();
 
@@ -433,6 +436,11 @@ namespace glt
 		static_assert(false, 
 			"Typename does not have a corresponding glUniform function!");
 	};*/
+
+	template <> struct uniform_update_func<float> : glt_constant<&glUniform1f> {};
+	template <> struct uniform_update_func<double> : glt_constant<&glUniform1d> {};
+	template <> struct uniform_update_func<int> : glt_constant<&glUniform1i> {};
+	template <> struct uniform_update_func<unsigned int> : glt_constant<&glUniform1ui> {};
 
 	template <> struct uniform_update_func<glm::vec1> : glt_constant<&glUniform1fv> {};
 	template <> struct uniform_update_func<glm::vec2> : glt_constant<&glUniform2fv> {};

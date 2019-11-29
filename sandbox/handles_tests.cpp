@@ -1,7 +1,7 @@
 ﻿
 #include "helpers.hpp"
 
-/* Check for correctness: 
+/* This unit checks for correctness: 
 - handle allocations
 - handle bindings
 */

@@ -1,224 +1,157 @@
 ﻿
 #include "helpers.hpp"
 
-#include "glm/matrix.hpp"
-#include "glm/gtc/matrix_transform.hpp"
-#include "glm/gtc/type_ptr.hpp"
-
 #include <fstream>
 #include <streambuf>
 
-template <char c>
-class base
+constexpr inline const char uname_model[] = "model",
+uname_view[] = "view",
+uname_projection[] = "projection",
+uname_texture1[] = "texture1",
+uname_texture2[] = "texture2";
+
+using collect_uniforms = std::tuple<glt::glslt<glm::mat4, uname_model>,
+	glt::glslt<glm::mat4, uname_view>,
+	glt::glslt<glm::mat4, uname_projection>,
+	glt::glslt<int, uname_texture1>,
+	glt::glslt<int, uname_texture2>>;
+
+namespace glt
 {
-public:
-	char Get(glt::tag_v<c>)
+	// int, float, double, not glslt
+	template <class T, class =
+		decltype(std::make_index_sequence<elements_count_v<T>>())>
+		struct get_uniform_arg_types
 	{
-		return c;
+		using type = std::tuple<T>;
+		using vtype = std::tuple<const glm::vec<1, T>&>;
+	};
+
+	template <glm::length_t L, typename T,
+		size_t ... indx>
+		struct get_uniform_arg_types<glm::vec<L, T>, std::index_sequence<indx...>>
+	{
+		using type = std::tuple<convert_v_to<T, indx>...>;
+		using vtype = std::tuple<const glm::vec<L, T>&>;
+	};
+
+	template<glm::length_t C, glm::length_t R, typename T,
+		size_t ... indx>
+		struct get_uniform_arg_types<glm::mat<C, R, T>, std::index_sequence<indx...>>
+	{
+		// TODO: validate 'type' case
+		using type = std::tuple<bool, const glm::mat<C, R, T>&>;
+		using vtype = std::tuple<bool, const glm::mat<C, R, T>*>;
+	};
+}
+
+template <class glslt, class T = glt::unwrap_glslt_t<glslt>,
+	class ArgsList = typename glt::get_uniform_arg_types<T>::type,
+	class ArgsListV = typename glt::get_uniform_arg_types<T>::vtype>
+	struct DummyUpdate;
+
+template <class T, const char *name,
+	class ... Args,
+	class ... ArgsV>
+	struct DummyUpdate<glt::glslt<T, name>, T,
+	std::tuple<Args...>,
+	std::tuple<ArgsV...>>
+{
+	void Update(glt::tag_c<name>, Args ... args)
+	{
+		(std::cout << ... << args);
+	}
+
+	void Update(glt::tag_c<name>, ArgsV ... args)
+	{
+		
 	}
 };
 
-template <char ... cc>
-struct collection : base<cc>...
+void foo(int *a)
 {
-	template <char c>
-	using T = base<c>;
-
-	using T<cc>::Get...;
-};
-
-template <class ... U>
-class UniformCollection : glt::Uniform<U>...
-{
-
-
-public:
-	template <class T>
-	using UniformBase = glt::Uniform<T>;
-
-	(using UniformBase<U>::Update...);
-
-};
+	std::cout << *a << std::endl;
+}
 
 int main()
 {
-	collection<'a', 'b', 'c'> col;
+	int a = 69;
+	foo(&a);
 
-	std::cout << col.Get(glt::tag_v<'a'>()) << std::endl;
+	void(*pFooRef)(const int&) = reinterpret_cast<void(*)(const int&)>(&foo);
+
+	(*pFooRef)(a);
+
+	static_assert(std::is_same_v<std::tuple<float, float, float, float>,
+		typename glt::get_uniform_arg_types<glm::vec4>::type>);
+	static_assert(std::is_same_v<std::tuple<const glm::vec4&>,
+		typename glt::get_uniform_arg_types<glm::vec4>::vtype>);
+
+	glt::get_uniform_arg_types<glm::mat4>::type;
+
+	/*
+	static_assert(std::is_same_v<std::tuple<const glm::vec4&, // fails
+		const glm::vec4&,
+		const glm::vec4&, 
+		const glm::vec4&, 
+		const glm::vec4&>,
+		typename glt::get_uniform_arg_types<glm::mat4>::type>);*/
+
+
+
+	// intellisence is mental for integer arguemnt input
+	DummyUpdate<glt::glslt<int, 0>>().Update(glt::tag_c<0>(), 16);  
+
+
+	DummyUpdate<glt::glslt<glm::vec4, 0>>().
+		Update(glt::tag_c<0>(), 3.0f, 2.0f, 1.0f, 4.0f);
+
+//	DummyUpdate<glt::glslt<glm::mat4, 0>>().Update(glt::tag_c<0>(), glm::mat4());
+
+
+	SmartGLFW sglfw{ 4, 5 };
+	SmartGLFWwindow window{ SCR_WIDTH, SCR_HEIGHT, "Testing uniforms" };
+
+	sglfw.MakeContextCurrent(window);
+	sglfw.LoadOpenGL();
 
 	
+	glt::Program prog;
 
-	std::cout << path.generic_string() << std::endl;
-	SmartGLFW glfw{ 4, 5 };
-	SmartGLFWwindow window{ SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL" };
-
-	glfw.MakeContextCurrent(window);
-	glfw.LoadOpenGL();
-
-	// build and compile our shader program
-	// ------------------------------------
-	Shader ourShader{ (path.generic_string() + "vshader.vs").c_str(),
-		(path.generic_string() + "fshader.fs").c_str() };
-
-
-	auto vertices = cube_vertexes();
-
-	using VAO = glt::VAO<glm::vec3, glm::vec2>;
-
-	VAO vao{};
-	vao.Bind();
-
-	glt::Buffer<glt::compound<glm::vec3, glm::vec2>> vbo{};
-	vbo.Bind(glt::tag_v<glt::BufferTarget::array>());
-	vbo.AllocateMemory(vertices.size(), glt::BufferUse::static_draw);
-
-	vbo.BufferData(vertices.data(), vertices.size());
-
-	// position attribute
-	vao.AttributePointer(vbo.Attribute(glt::tag_indx<0, 0>()), glt::tag_s<0>());
-
-	// texture coord attribute
-	vao.AttributePointer(vbo.Attribute(glt::tag_indx<0, 1>()), glt::tag_s<1>());
-
-	vao.EnableVertexAttribPointer(0);
-	vao.EnableVertexAttribPointer(1);
-
-	vbo.UnBind(glt::tag_v<glt::BufferTarget::array>());
-
-
-	// Loading shaders' sources
-	std::fstream f{ (path.generic_string() + "vshader.vs"), std::fstream::in };
-	if (!f)
 	{
-		std::cerr << "Failed to open Vertex Shader source file!\n";
-		return -1;
-	}
-	std::string vSource{ std::istreambuf_iterator<char>(f),
-		std::istreambuf_iterator<char>() };
+		std::fstream f{ path.generic_string() + "vshader.vs", std::fstream::in };
 
-	f.close();
-	f.open((path.generic_string() + "fshader.fs"), std::fstream::in);
-	if (!f)
-	{
-		std::cerr << "Failed to open Fragment Shader source file!\n";
-		return -1;
-	}
-	std::string fSource{ std::istreambuf_iterator<char>(f),
-		std::istreambuf_iterator<char>() };
+		if (!f)
+		{
+			std::cerr << "Failed to open vshader.vs" << std::endl;
+			return -1;
+		}
 
-	glt::VertexShader vShader{ vSource };
-	glt::FragmentShader fShader{ fSource };
+		std::string vSource{ std::istreambuf_iterator<char>(f),
+			std::istreambuf_iterator<char>() };
 
-	if (!vShader || !fShader)
-	{
-		std::cerr << "Failed to construct Shaders\n";
-		return -1;
+		f.close();
+		f.open(path.generic_string() + "fshader.fs", std::fstream::in);
+
+		if (!f)
+		{
+			std::cerr << "Failed to open fshader.fs" << std::endl;
+			return -1;
+		}
+
+		std::string fSource{ std::istreambuf_iterator<char>(f),
+			std::istreambuf_iterator<char>() };
+
+		glt::VertexShader vShader{ vSource };
+		glt::FragmentShader fShader{ fSource };
+
+		prog.Link(vShader, fShader);
 	}
 
-	// Testing Program (without uniform collection)
-	glt::Program<VAO, void> prog{ vShader, fShader };
+	prog.Use();
+	//glt::UniformCollection<collect_uniforms> uniforms{ prog.GetHandle() };
 
-
-
-	/////////////////////////////////////////////////////////////////////
-	// The rest part is identical to other use cases
-	/////////////////////////////////////////////////////////////////////
-
-	glEnable(GL_DEPTH_TEST);
-
-	// load and create textures 
-	unsigned int texture1, texture2;
-	{
-		Image tex1{ (path.generic_string() + "resources/textures/container.jpg") },
-			tex2{ (path.generic_string() + "resources/textures/awesomeface.png") };
-
-		assert(tex1.Data() && tex2.Data());
-
-		// texture 1
-		// ---------
-		glGenTextures(1, &texture1);
-		glBindTexture(GL_TEXTURE_2D, texture1);
-		// set the texture wrapping parameters
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		// set texture filtering parameters
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex1.Width(), tex1.Height(),
-			0, GL_RGB, GL_UNSIGNED_BYTE, tex1.Data());
-		glGenerateMipmap(GL_TEXTURE_2D);
-
-		// texture 2
-		// ---------
-		glGenTextures(1, &texture2);
-		glBindTexture(GL_TEXTURE_2D, texture2);
-		// set the texture wrapping parameters
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		// set texture filtering parameters
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex2.Width(), tex2.Height(),
-			0, GL_RGBA, GL_UNSIGNED_BYTE, tex2.Data());
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-
-	ourShader.use();
-	ourShader.setInt("texture1", 0);
-	ourShader.setInt("texture2", 1);
-
-
-	// render loop
-	// -----------
-	while (!glfwWindowShouldClose(window))
-	{
-		// input
-		// -----
-		processInput(window);
-
-		// render
-		// ------
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // also clear the depth buffer now!
-
-		// bind textures on corresponding texture units
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texture1);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, texture2);
-
-		// activate shader
-		ourShader.use();
-
-		// create transformations
-		glm::mat4 model = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-		glm::mat4 view = glm::mat4(1.0f);
-		glm::mat4 projection = glm::mat4(1.0f);
-		model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f));
-		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
-		projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-		// retrieve the matrix uniform locations
-		unsigned int modelLoc = glGetUniformLocation(ourShader.ID, "model");
-		unsigned int viewLoc = glGetUniformLocation(ourShader.ID, "view");
-		// pass them to the shaders (3 different ways)
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
-		// note: currently we set the projection matrix each frame, but since the projection matrix rarely changes it's often best practice to set it outside the main loop only once.
-		ourShader.setMat4("projection", projection);
-
-		// render box
-		//glBindVertexArray(vao);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-
-
-		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-		// -------------------------------------------------------------------------------
-		glfwSwapBuffers(window);
-		glfwPollEvents();
-	}
+	// uniforms.Update()
 
 	return 0;
-
 }
