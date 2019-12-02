@@ -79,15 +79,20 @@ namespace glt
 		void bar(convert_to<bool, T> ... arg) // to invoke, n bool args is needed.
 		{}
 	};
-	*/
+	
+	// defined in gltEnums
 	template <typename To, typename From>
 	using convert_to = To;
+	*/
+
 
 	/*
 	Similar to "convert_to", but converting from non-template parameter.
-	*/
+	// defined in gltEnums
 	template <typename To, auto indx>
 	using convert_v_to = To;
+	*/
+
 
 
 	template <auto>

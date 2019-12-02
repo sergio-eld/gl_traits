@@ -428,49 +428,123 @@ namespace glt
 	template <class T>
 	constexpr inline bool is_glm_vec_v = is_glm_vec<T>();
 
-	// glUniform funcs map
-	template <class T>
-	struct uniform_update_func;
-	/*
+
+
+
+	/* Convert one type to another. Used when expanding parameter pack.
+Example: set n = sizeof...(T) arguments in a Foo<T..>::bar;
+template <class ... T>
+class Foo
+{
+	void bar(convert_to<bool, T> ... arg) // to invoke, n bool args is needed.
+	{}
+};
+*/
+	template <typename To, typename From>
+	using convert_to = To;
+
+/*
+Similar to "convert_to", but converting from non-template parameter.
+*/
+	template <typename To, auto indx>
+	using convert_v_to = To;
+
+	template <class T, size_t sz = 1, class = decltype(std::make_index_sequence<sz>())>
+	struct p_gl_uniform;
+
+	template <class T, size_t sz, size_t ... indx>
+	struct p_gl_uniform<T, sz, std::index_sequence<indx...>>
 	{
-		static_assert(false, 
-			"Typename does not have a corresponding glUniform function!");
-	};*/
+		using type = void(*)(GLint, convert_v_to<T, indx>...);
+	};
 
-	template <> struct uniform_update_func<float> : glt_constant<&glUniform1f> {};
-	template <> struct uniform_update_func<double> : glt_constant<&glUniform1d> {};
-	template <> struct uniform_update_func<int> : glt_constant<&glUniform1i> {};
-	template <> struct uniform_update_func<unsigned int> : glt_constant<&glUniform1ui> {};
+	template <glm::length_t L, typename T>
+	struct p_gl_uniform<glm::vec<L, T>>
+	{
+		using type = void(*)(GLint, GLsizei, const glm::vec<L, T>&);
+	};
 
-	template <> struct uniform_update_func<glm::vec1> : glt_constant<&glUniform1fv> {};
-	template <> struct uniform_update_func<glm::vec2> : glt_constant<&glUniform2fv> {};
-	template <> struct uniform_update_func<glm::vec3> : glt_constant<&glUniform3fv> {};
-	template <> struct uniform_update_func<glm::vec4> : glt_constant<&glUniform4fv> {};
+	template <glm::length_t C, glm::length_t R, typename T>
+	struct p_gl_uniform<glm::mat<C, R, T>>
+	{
+		using type = void(*)(GLint, GLsizei, GLboolean, const glm::mat<C, R, T>&);
+	};
 
-	template <> struct uniform_update_func<glm::ivec1> : glt_constant<&glUniform1iv> {};
-	template <> struct uniform_update_func<glm::ivec2> : glt_constant<&glUniform2iv> {};
-	template <> struct uniform_update_func<glm::ivec3> : glt_constant<&glUniform3iv> {};
-	template <> struct uniform_update_func<glm::ivec4> : glt_constant<&glUniform4iv> {};
+	template <class T, size_t sz = 1>
+	using p_gl_uniform_t = typename p_gl_uniform<T, sz>::type;
 
-	template <> struct uniform_update_func<glm::uvec1> : glt_constant<&glUniform1uiv> {};
-	template <> struct uniform_update_func<glm::uvec2> : glt_constant<&glUniform2uiv> {};
-	template <> struct uniform_update_func<glm::uvec3> : glt_constant<&glUniform3uiv> {};
-	template <> struct uniform_update_func<glm::uvec4> : glt_constant<&glUniform4uiv> {};
 
-	template <> struct uniform_update_func<glm::mat2> : glt_constant<&glUniformMatrix2fv> {};
-	template <> struct uniform_update_func<glm::mat3> : glt_constant<&glUniformMatrix3fv> {};
-	template <> struct uniform_update_func<glm::mat4> : glt_constant<&glUniformMatrix4fv> {};
+	template <auto *vPtr, class T, size_t sz = 1>
+	struct p_gl_uniform_const
+	{
+		constexpr static p_gl_uniform_t<T, sz> *value = 0;// vPtr;
 
-	template <> struct uniform_update_func<glm::mat2x3> : glt_constant<&glUniformMatrix2x3fv> {};
-	template <> struct uniform_update_func<glm::mat3x2> : glt_constant<&glUniformMatrix3x2fv> {};
+		constexpr p_gl_uniform_t<T, sz>* operator()() const
+		{
+			return value;
+		}
+	};
 
-	template <> struct uniform_update_func<glm::mat2x4> : glt_constant<&glUniformMatrix2x4fv> {};
-	template <> struct uniform_update_func<glm::mat4x2> : glt_constant<&glUniformMatrix4x2fv> {};
 
-	template <> struct uniform_update_func<glm::mat4x3> : glt_constant<&glUniformMatrix4x3fv> {};
-	template <> struct uniform_update_func<glm::mat3x4> : glt_constant<&glUniformMatrix3x4fv> {};
+	template <class T, size_t = 1>
+	struct p_gl_uniform_map;
 
+	template <> struct p_gl_uniform_map<float> : glt_constant<&glUniform1f> {};
+	template <> struct p_gl_uniform_map<float, 2> : glt_constant<&glUniform2f> {};
+	template <> struct p_gl_uniform_map<float, 3> : glt_constant<&glUniform3f> {};
+	template <> struct p_gl_uniform_map<float, 4> : glt_constant<&glUniform4f> {};
+
+	template <> struct p_gl_uniform_map<double> : glt_constant<&glUniform1d> {};
+	template <> struct p_gl_uniform_map<double, 2> : glt_constant<&glUniform2d> {};
+	template <> struct p_gl_uniform_map<double, 3> : glt_constant<&glUniform3d> {};
+	template <> struct p_gl_uniform_map<double, 4> : glt_constant<&glUniform4d> {};
+
+	template <> struct p_gl_uniform_map<int> : glt_constant<&glUniform1i> {};
+	template <> struct p_gl_uniform_map<int, 2> : glt_constant<&glUniform2i> {};
+	template <> struct p_gl_uniform_map<int, 3> : glt_constant<&glUniform3i> {};
+	template <> struct p_gl_uniform_map<int, 4> : glt_constant<&glUniform4i> {};
+
+	template <> struct p_gl_uniform_map<unsigned int> : glt_constant<&glUniform1ui> {};
+	template <> struct p_gl_uniform_map<unsigned int, 2> : glt_constant<&glUniform2ui> {};
+	template <> struct p_gl_uniform_map<unsigned int, 3> : glt_constant<&glUniform3ui> {};
+	template <> struct p_gl_uniform_map<unsigned int, 4> : glt_constant<&glUniform4ui> {};
+
+	template <> struct p_gl_uniform_map<glm::vec1> : glt_constant<&glUniform1fv> {};
+	template <> struct p_gl_uniform_map<glm::vec2> : glt_constant<&glUniform2fv> {};
+	template <> struct p_gl_uniform_map<glm::vec3> : glt_constant<&glUniform3fv> {};
+	template <> struct p_gl_uniform_map<glm::vec4> : glt_constant<&glUniform4fv> {};
+
+	template <> struct p_gl_uniform_map<glm::ivec1> : glt_constant<&glUniform1iv> {};
+	template <> struct p_gl_uniform_map<glm::ivec2> : glt_constant<&glUniform2iv> {};
+	template <> struct p_gl_uniform_map<glm::ivec3> : glt_constant<&glUniform3iv> {};
+	template <> struct p_gl_uniform_map<glm::ivec4> : glt_constant<&glUniform4iv> {};
+
+	template <> struct p_gl_uniform_map<glm::uvec1> : glt_constant<&glUniform1uiv> {};
+	template <> struct p_gl_uniform_map<glm::uvec2> : glt_constant<&glUniform2uiv> {};
+	template <> struct p_gl_uniform_map<glm::uvec3> : glt_constant<&glUniform3uiv> {};
+	template <> struct p_gl_uniform_map<glm::uvec4> : glt_constant<&glUniform4uiv> {};
+
+	template <> struct p_gl_uniform_map<glm::mat2> : glt_constant<&glUniformMatrix2fv> {};
+	template <> struct p_gl_uniform_map<glm::mat3> : glt_constant<&glUniformMatrix3fv> {};
+	template <> struct p_gl_uniform_map<glm::mat4> : glt_constant<&glUniformMatrix4fv> {};
+
+	template <> struct p_gl_uniform_map<glm::mat2x3> : glt_constant<&glUniformMatrix2x3fv> {};
+	template <> struct p_gl_uniform_map<glm::mat3x2> : glt_constant<&glUniformMatrix3x2fv> {};
+
+	template <> struct p_gl_uniform_map<glm::mat2x4> : glt_constant<&glUniformMatrix2x4fv> {};
+	template <> struct p_gl_uniform_map<glm::mat4x2> : glt_constant<&glUniformMatrix4x2fv> {};
+
+	template <> struct p_gl_uniform_map<glm::mat4x3> : glt_constant<&glUniformMatrix4x3fv> {};
+	template <> struct p_gl_uniform_map<glm::mat3x4> : glt_constant<&glUniformMatrix3x4fv> {};
+	
 	template <class T>
-	constexpr inline auto uniform_update_func_v = uniform_update_func<T>();
+	constexpr inline auto p_gl_uniform_map_v = p_gl_uniform_map<T>();
+
+	// default sz wll lead to error
+	template <class T, size_t sz>
+	constexpr p_gl_uniform_t<T, sz> get_p_gl_uniform()
+	{
+		return reinterpret_cast<p_gl_uniform_t<T, sz>>(*p_gl_uniform_map_v<T>);
+	}
 
 }

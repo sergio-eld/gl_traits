@@ -30,7 +30,6 @@ struct inherit : bass<T>
 
 int main()
 {
-	glt::uniform_update_func_v<glm::vec1>;
 
 	inherit<int>().Print(69);
 	inherit<char>().Print('a', 32);

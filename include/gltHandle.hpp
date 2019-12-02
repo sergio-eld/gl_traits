@@ -292,7 +292,7 @@ namespace glt
             glGetIntegerv((GLenum)binding, &res);
             assert(res == raw_handle_);
 
-            return handle == raw_handle_;
+            return bool(handle == raw_handle_);
         }
     };
 
@@ -1183,7 +1183,7 @@ namespace glt
 
 			auto sz = (GLint)vao_attrib_size<A>()();
 			GLenum glType = (GLenum)c_to_gl_v<A>;
-			GLsizei stride = attrib.Stride();
+			GLsizei stride = (GLsizei)attrib.Stride();
 			void *voffset = (void*)attrib.Offset();
 
             glVertexAttribPointer((GLuint)indx,
@@ -1339,44 +1339,10 @@ namespace glt
 	
 	
 
-
+	/*
 	template <class glslt_T, class T = unwrap_glslt_t<glslt_T>,
 		class = decltype(std::make_index_sequence<elements_count_v<T>>())>
 		class Uniform;
-
-	// glUniform1* and glUniform1*v
-	template <class T, const char *name>
-	class Uniform<glslt<T, name>, T>
-	{
-		GLint handle_ = -1;
-
-	public:
-
-		Uniform(const HandleProg& prog)
-			: handle_(GetHandle(prog))
-		{
-			assert(handle_ != -1 && "Uniform::Failed to get Uniform location!");
-		}
-
-		void Update(tag_c<name>, T val) const
-		{
-			// TODO: implement
-		}
-
-		void Update(tag_c<name>, const glm::vec<1, T>& val) const
-		{
-			// TODO: implement
-		}
-
-	private:
-		static GLint GetHandle(const HandleProg& prog)
-		{
-			assert(ActiveProgram::IsActive(prog) &&
-				"Uniform::Trying to access a uniform when Program is not active!");
-			return glGetUniformLocation(handle_accessor(prog),
-				uniformName);
-		}
-	};
 
 	// glUniform1-4* and glUniform1-4*v
 	template <glm::length_t L, typename T, const char *name, size_t ... indx>
@@ -1397,11 +1363,16 @@ namespace glt
 		void Update(tag_c<name>, convert_v_to<T, indx> ... val) const
 		{
 			// TODO: implement
+			p_gl_uniform<T, L> pglUniformT = get_p_gl_uniform<T, L>();
+
+			(*pglUniformT)(handle, val...);
 		}
 
 		void Update(tag_c<name>, const glm::vec<L, T>& val) const
 		{
-			// TODO: implement
+			p_gl_uniform<glm::vec<L, T>> pglUniformTv = get_p_gl_uniform<glm::vec<L, T>>();
+
+			(*pglUniformTv)(handle, L, val);
 		}
 
 	private:
@@ -1430,9 +1401,12 @@ namespace glt
 			assert(handle_ != -1 && "Uniform::Failed to get Uniform location!");
 		}
 
-		void Update(tag_c<name>, const glm::mat<C, R, T>& val) const
+		void Update(tag_c<name>, const glm::mat<C, R, T>& val, bool transpose = false) const
 		{
-			// TODO: implement
+			p_gl_uniform<glm::mat<C, R, T>> pglUniformMatrixT =
+				get_p_gl_uniform<glm::mat<C, R, T>>();
+
+			(*pglUniformMatrixT)(handle, 1, transpose, val);
 		}
 
 	private:
@@ -1465,6 +1439,7 @@ namespace glt
 
 		using UnifBase<indx>::Update...;
 	};
+	*/
 
 	//template <class VAOdescr, class UniformCollect, class ...>
 	//class Program;
