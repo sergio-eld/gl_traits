@@ -29,6 +29,7 @@ namespace glt
         friend struct Allocator<eTargetType>;
         friend class handle_accessor<eTargetType>;
 
+
     public:
 
         // recover pointer to deleter function pointer
@@ -84,6 +85,7 @@ namespace glt
         // handle is not aware if it is or can be bound to a target
         ~Handle()
         {
+
             if (handle_)
             {
                 // TODO: do i need to check?
@@ -107,7 +109,9 @@ namespace glt
         Handle() = default;
         Handle(GLuint handle) noexcept
             : handle_(handle)
-        {}
+        {
+			static_assert(sizeof(decltype(*this)) == sizeof(GLuint));
+		}
 
         constexpr operator GLuint() const
         {

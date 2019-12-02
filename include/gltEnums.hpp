@@ -487,64 +487,73 @@ Similar to "convert_to", but converting from non-template parameter.
 
 
 	template <class T, size_t = 1>
-	struct p_gl_uniform_map;
+	struct pp_gl_uniform_map;
 
-	template <> struct p_gl_uniform_map<float> : glt_constant<&glUniform1f> {};
-	template <> struct p_gl_uniform_map<float, 2> : glt_constant<&glUniform2f> {};
-	template <> struct p_gl_uniform_map<float, 3> : glt_constant<&glUniform3f> {};
-	template <> struct p_gl_uniform_map<float, 4> : glt_constant<&glUniform4f> {};
+	template <> struct pp_gl_uniform_map<float> : glt_constant<&glUniform1f> {};
+	template <> struct pp_gl_uniform_map<float, 2> : glt_constant<&glUniform2f> {};
+	template <> struct pp_gl_uniform_map<float, 3> : glt_constant<&glUniform3f> {};
+	template <> struct pp_gl_uniform_map<float, 4> : glt_constant<&glUniform4f> {};
 
-	template <> struct p_gl_uniform_map<double> : glt_constant<&glUniform1d> {};
-	template <> struct p_gl_uniform_map<double, 2> : glt_constant<&glUniform2d> {};
-	template <> struct p_gl_uniform_map<double, 3> : glt_constant<&glUniform3d> {};
-	template <> struct p_gl_uniform_map<double, 4> : glt_constant<&glUniform4d> {};
+	template <> struct pp_gl_uniform_map<double> : glt_constant<&glUniform1d> {};
+	template <> struct pp_gl_uniform_map<double, 2> : glt_constant<&glUniform2d> {};
+	template <> struct pp_gl_uniform_map<double, 3> : glt_constant<&glUniform3d> {};
+	template <> struct pp_gl_uniform_map<double, 4> : glt_constant<&glUniform4d> {};
 
-	template <> struct p_gl_uniform_map<int> : glt_constant<&glUniform1i> {};
-	template <> struct p_gl_uniform_map<int, 2> : glt_constant<&glUniform2i> {};
-	template <> struct p_gl_uniform_map<int, 3> : glt_constant<&glUniform3i> {};
-	template <> struct p_gl_uniform_map<int, 4> : glt_constant<&glUniform4i> {};
+	template <> struct pp_gl_uniform_map<int> : glt_constant<&glUniform1i> {};
+	template <> struct pp_gl_uniform_map<int, 2> : glt_constant<&glUniform2i> {};
+	template <> struct pp_gl_uniform_map<int, 3> : glt_constant<&glUniform3i> {};
+	template <> struct pp_gl_uniform_map<int, 4> : glt_constant<&glUniform4i> {};
 
-	template <> struct p_gl_uniform_map<unsigned int> : glt_constant<&glUniform1ui> {};
-	template <> struct p_gl_uniform_map<unsigned int, 2> : glt_constant<&glUniform2ui> {};
-	template <> struct p_gl_uniform_map<unsigned int, 3> : glt_constant<&glUniform3ui> {};
-	template <> struct p_gl_uniform_map<unsigned int, 4> : glt_constant<&glUniform4ui> {};
+	template <> struct pp_gl_uniform_map<unsigned int> : glt_constant<&glUniform1ui> {};
+	template <> struct pp_gl_uniform_map<unsigned int, 2> : glt_constant<&glUniform2ui> {};
+	template <> struct pp_gl_uniform_map<unsigned int, 3> : glt_constant<&glUniform3ui> {};
+	template <> struct pp_gl_uniform_map<unsigned int, 4> : glt_constant<&glUniform4ui> {};
 
-	template <> struct p_gl_uniform_map<glm::vec1> : glt_constant<&glUniform1fv> {};
-	template <> struct p_gl_uniform_map<glm::vec2> : glt_constant<&glUniform2fv> {};
-	template <> struct p_gl_uniform_map<glm::vec3> : glt_constant<&glUniform3fv> {};
-	template <> struct p_gl_uniform_map<glm::vec4> : glt_constant<&glUniform4fv> {};
+	template <> struct pp_gl_uniform_map<glm::vec1> : glt_constant<&glUniform1fv> {};
+	template <> struct pp_gl_uniform_map<glm::vec2> : glt_constant<&glUniform2fv> {};
+	template <> struct pp_gl_uniform_map<glm::vec3> : glt_constant<&glUniform3fv> {};
+	template <> struct pp_gl_uniform_map<glm::vec4> : glt_constant<&glUniform4fv> {};
 
-	template <> struct p_gl_uniform_map<glm::ivec1> : glt_constant<&glUniform1iv> {};
-	template <> struct p_gl_uniform_map<glm::ivec2> : glt_constant<&glUniform2iv> {};
-	template <> struct p_gl_uniform_map<glm::ivec3> : glt_constant<&glUniform3iv> {};
-	template <> struct p_gl_uniform_map<glm::ivec4> : glt_constant<&glUniform4iv> {};
+	template <> struct pp_gl_uniform_map<glm::ivec1> : glt_constant<&glUniform1iv> {};
+	template <> struct pp_gl_uniform_map<glm::ivec2> : glt_constant<&glUniform2iv> {};
+	template <> struct pp_gl_uniform_map<glm::ivec3> : glt_constant<&glUniform3iv> {};
+	template <> struct pp_gl_uniform_map<glm::ivec4> : glt_constant<&glUniform4iv> {};
 
-	template <> struct p_gl_uniform_map<glm::uvec1> : glt_constant<&glUniform1uiv> {};
-	template <> struct p_gl_uniform_map<glm::uvec2> : glt_constant<&glUniform2uiv> {};
-	template <> struct p_gl_uniform_map<glm::uvec3> : glt_constant<&glUniform3uiv> {};
-	template <> struct p_gl_uniform_map<glm::uvec4> : glt_constant<&glUniform4uiv> {};
+	template <> struct pp_gl_uniform_map<glm::uvec1> : glt_constant<&glUniform1uiv> {};
+	template <> struct pp_gl_uniform_map<glm::uvec2> : glt_constant<&glUniform2uiv> {};
+	template <> struct pp_gl_uniform_map<glm::uvec3> : glt_constant<&glUniform3uiv> {};
+	template <> struct pp_gl_uniform_map<glm::uvec4> : glt_constant<&glUniform4uiv> {};
 
-	template <> struct p_gl_uniform_map<glm::mat2> : glt_constant<&glUniformMatrix2fv> {};
-	template <> struct p_gl_uniform_map<glm::mat3> : glt_constant<&glUniformMatrix3fv> {};
-	template <> struct p_gl_uniform_map<glm::mat4> : glt_constant<&glUniformMatrix4fv> {};
+	template <> struct pp_gl_uniform_map<glm::mat2> : glt_constant<&glUniformMatrix2fv> {};
+	template <> struct pp_gl_uniform_map<glm::mat3> : glt_constant<&glUniformMatrix3fv> {};
+	template <> struct pp_gl_uniform_map<glm::mat4> : glt_constant<&glUniformMatrix4fv> {};
 
-	template <> struct p_gl_uniform_map<glm::mat2x3> : glt_constant<&glUniformMatrix2x3fv> {};
-	template <> struct p_gl_uniform_map<glm::mat3x2> : glt_constant<&glUniformMatrix3x2fv> {};
+	template <> struct pp_gl_uniform_map<glm::mat2x3> : glt_constant<&glUniformMatrix2x3fv> {};
+	template <> struct pp_gl_uniform_map<glm::mat3x2> : glt_constant<&glUniformMatrix3x2fv> {};
 
-	template <> struct p_gl_uniform_map<glm::mat2x4> : glt_constant<&glUniformMatrix2x4fv> {};
-	template <> struct p_gl_uniform_map<glm::mat4x2> : glt_constant<&glUniformMatrix4x2fv> {};
+	template <> struct pp_gl_uniform_map<glm::mat2x4> : glt_constant<&glUniformMatrix2x4fv> {};
+	template <> struct pp_gl_uniform_map<glm::mat4x2> : glt_constant<&glUniformMatrix4x2fv> {};
 
-	template <> struct p_gl_uniform_map<glm::mat4x3> : glt_constant<&glUniformMatrix4x3fv> {};
-	template <> struct p_gl_uniform_map<glm::mat3x4> : glt_constant<&glUniformMatrix3x4fv> {};
+	template <> struct pp_gl_uniform_map<glm::mat4x3> : glt_constant<&glUniformMatrix4x3fv> {};
+	template <> struct pp_gl_uniform_map<glm::mat3x4> : glt_constant<&glUniformMatrix3x4fv> {};
 	
 	template <class T>
-	constexpr inline auto p_gl_uniform_map_v = p_gl_uniform_map<T>();
+	constexpr inline auto p_gl_uniform_map_v = pp_gl_uniform_map<T>();
 
-	// default sz wll lead to error
-	template <class T, size_t sz>
-	constexpr p_gl_uniform_t<T, sz> get_p_gl_uniform()
+	// default inpArgs wll lead to an error, must be 1 for vectors and matrices
+	template <class T, size_t inpArgs>
+	constexpr p_gl_uniform_t<T, inpArgs> get_p_gl_uniform()
 	{
-		return reinterpret_cast<p_gl_uniform_t<T, sz>>(*p_gl_uniform_map_v<T>);
+		return reinterpret_cast<p_gl_uniform_t<T, inpArgs>>(*p_gl_uniform_map_v<T>);
 	}
+
+
+	template <class T>
+	struct pp_gl_get_uniform_map;
+
+	template <> struct pp_gl_get_uniform_map<float> : glt_constant<&glGetUniformfv> {};
+	template <> struct pp_gl_get_uniform_map<double> : glt_constant<&glGetUniformdv> {};
+	template <> struct pp_gl_get_uniform_map<int> : glt_constant<&glGetUniformiv> {};
+	template <> struct pp_gl_get_uniform_map<unsigned int> : glt_constant<&glGetUniformuiv> {};
 
 }

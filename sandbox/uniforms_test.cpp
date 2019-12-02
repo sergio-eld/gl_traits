@@ -26,6 +26,8 @@ namespace glt
 	template <typename T, size_t sz, size_t ... indx>
 	struct UniformModifier<T, sz, std::index_sequence<indx...>>
 	{
+
+
 		// TODO: change GLint to handle
 		static void Update(GLint handle,
 			convert_v_to<T, indx>... vals)
@@ -35,19 +37,51 @@ namespace glt
 			(*pglUniformT)(handle, vals...);
 		}
 
+		static void Get(const HandleProg& prog, GLint handle, glm::vec<sz, T>&ret)
+		{
+			void(*ptr)(GLint, GLint, T*) = *pp_gl_get_uniform_map<T>();
+			//constexpr auto ptr = pp_gl_get_uniform_map<T>();
+			(*ptr)(handle_accessor(prog), handle, &ret);
+		}
+
+		static glm::vec<sz, T> Get(const HandleProg& prog, GLint handle)
+		{
+			glm::vec<sz, T> ret{};
+			void(*ptr)(/*const HandleProg&*/ GLint, GLint, glm::vec<sz, T>&) = 
+				reinterpret_cast<decltype(ptr)>(*pp_gl_get_uniform_map<T>());
+
+			(*ptr)(handle_accessor(prog), handle, ret);
+
+			return ret;
+		}
+
 
 	};
 
 	template <typename T, glm::length_t L>
-	struct UniformModifier<glm::vec<L, T>, 0>
+	struct UniformModifier<glm::vec<L, T>>
 	{
 		// TODO: change GLint to handle
 		static void Update(GLint handle, const glm::vec<L, T>& vec)
 		{
 			p_gl_uniform_t<glm::vec<L, T>> pglUniformT = 
-				get_p_gl_uniform<glm::vec<L, T>, L>();
+				get_p_gl_uniform<glm::vec<L, T>, 1>();
 
 			(*pglUniformT)(handle, L, vec);
+		}
+	};
+
+	template <typename T, glm::length_t C, glm::length_t R>
+	struct UniformModifier<glm::mat<C, R, T>>
+	{
+		// TODO: change GLint to handle
+		static void Update(GLint handle, const glm::mat<C, R, T>& mat, 
+			bool transpose = false)
+		{
+			p_gl_uniform_t<glm::mat<C, R, T >> pglUniformT =
+				get_p_gl_uniform<glm::mat<C, R, T>, 1>();
+
+			(*pglUniformT)(handle, 1, transpose, mat);
 		}
 	};
 
@@ -75,6 +109,17 @@ namespace glt
 			return glGetUniformLocation(handle_accessor(prog_),
 				name);
 		}
+
+	};
+
+	
+	template <class glslt_T>
+	class UniformTest;
+
+	// TODO: use unwrapper to get size of T. size = 0 for mat and vec
+	template <class T, const char * name>
+	class UniformTest<glslt<T, name>>
+	{
 
 	};
 
@@ -119,10 +164,12 @@ namespace glt
 
 		void Update(tag_c<name>, T val) const
 		{
-			// TODO: implement
-			p_gl_uniform_t<T, 1> pglUniformT = get_p_gl_uniform<T, 1>();
+			UniformModifier<T, 1>::Update(handle_, val);
 
-			(*pglUniformT)(handle_, val);
+			// TODO: implement
+			//p_gl_uniform_t<T, 1> pglUniformT = get_p_gl_uniform<T, 1>();
+
+			//(*pglUniformT)(handle_, val);
 		}
 
 		void Update(tag_c<name>, const glm::vec<1, T>& val) const
@@ -326,16 +373,30 @@ int main()
 	glt::p_gl_uniform_t<float, 4> pglUniform4f =
 		glt::get_p_gl_uniform<float, 4>();
 
+	
+
 	glt::Uniform<glt::glslt<int, uname_texture1>> u1{ prog.GetHandle() };
 	glt::Uniform<glt::glslt<int, uname_texture2>> u2{ prog.GetHandle() };
 
-	
+	GLint loc_tex1 =
+		glGetUniformLocation(glt::handle_accessor(prog.GetHandle()), uname_texture1);
+	int tex_val = 0;
+	glGetUniformiv(glt::handle_accessor(prog.GetHandle()), loc_tex1, &tex_val);
+
+	u1.Update(glt::tag_c<uname_texture1>(), 1);
+
+	glm::ivec1 tex_val2 = glt::UniformModifier<int, 1>::Get(prog.GetHandle(), loc_tex1);
+
+
+	//glGetUniformiv(glt::handle_accessor(prog.GetHandle()), loc_tex1, &tex_val);
+
+
 
 	glt::Uniform<glt::glslt<glm::mat4, uname_model>> u3{ prog.GetHandle() };
 
-	//glt::UniformModifier<float, 4>::Update(-1, 4, 8, 15, 16);
-
-	//glt::UniformModifier<glm::vec4>::Update(-1, glm::vec4());
+	glt::UniformModifier<float, 4>::Update(-1, 4, 8, 15, 16);
+	glt::UniformModifier<glm::vec4>::Update(-1, glm::vec4());
+	glt::UniformModifier<glm::mat4>::Update(-1, glm::mat4());
 
 	//u3.Update(glt::tag_c<uname_model>(), glm::mat4());
 	//glt::UniformCollection<collect_uniforms> uniforms{ prog.GetHandle() };
