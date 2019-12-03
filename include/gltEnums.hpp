@@ -428,8 +428,14 @@ namespace glt
 	template <class T>
 	constexpr inline bool is_glm_vec_v = is_glm_vec<T>();
 
+	template <class T>
+	struct is_glm_mat : std::false_type {};
 
+	template <class T, glm::length_t C, glm::length_t R, glm::qualifier Q>
+	struct is_glm_mat<glm::mat<C, R, T, Q>> : std::true_type {};
 
+	template <class T>
+	constexpr inline bool is_glm_mat_v = is_glm_mat<T>();
 
 	/* Convert one type to another. Used when expanding parameter pack.
 Example: set n = sizeof...(T) arguments in a Foo<T..>::bar;

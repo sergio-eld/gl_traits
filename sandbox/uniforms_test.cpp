@@ -16,8 +16,36 @@ using collect_uniforms = std::tuple<glt::glslt<glm::mat4, uname_model>,
 	glt::glslt<int, uname_texture1>,
 	glt::glslt<int, uname_texture2>>;
 
+/*
+
 namespace glt
 {
+
+	template <class glslt_T>
+	struct get_uniform_elems_count;
+
+	template <class T, const char *name>
+	struct get_uniform_elems_count<glslt<T, name>>
+	{
+		constexpr static size_t value = 1;
+	};
+
+	template <class T, const char *name, glm::length_t L>
+	struct get_uniform_elems_count<glslt<glm::vec<L, T>, name>>
+	{
+		constexpr static size_t value = L;
+	};
+
+	template <class T, const char * name, glm::length_t C, glm::length_t R>
+	struct get_uniform_elems_count <glslt<glm::mat<C, R, T>, name>>
+	{
+		constexpr static size_t value = 0;
+	};
+
+	template <class T>
+	constexpr inline size_t get_uniform_elems_count_v =
+		get_uniform_elems_count<T>::value;
+
 
 	template <typename T, size_t sz = 0,
 		class = decltype(std::make_index_sequence<sz>())>
@@ -26,7 +54,7 @@ namespace glt
 	template <typename T, size_t sz, size_t ... indx>
 	struct UniformModifier<T, sz, std::index_sequence<indx...>>
 	{
-
+		using ret_type = std::conditional_t<(sz > 1), glm::vec<sz, T>, T>;
 
 		// TODO: change GLint to handle
 		static void Update(GLint handle,
@@ -37,18 +65,19 @@ namespace glt
 			(*pglUniformT)(handle, vals...);
 		}
 
-		static void Get(const HandleProg& prog, GLint handle, glm::vec<sz, T>&ret)
+		static void Get(const HandleProg& prog, GLint handle, ret_type&ret)
 		{
-			void(*ptr)(GLint, GLint, T*) = *pp_gl_get_uniform_map<T>();
-			//constexpr auto ptr = pp_gl_get_uniform_map<T>();
+			void(*ptr)(GLint, GLint, ret_type*) = *pp_gl_get_uniform_map<ret_type>();
+
 			(*ptr)(handle_accessor(prog), handle, &ret);
 		}
 
-		static glm::vec<sz, T> Get(const HandleProg& prog, GLint handle)
+
+		static ret_type Get(const HandleProg& prog, GLint handle)
 		{
-			glm::vec<sz, T> ret{};
-			void(*ptr)(/*const HandleProg&*/ GLint, GLint, glm::vec<sz, T>&) = 
-				reinterpret_cast<decltype(ptr)>(*pp_gl_get_uniform_map<T>());
+			ret_type ret{};
+			void(*ptr)(GLint, GLint, ret_type&) =
+				reinterpret_cast<decltype(ptr)>(*pp_gl_get_uniform_map<ret_type>());
 
 			(*ptr)(handle_accessor(prog), handle, ret);
 
@@ -69,6 +98,26 @@ namespace glt
 
 			(*pglUniformT)(handle, L, vec);
 		}
+
+		static void Get(const HandleProg& prog, GLint handle, glm::vec<L, T>&ret)
+		{
+			void(*ptr)(GLint, GLint, glm::vec<L, T>&) = 
+				reinterpret_cast<decltype(ptr)>(*pp_gl_get_uniform_map<T>());
+
+			(*ptr)(handle_accessor(prog), handle, ret);
+		}
+
+		static glm::vec<L, T> Get(const HandleProg& prog, GLint handle)
+		{
+			glm::vec<L, T> ret;
+			void(*ptr)(GLint, GLint, glm::vec<L, T>&) =
+				reinterpret_cast<decltype(ptr)>(*pp_gl_get_uniform_map<T>());
+
+			(*ptr)(handle_accessor(prog), handle, ret);
+
+			return ret;
+		}
+
 	};
 
 	template <typename T, glm::length_t C, glm::length_t R>
@@ -83,6 +132,26 @@ namespace glt
 
 			(*pglUniformT)(handle, 1, transpose, mat);
 		}
+
+		static void Get(const HandleProg& prog, GLint handle, glm::mat<C, R, T>&ret)
+		{
+			void(*ptr)(GLint, GLint, glm::mat<C, R, T>&) =
+				reinterpret_cast<decltype(ptr)>(*pp_gl_get_uniform_map<T>());
+
+			(*ptr)(handle_accessor(prog), handle, ret);
+		}
+
+		static glm::mat<C, R, T> Get(const HandleProg& prog, GLint handle)
+		{
+			glm::mat<C, R, T> ret;
+			void(*ptr)(GLint, GLint, glm::mat<C, R, T>&) =
+				reinterpret_cast<decltype(ptr)>(*pp_gl_get_uniform_map<T>());
+
+			(*ptr)(handle_accessor(prog), handle, ret);
+
+			return ret;
+		}
+
 	};
 
 	template <typename T, const char *name>
@@ -112,48 +181,16 @@ namespace glt
 
 	};
 
-	
-	template <class glslt_T>
-	class UniformTest;
 
-	// TODO: use unwrapper to get size of T. size = 0 for mat and vec
-	template <class T, const char * name>
-	class UniformTest<glslt<T, name>>
-	{
-
-	};
-
-	template <class glslt_T, class T = unwrap_glslt_t<glslt_T>,
-		class = decltype(std::make_index_sequence<elements_count_v<T>>())>
+	template <class glslt_T,
+		class = 
+		decltype(std::make_index_sequence<get_uniform_elems_count_v<glslt_T>>())>
 		class Uniform;
-
-	// glUniformMatrix
-	template <glm::length_t C, glm::length_t R, typename T,
-		const char *name>
-		class Uniform<glslt<glm::mat<C, R, T>, name>,
-		glm::mat<C, R, T>> : protected UniformBase<glm::mat<C, R, T>, name>
-	{
-	public:
-
-		Uniform(const HandleProg& prog)
-			: UniformBase<glm::mat<C, R, T>, name>(prog)
-		{
-			assert(handle_ != -1 && "Uniform::Failed to get Uniform location!");
-		}
-
-		void Update(tag_c<name>, const glm::mat<C, R, T>& val, bool transpose = false) const
-		{
-			p_gl_uniform_t<glm::mat<C, R, T>> pglUniformMatrixT =
-				get_p_gl_uniform<glm::mat<C, R, T>>();
-
-			(*pglUniformMatrixT)(handle_, 1, transpose, val);
-		}
-
-	};
 
 	// glUniform1* and glUniform1*v
 	template <typename T, const char *name>
-	class Uniform<glslt<T, name>> : protected UniformBase<T, name>
+	class Uniform<glslt<T, name>, std::index_sequence<0>> 
+		: protected UniformBase<T, name>
 	{
 
 	public:
@@ -164,28 +201,33 @@ namespace glt
 
 		void Update(tag_c<name>, T val) const
 		{
+			assert(ActiveProgram::IsActive(prog_) &&
+				"Uniform::Trying to modify a uniform for a non-active Program!");
 			UniformModifier<T, 1>::Update(handle_, val);
-
-			// TODO: implement
-			//p_gl_uniform_t<T, 1> pglUniformT = get_p_gl_uniform<T, 1>();
-
-			//(*pglUniformT)(handle_, val);
 		}
 
 		void Update(tag_c<name>, const glm::vec<1, T>& val) const
 		{
-			p_gl_uniform_t<glm::vec<1, T>> pglUniformTv = get_p_gl_uniform<glm::vec<1, T>>();
-
-			(*pglUniformTv)(handle_, 1, val);
+			assert(ActiveProgram::IsActive(prog_) &&
+				"Uniform::Trying to modify a uniform for a non-active Program!");
+			UniformModifier<glm::vec<1, T>>::Update(handle_, val);
 		}
 
+		void Get(tag_c<name>, T& val) const
+		{
+			UniformModifier<T, 1>::Get(prog_, handle_, val);
+		}
+
+		T Get(tag_c<name>) const
+		{
+			return UniformModifier<T, 1>::Get(prog_, handle_);
+		}
 	
 	};
 
 	// glUniform1-4* and glUniform1-4*v
 	template <glm::length_t L, typename T, const char *name, size_t ... indx>
 	class Uniform<glslt<glm::vec<L, T>, name>,
-		glm::vec<L, T>,
 		std::index_sequence<indx...>> 
 		: protected UniformBase<glm::vec<L, T>, name>
 	{
@@ -198,21 +240,53 @@ namespace glt
 
 		void Update(tag_c<name>, convert_v_to<T, indx> ... val) const
 		{
-			// TODO: implement
-			p_gl_uniform_t<T, L> pglUniformT = get_p_gl_uniform<T, L>();
-
-			(*pglUniformT)(handle_, val...);
+			assert(ActiveProgram::IsActive(prog_) &&
+				"Uniform::Trying to modify a uniform for a non-active Program!");
+			UniformModifier<T, L>::Update(handle_, val ...);
 		}
 
 		void Update(tag_c<name>, const glm::vec<L, T>& val) const
 		{
-			p_gl_uniform_t<glm::vec<L, T>> pglUniformTv = get_p_gl_uniform<glm::vec<L, T>>();
-
-			(*pglUniformTv)(handle_, L, val);
+			assert(ActiveProgram::IsActive(prog_) &&
+				"Uniform::Trying to modify a uniform for a non-active Program!");
+			UniformModifier<glm::vec<L, T>>::Update(handle_, val);
 		}
 
 	};
 
+	// glUniformMatrix
+	template <glm::length_t C, glm::length_t R, typename T,
+		const char *name>
+		class Uniform<glslt<glm::mat<C, R, T>, name>, 
+		std::index_sequence<>>
+		: protected UniformBase<glm::mat<C, R, T>, name>
+	{
+	public:
+
+		Uniform(const HandleProg& prog)
+			: UniformBase<glm::mat<C, R, T>, name>(prog)
+		{
+			assert(handle_ != -1 && "Uniform::Failed to get Uniform location!");
+		}
+
+		void Update(tag_c<name>, const glm::mat<C, R, T>& val, bool transpose = false) const
+		{
+			assert(ActiveProgram::IsActive(prog_) &&
+				"Uniform::Trying to modify a uniform for a non-active Program!");
+			UniformModifier<glm::mat<C, R, T>>::Update(handle_, val, transpose);
+		}
+
+		void Get(tag_c<name>, glm::mat<C, R, T>& val) const
+		{
+			UniformModifier<glm::mat<C, R, T>>::Get(prog_, handle_, val);
+		}
+
+		glm::mat<C, R, T> Get(tag_c<name>) const
+		{
+			return UniformModifier<glm::mat<C, R, T>>::Get(prog_, handle_);
+		}
+
+	};
 	
 
 	template <class TupleArgs,
@@ -234,12 +308,15 @@ namespace glt
 		{}
 
 		using UnifBase<indx>::Update...;
+		using UnifBase<indx>::Get...;
+
 	};
 
 }
-
+*/
 
 using uint = unsigned int;
+
 
 int main()
 {
@@ -326,6 +403,11 @@ int main()
 	static_assert(std::is_same_v<glt::p_gl_uniform_t<glm::mat4>,
 		void(*)(GLint, GLsizei, GLboolean, const glm::mat4&)>);
 
+	static_assert(glt::get_uniform_elems_count_v<glt::glslt<int, 0>> == 1);
+	static_assert(glt::get_uniform_elems_count_v<glt::glslt<glm::mat4, 0>> == 0);
+	static_assert(glt::get_uniform_elems_count_v<glt::glslt<glm::vec3, 0>> == 3);
+
+
 	// run-time checks
 	SmartGLFW sglfw{ 4, 5 };
 	SmartGLFWwindow window{ SCR_WIDTH, SCR_HEIGHT, "Testing uniforms" };
@@ -375,32 +457,60 @@ int main()
 
 	
 
-	glt::Uniform<glt::glslt<int, uname_texture1>> u1{ prog.GetHandle() };
-	glt::Uniform<glt::glslt<int, uname_texture2>> u2{ prog.GetHandle() };
+
 
 	GLint loc_tex1 =
 		glGetUniformLocation(glt::handle_accessor(prog.GetHandle()), uname_texture1);
 	int tex_val = 0;
 	glGetUniformiv(glt::handle_accessor(prog.GetHandle()), loc_tex1, &tex_val);
 
-	u1.Update(glt::tag_c<uname_texture1>(), 1);
-
-	glm::ivec1 tex_val2 = glt::UniformModifier<int, 1>::Get(prog.GetHandle(), loc_tex1);
-
 
 	//glGetUniformiv(glt::handle_accessor(prog.GetHandle()), loc_tex1, &tex_val);
 
 
-
+	glt::Uniform<glt::glslt<int, uname_texture1>> u1{ prog.GetHandle() };
+	glt::Uniform<glt::glslt<int, uname_texture2>> u2{ prog.GetHandle() };
 	glt::Uniform<glt::glslt<glm::mat4, uname_model>> u3{ prog.GetHandle() };
+	
+	u1.Update(glt::tag_c<uname_texture1>(), 1);
+	if (u1.Get(glt::tag_c<uname_texture1>()) != 1)
+	{
+		std::cerr << "Invalid value returned" << std::endl;
+		return -1;
+	}
 
-	glt::UniformModifier<float, 4>::Update(-1, 4, 8, 15, 16);
-	glt::UniformModifier<glm::vec4>::Update(-1, glm::vec4());
-	glt::UniformModifier<glm::mat4>::Update(-1, glm::mat4());
+	u1.Update(glt::tag_c<uname_texture1>(), glm::ivec1(2));
+	if (u1.Get(glt::tag_c<uname_texture1>()) != 2)
+	{
+		std::cerr << "Invalid value returned" << std::endl;
+		return -1;
+	}
 
-	//u3.Update(glt::tag_c<uname_model>(), glm::mat4());
-	//glt::UniformCollection<collect_uniforms> uniforms{ prog.GetHandle() };
+	glm::mat4 in{ 3.14f },
+		out;
+	u3.Update(glt::tag_c<uname_model>(), in);
+	u3.Get(glt::tag_c<uname_model>(), out);
 
+	if (in != out)
+	{
+		std::cerr << "Invalid value returned" << std::endl;
+		return -1;
+	}
+	if (u3.Get(glt::tag_c<uname_model>()) != out)
+	{
+		std::cerr << "Invalid value returned" << std::endl;
+		return -1;
+	}
+
+	glt::UniformCollection<collect_uniforms> uCollection{ prog.GetHandle() };
+
+	uCollection.Update(glt::tag_c<uname_projection>(), in);
+
+	if (uCollection.Get(glt::tag_c<uname_projection>()) != out)
+	{
+		std::cerr << "Invalid value returned" << std::endl;
+		return -1;
+	}
 
 	return 0;
 }

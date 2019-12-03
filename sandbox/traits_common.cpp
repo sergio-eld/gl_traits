@@ -52,6 +52,7 @@ int main()
 	static_assert(std::is_same_v<glm::mat4,
 		glt::unwrap_glslt_t<glt::glslt<glm::mat4, 0>>>);
 
+
 	static_assert(uname_model == glt::get_glslt_name_v<utype_model>);
 
 	return 0;
