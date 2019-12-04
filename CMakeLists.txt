@@ -10,8 +10,10 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # Substitute with find_package?
-add_subdirectory(third_party/pod_reflection)
+# add_subdirectory(third_party/pod_reflection)
 #add_subdirectory(third_party/dhconstexpr_lib)
+
+add_subdirectory(glt_parser)
 
 
 # TODO: check if glad was generated with EXPORT
