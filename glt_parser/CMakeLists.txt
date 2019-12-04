@@ -6,6 +6,7 @@ project(glt_parser LANGUAGES CXX)
 add_executable(${PROJECT_NAME}
 	src/${PROJECT_NAME}.cpp
 	src/Arguments.cpp
+	src/ComLineParser.cpp
 	
 	include/IParser.h
 	)
@@ -17,9 +18,10 @@ target_include_directories(${PROJECT_NAME}
 	
 set(ARGUMENTS
 	"-s C:/Users/KolesnikSV/Documents/DEV2/gl_traits/glt_parser/test_shader \
-	-d C:/Users/KolesnikSV/Documents/dev_build/gl_traits/bin/Debug \
-	-p \"Test Compute\" \
-	-e \".vs .fs .cs .vshader .fshader .cshader\""
+-d C:/Users/KolesnikSV/Documents/dev_build/gl_traits/bin/Debug \
+-p \"Test Compute\" \
+-e \".vs .fs .cs .vshader .fshader .cshader\" \
+-w warnings"
 	)
 	
 set_target_properties(${PROJECT_NAME}

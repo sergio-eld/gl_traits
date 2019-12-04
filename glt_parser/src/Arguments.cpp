@@ -4,7 +4,6 @@
 #include <string>
 #include <functional>
 #include <algorithm>
-#include <numeric>
 
 constexpr const char descr_none[] = "Unknown parameter",
 descr_source_dir[] = "Path (absolute or relative) to a directory"
@@ -23,6 +22,7 @@ descr_severity[] = "Error severity level";
 
 class Argument : public IArgument
 {
+    std::string tag_;
 	std::string name_;
 	std::string description_;
 
@@ -33,9 +33,11 @@ protected:
 
 public:
 
-	Argument(const std::string& name,
+	Argument(const std::string& tag,
+        const std::string& name,
 		const std::string& descr)
-		: name_(name),
+		: tag_(tag),
+        name_(name),
 		description_(descr)
 	{}
 
@@ -44,6 +46,10 @@ public:
 	{
 		return name_;
 	}
+    const std::string & Tag() const override
+    {
+        return tag_;
+    }
 
 
 	virtual const std::string & Value() const override
@@ -73,42 +79,63 @@ public:
 class PathArgument : public Argument
 {
 	std::regex regPath{ R"(((?:[a-zA-Z]:)|.*)?([\\|/][\w|\s]*)+)" };
+    Severity sev_ = none;
 
 public:
-	PathArgument(const std::string& name,
+	PathArgument(const std::string& tag,
+        const std::string& name,
 		const std::string& descr)
-		: Argument(name, descr)
+		: Argument(tag, name, descr)
 	{}
 
 	bool SetValue(std::string_view val) override
 	{
 		//std::string value{ val };
 		std::match_results<std::string_view::iterator> sm;
-		if (!std::regex_match(val.begin(), val.end(), sm, regPath))
+		if (!std::regex_match(val.begin(), val.end(), sm, regPath) ||
+            !fsys::exists(val))
 		{
 			valid_ = false;
+            sev_ = error;
+
 			return IsValid();
 		}
 
+        sev_ = none;
 		valid_ = true;
 		value_ = fsys::path(val).generic_string();
 
 		return IsValid();
 	}
+
+    std::string Pattern() const override
+    {
+        return std::string("(" + Tag() + ")" + " \"F:/ull/or/relative/path/\"");
+    }
+
+    std::string GetError() const
+    {
+        if (!sev_)
+            return std::string();
+
+        return std::string("Invalid or non-existing path!");
+    }
 };
 
 class WarningsArgument : public Argument
 {
-	std::regex regSev{ R"(([0-1])|(none)|(warnings))", std::regex::icase };
+	std::regex regSev{ R"(([0-2])|(none)|(error)|(warnings))", std::regex::icase };
 
 	// set flag if error occures
-	Severity sev_ = none;
+	Severity sev_ = error;
 public:
-	WarningsArgument(const std::string& name,
-		const std::string& descr)
-		: Argument(name, descr)
+
+    // only one instance would be created
+	WarningsArgument()
+		: Argument("-w", "Warnings Level", descr_severity)
 	{
 		valid_ = true;
+        value_ = "1";
 	}
 
 	bool SetValue(std::string_view val) override
@@ -123,12 +150,32 @@ public:
 		
 		valid_ = true;
 
-		// TODO:
-		value_ = val;
-		//value_ = fsys::path(val).generic_string();
+        auto sub = ++sm.cbegin();
+
+        if (sub->matched)
+            value_ = *sub;
+        else if ((++sub)->matched)
+            value_ = "0";
+        else if ((++sub)->matched)
+            value_ = "1";
+        else
+            value_ = "2";
 
 		return IsValid();
 	}
+
+    std::string Pattern() const override
+    {
+        return std::string(Tag() + " [0-2|none|error|warnings]");
+    }
+
+    std::string GetError() const
+    {
+        if (!sev_)
+            return std::string();
+
+        return std::string("Invalid warnings level!");
+    }
 };
 
 
@@ -147,77 +194,20 @@ std::vector<std::unique_ptr<IArgument>> init_args(std::unique_ptr<Args>&& ... ar
 }
 
 const std::vector<std::unique_ptr<IArgument>> IArgument::defaultArgs =
-	init_args(std::make_unique<PathArgument>("-s", descr_source_dir),
-		std::make_unique<PathArgument>("-d", descr_outout_dir),
+	init_args(std::make_unique<PathArgument>("-s", "Source Directory", descr_source_dir),
+		std::make_unique<PathArgument>("-d", "Output Directory", descr_outout_dir),
 		//std::make_unique<Argument>("-n", descr_file_name),
-		std::make_unique<Argument>("-p", descr_name_pred),
-		std::make_unique<Argument>("-e", descr_extension),
-		std::make_unique<WarningsArgument>("-w", descr_severity));
+		std::make_unique<Argument>("-p", "Name predicates", descr_name_pred),
+		std::make_unique<Argument>("-e", "Shader source file extensions", descr_extension),
+		std::make_unique<WarningsArgument>());
 
 
-
-ComLineParser::ComLineParser(int argc, const char ** argv)
-	: cl_args_(argv, std::next(argv, argc))
-{
-	Parce();
-}
-
-bool ComLineParser::Success() const
-{
-	constexpr auto fn = [](bool init, const std::unique_ptr<IArgument>& arg)
-	{
-		return init && arg->IsValid();
-	};
-	return std::accumulate(IArgument::defaultArgs.cbegin(),
-		IArgument::defaultArgs.cend(), true, fn);
-}
-
-void ComLineParser::PrintErrors() const
-{
-	constexpr auto fn = [&](const std::unique_ptr<IArgument>& arg)
-	{
-		std::cout << "Invalid Argument: " << arg->Name() << ", Description: " <<
-			arg->Description() << std::endl;
-	};
-	std::for_each(IArgument::defaultArgs.cbegin(), IArgument::defaultArgs.cend(), fn);
-}
-
-void ComLineParser::Parce()
-{
-	fsys::path exePath = cl_args_[0];
-
-	auto def_order_iter = IArgument::defaultArgs.begin();
-	auto clArg = ++cl_args_.begin();
-
-
-	bool default_parse_fail = false;
-
-	// parsing by default order
-	while (clArg != cl_args_.cend() &&
-		def_order_iter != IArgument::defaultArgs.cend())
-	{
-		if ((!IsArgName(*clArg) || *clArg != (*def_order_iter)->Name()) &&
-			!(*def_order_iter++)->SetValue(*clArg))
-		{
-			default_parse_fail = true;
-			break;
-		}
-		++clArg;
-	}
-
-}
-
-bool ComLineParser::IsArgName(std::string_view val)
-{
-	return std::regex_match(val.begin(), val.end(), regArgName_);
-}
-
-IArgument* ComLineParser::Find(const std::string & name)
+IArgument* IArgument::Find(const std::string& tag)
 {
 	auto found = std::find_if(IArgument::defaultArgs.cbegin(), IArgument::defaultArgs.cend(),
 		[&](const std::unique_ptr<IArgument>& ptr)
 	{
-		return ptr->Name() == name;
+		return ptr->Tag() == tag;
 	});
 
 	if (found == IArgument::defaultArgs.cend())
