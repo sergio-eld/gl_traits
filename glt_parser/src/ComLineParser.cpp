@@ -19,6 +19,8 @@ bool ComLineParser::EmptyArgs() const
 
 bool ComLineParser::Success() const
 {
+	// TODO: check warning levels ??
+
     constexpr auto fn = [](bool init, const std::unique_ptr<IArgument>& arg)
     {
         return init && arg->IsValid();
@@ -37,11 +39,13 @@ void ComLineParser::PrintUsage() const
 
 void ComLineParser::PrintErrors() const
 {
-    IArgument *wLevel = IArgument::Find("-w");
-    if (!wLevel)
-        throw std::exception("Warning level argument is missing in default args list!");
+	std::optional<rIArgument> wLevelFound = IArgument::Find("-w");
+	if (!wLevelFound.has_value())
+		throw std::exception("Warning level argument is missing in default args list!");
 
-    IArgument::Severity sev = (IArgument::Severity)std::stoi(wLevel->Value());
+	IArgument& wLevel = *wLevelFound;    
+
+    IArgument::Severity sev = (IArgument::Severity)std::stoi(wLevel.Value());
 
     if (sev > IArgument::Severity::warning)
         throw std::exception("Invalid warning level!");
@@ -61,6 +65,8 @@ void ComLineParser::PrintErrors() const
     std::for_each(IArgument::defaultArgs.cbegin(), IArgument::defaultArgs.cend(), std::bind(fn, std::placeholders::_1, sev));
 }
 
+// TODO: need proper implementation!!!!
+#pragma message("Warning: ComLineParser::Parce is not fully implemented!")
 void ComLineParser::Parce()
 {
     fsys::path exePath = cl_args_[0];

@@ -202,7 +202,7 @@ const std::vector<std::unique_ptr<IArgument>> IArgument::defaultArgs =
 		std::make_unique<WarningsArgument>());
 
 
-IArgument* IArgument::Find(const std::string& tag)
+std::optional<rIArgument> IArgument::Find(const std::string& tag)
 {
 	auto found = std::find_if(IArgument::defaultArgs.cbegin(), IArgument::defaultArgs.cend(),
 		[&](const std::unique_ptr<IArgument>& ptr)
@@ -211,7 +211,7 @@ IArgument* IArgument::Find(const std::string& tag)
 	});
 
 	if (found == IArgument::defaultArgs.cend())
-		return nullptr;
+		return std::nullopt;
 
-	return found->get();
+	return rIArgument(*found->get());
 }

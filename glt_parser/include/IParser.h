@@ -3,11 +3,17 @@
 #include <iostream>
 #include <regex>
 
+#include <optional>
+
 #include <string_view>
 
 #include <filesystem>
 
 namespace fsys = std::filesystem;
+
+struct IArgument;
+
+using rIArgument = std::reference_wrapper<IArgument>;
 
 // TODO: add print format. (-n "name predicates list")
 struct IArgument
@@ -48,7 +54,7 @@ struct IArgument
 	virtual bool SetValue(std::string_view) = 0;
 
 	static const std::vector<std::unique_ptr<IArgument>> defaultArgs;
-    static IArgument *Find(const std::string& tag);
+    static std::optional<rIArgument> Find(const std::string& tag);
 };
 
 
