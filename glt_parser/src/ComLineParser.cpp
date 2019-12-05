@@ -59,7 +59,7 @@ void ComLineParser::PrintErrors() const
         if (arg->IsValid() || arg->GetSeverity() > sev)
             return;
 
-        std::cout << "Argument: " << arg->Name() << ", " << arg->GetError() << std::endl;
+        std::cout << "Error. [" << arg->Name() << "] " << arg->GetError() << std::endl;
             // ", Description: " <<            arg->Description() << std::endl;
     };
     std::for_each(IArgument::defaultArgs.cbegin(), IArgument::defaultArgs.cend(), std::bind(fn, std::placeholders::_1, sev));

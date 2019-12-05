@@ -4,6 +4,9 @@
 #include <regex>
 #include <filesystem>
 
+#include <exception>
+#include <iostream>
+
 namespace fsys = std::filesystem;
 
 ShaderInfo::ShaderInfo(const std::string & fpath)
@@ -26,15 +29,47 @@ size_t ShaderInfo::VarsCount(IVariable::VarType type) const
 struct ShaderParser::regexImpl
 {
 	inline static std::string layout_uniform{
-		R"((layout)|(uniform)\s{1,5}([(]location\s{1,5}=\s{1,5}\d{1,3}[)])?)" };
+		R"(((layout)|(uniform)\s+(?:[(]location\s{1,5}=\s{1,5}(\d{1,3})[)])?))" };
 
 	inline static std::regex glslVariable
 	{
 		layout_uniform
 	};
+
+    regexImpl()
+    {
+        static size_t entities = 0;
+
+        if (entities++)
+        {
+            std::set_terminate([]() 
+            {
+                std::cerr << "Critical error: ShaderParser::regexImpl::Only one instance is allowed" << std::endl;
+                std::abort();
+            });
+
+            std::terminate();
+        }
+
+        // assert search cases on creation
+        std::vector<std::string> lines{
+            {"layout (location = 0) in vec3 aPos;"},
+        {"layout   in vec2 aTexCoord;"},
+        {"uniform mat4 model;"}
+
+        };
+
+        std::smatch sm;
+
+        for (const std::string& l : lines)
+        {
+            bool matched = std::regex_search(l, sm, glslVariable);
+        }
+    }
+
 };
 
-std::unique_ptr<ShaderParser::regexImpl> ShaderParser::regImpl_{};
+std::unique_ptr<ShaderParser::regexImpl> ShaderParser::regImpl_ = std::make_unique<ShaderParser::regexImpl>();
 
 
 ShaderParser::ShaderParser(const std::string & fpath, const std::string & namePred, const std::string & extensions)
@@ -138,7 +173,9 @@ ShaderParser::container_t ShaderParser::GetFilePaths(const std::string & fpath, 
 
 void ShaderParser::ParseSource(ShaderInfo & sInf)
 {
+    //////////////////////////////////////
 
+    //////////////////////////////////////
 }
 
 
