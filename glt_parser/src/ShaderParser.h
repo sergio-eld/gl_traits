@@ -9,8 +9,11 @@ struct ShaderInfo : public IShaderInfo
 {
 	std::string filePath;
 
-	std::vector<std::shared_ptr<IVariable>> vao_;
-	std::vector<std::shared_ptr<IVariable>> uniforms_;
+	std::vector<std::shared_ptr<IVariable>> vao_,
+		uniforms_,
+		var_in_,
+		var_out;
+
 
 	ShaderInfo(const std::string& fpath);
 
@@ -20,12 +23,15 @@ struct ShaderInfo : public IShaderInfo
 
 class ShaderParser : public IShaderParser
 {
-	struct regexImpl;
+	struct glsl_variable_info;
+
+	struct ParseImpl;
+	
 
 	std::string name_;
 	std::list<ShaderInfo> shaders_;
 
-	static std::unique_ptr<regexImpl> regImpl_;
+	static std::unique_ptr<ParseImpl> parseImpl_;
 
 	using container_t = decltype(shaders_);
 

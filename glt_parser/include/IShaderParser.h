@@ -12,7 +12,9 @@ struct IVariable
 		vertex_in,
 		uniform,
 		var_in,
-		var_out
+		var_out,
+
+		unknown
 	};
 
 	virtual const std::string& Name() const = 0;

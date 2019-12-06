@@ -82,6 +82,7 @@ public:
 			break;
 		}
 
+		// TODO: 
 		for (const ptrIShaderParser& p : progParsers_)
 			p->ParseAll();
 
