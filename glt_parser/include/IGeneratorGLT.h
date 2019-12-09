@@ -12,6 +12,8 @@ struct IGeneratorGLT
 		find_none
 	};
 
+
+
 	static std::unique_ptr<IGeneratorGLT> Create(const std::string& sourcePath,
 		const std::string& outputPath,
 		const std::string& namePredicates, const std::string& extensions,
