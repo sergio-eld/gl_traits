@@ -1,7 +1,7 @@
 ﻿
 #include "helpers.hpp"
 
-/* Check for correctness: 
+/* This unit checks for correctness: 
 - handle allocations
 - handle bindings
 */
@@ -14,8 +14,8 @@ int CheckHandle()
     Handle<T> h1 = Allocator<T>::Allocate();
     Handle<T> h2 = Allocator<T>::Allocate();
 
-    if (handle_accessor<T>()(h1) != 1 ||
-        handle_accessor<T>()(h2) != 2)
+    if (handle_accessor(h1) != 1 ||
+		handle_accessor(h2) != 2)
         throw ("Invalid values' sequence!");
 
     return 0;
@@ -78,7 +78,7 @@ int main()
 
     auto namedbufferdata = &glNamedBufferData;
 
-    // TODO: add glShaderTarget test;
+    // TODO: add ShaderTarget test;
 
 
     //bound_handle_base<BufferTarget, BufferTarget::array>::Bind(tag_v<BufferTarget::array>(), hBuf);

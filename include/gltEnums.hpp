@@ -62,14 +62,14 @@ namespace glt
 	enum class BufferTarget : int;
 	enum class glFrameBufferTarget : int;
 	enum class TextureTarget : int;
-	enum class glShaderTarget : int;
+	enum class ShaderTarget : int;
 
 	enum class glTransformFeedBackTarget : int; // GL_TRANSFORM_FEEDBACK only
 	enum class glQueryTarget : int;             // used in glBeginQuery
 
 
 	// types only to be used as a paramaeter for Handle<T>, to find allocator and deleter functions 
-	enum class glProgramTarget : int;           // empty
+	enum class glProgramTarget : int {}; // empty
 
 	enum class VAOTarget : int;       // empty
 	enum class glProgramPipeLineTarget : int;   // empty
@@ -95,7 +95,7 @@ namespace glt
 	template <> struct pp_gl_allocator<glProgramTarget> : glt_constant<&glCreateProgram> {};
 
 	// takes argument 
-	template <> struct pp_gl_allocator<glShaderTarget> : glt_constant<&glCreateShader> {};
+	template <> struct pp_gl_allocator<ShaderTarget> : glt_constant<&glCreateShader> {};
 
 	template <typename glObjType>
 	constexpr inline auto pp_gl_allocator_v = pp_gl_allocator<glObjType>::value;
@@ -117,7 +117,7 @@ namespace glt
 	template <> struct pp_gl_deleter<glSamplerTarget> : glt_constant<&glDeleteSamplers> {};
 
 
-	template <> struct pp_gl_deleter<glShaderTarget> : glt_constant<&glDeleteShader> {};
+	template <> struct pp_gl_deleter<ShaderTarget> : glt_constant<&glDeleteShader> {};
 	template <> struct pp_gl_deleter<glProgramTarget> : glt_constant<&glDeleteProgram> {};
 
 	template <typename glObjType>
@@ -406,5 +406,160 @@ namespace glt
 	/*
 	template <class T>
 	constexpr inline VAOAttribSize vao_attrib_size_v = vao_attrib_size<T>();*/
+
+	template <class T>
+	struct elements_count : glt_constant<(size_t)1> {};
+
+	template <glm::length_t L, typename T, glm::qualifier Q>
+	struct elements_count<glm::vec<L, T, Q>> : glt_constant<L> {};
+
+	template <glm::length_t C, glm::length_t R, typename T, glm::qualifier Q>
+	struct elements_count<glm::mat<C, R, T, Q>> : glt_constant<C> {};
+
+	template <class T>
+	constexpr inline size_t elements_count_v = elements_count<T>();
+
+	template <class T>
+	struct is_glm_vec : std::false_type {};
+
+	template <glm::length_t L, typename T, glm::qualifier Q>
+	struct is_glm_vec<glm::vec<L, T, Q>> : std::true_type {};
+
+	template <class T>
+	constexpr inline bool is_glm_vec_v = is_glm_vec<T>();
+
+	template <class T>
+	struct is_glm_mat : std::false_type {};
+
+	template <class T, glm::length_t C, glm::length_t R, glm::qualifier Q>
+	struct is_glm_mat<glm::mat<C, R, T, Q>> : std::true_type {};
+
+	template <class T>
+	constexpr inline bool is_glm_mat_v = is_glm_mat<T>();
+
+	/* Convert one type to another. Used when expanding parameter pack.
+Example: set n = sizeof...(T) arguments in a Foo<T..>::bar;
+template <class ... T>
+class Foo
+{
+	void bar(convert_to<bool, T> ... arg) // to invoke, n bool args is needed.
+	{}
+};
+*/
+	template <typename To, typename From>
+	using convert_to = To;
+
+/*
+Similar to "convert_to", but converting from non-template parameter.
+*/
+	template <typename To, auto indx>
+	using convert_v_to = To;
+
+	template <class T, size_t sz = 1, class = decltype(std::make_index_sequence<sz>())>
+	struct p_gl_uniform;
+
+	template <class T, size_t sz, size_t ... indx>
+	struct p_gl_uniform<T, sz, std::index_sequence<indx...>>
+	{
+		using type = void(*)(GLint, convert_v_to<T, indx>...);
+	};
+
+	template <glm::length_t L, typename T>
+	struct p_gl_uniform<glm::vec<L, T>>
+	{
+		using type = void(*)(GLint, GLsizei, const glm::vec<L, T>&);
+	};
+
+	template <glm::length_t C, glm::length_t R, typename T>
+	struct p_gl_uniform<glm::mat<C, R, T>>
+	{
+		using type = void(*)(GLint, GLsizei, GLboolean, const glm::mat<C, R, T>&);
+	};
+
+	template <class T, size_t sz = 1>
+	using p_gl_uniform_t = typename p_gl_uniform<T, sz>::type;
+
+
+	template <auto *vPtr, class T, size_t sz = 1>
+	struct p_gl_uniform_const
+	{
+		constexpr static p_gl_uniform_t<T, sz> *value = 0;// vPtr;
+
+		constexpr p_gl_uniform_t<T, sz>* operator()() const
+		{
+			return value;
+		}
+	};
+
+
+	template <class T, size_t = 1>
+	struct pp_gl_uniform_map;
+
+	template <> struct pp_gl_uniform_map<float> : glt_constant<&glUniform1f> {};
+	template <> struct pp_gl_uniform_map<float, 2> : glt_constant<&glUniform2f> {};
+	template <> struct pp_gl_uniform_map<float, 3> : glt_constant<&glUniform3f> {};
+	template <> struct pp_gl_uniform_map<float, 4> : glt_constant<&glUniform4f> {};
+
+	template <> struct pp_gl_uniform_map<double> : glt_constant<&glUniform1d> {};
+	template <> struct pp_gl_uniform_map<double, 2> : glt_constant<&glUniform2d> {};
+	template <> struct pp_gl_uniform_map<double, 3> : glt_constant<&glUniform3d> {};
+	template <> struct pp_gl_uniform_map<double, 4> : glt_constant<&glUniform4d> {};
+
+	template <> struct pp_gl_uniform_map<int> : glt_constant<&glUniform1i> {};
+	template <> struct pp_gl_uniform_map<int, 2> : glt_constant<&glUniform2i> {};
+	template <> struct pp_gl_uniform_map<int, 3> : glt_constant<&glUniform3i> {};
+	template <> struct pp_gl_uniform_map<int, 4> : glt_constant<&glUniform4i> {};
+
+	template <> struct pp_gl_uniform_map<unsigned int> : glt_constant<&glUniform1ui> {};
+	template <> struct pp_gl_uniform_map<unsigned int, 2> : glt_constant<&glUniform2ui> {};
+	template <> struct pp_gl_uniform_map<unsigned int, 3> : glt_constant<&glUniform3ui> {};
+	template <> struct pp_gl_uniform_map<unsigned int, 4> : glt_constant<&glUniform4ui> {};
+
+	template <> struct pp_gl_uniform_map<glm::vec1> : glt_constant<&glUniform1fv> {};
+	template <> struct pp_gl_uniform_map<glm::vec2> : glt_constant<&glUniform2fv> {};
+	template <> struct pp_gl_uniform_map<glm::vec3> : glt_constant<&glUniform3fv> {};
+	template <> struct pp_gl_uniform_map<glm::vec4> : glt_constant<&glUniform4fv> {};
+
+	template <> struct pp_gl_uniform_map<glm::ivec1> : glt_constant<&glUniform1iv> {};
+	template <> struct pp_gl_uniform_map<glm::ivec2> : glt_constant<&glUniform2iv> {};
+	template <> struct pp_gl_uniform_map<glm::ivec3> : glt_constant<&glUniform3iv> {};
+	template <> struct pp_gl_uniform_map<glm::ivec4> : glt_constant<&glUniform4iv> {};
+
+	template <> struct pp_gl_uniform_map<glm::uvec1> : glt_constant<&glUniform1uiv> {};
+	template <> struct pp_gl_uniform_map<glm::uvec2> : glt_constant<&glUniform2uiv> {};
+	template <> struct pp_gl_uniform_map<glm::uvec3> : glt_constant<&glUniform3uiv> {};
+	template <> struct pp_gl_uniform_map<glm::uvec4> : glt_constant<&glUniform4uiv> {};
+
+	template <> struct pp_gl_uniform_map<glm::mat2> : glt_constant<&glUniformMatrix2fv> {};
+	template <> struct pp_gl_uniform_map<glm::mat3> : glt_constant<&glUniformMatrix3fv> {};
+	template <> struct pp_gl_uniform_map<glm::mat4> : glt_constant<&glUniformMatrix4fv> {};
+
+	template <> struct pp_gl_uniform_map<glm::mat2x3> : glt_constant<&glUniformMatrix2x3fv> {};
+	template <> struct pp_gl_uniform_map<glm::mat3x2> : glt_constant<&glUniformMatrix3x2fv> {};
+
+	template <> struct pp_gl_uniform_map<glm::mat2x4> : glt_constant<&glUniformMatrix2x4fv> {};
+	template <> struct pp_gl_uniform_map<glm::mat4x2> : glt_constant<&glUniformMatrix4x2fv> {};
+
+	template <> struct pp_gl_uniform_map<glm::mat4x3> : glt_constant<&glUniformMatrix4x3fv> {};
+	template <> struct pp_gl_uniform_map<glm::mat3x4> : glt_constant<&glUniformMatrix3x4fv> {};
+	
+	template <class T>
+	constexpr inline auto p_gl_uniform_map_v = pp_gl_uniform_map<T>();
+
+	// default inpArgs wll lead to an error, must be 1 for vectors and matrices
+	template <class T, size_t inpArgs>
+	constexpr p_gl_uniform_t<T, inpArgs> get_p_gl_uniform()
+	{
+		return reinterpret_cast<p_gl_uniform_t<T, inpArgs>>(*p_gl_uniform_map_v<T>);
+	}
+
+
+	template <class T>
+	struct pp_gl_get_uniform_map;
+
+	template <> struct pp_gl_get_uniform_map<float> : glt_constant<&glGetUniformfv> {};
+	template <> struct pp_gl_get_uniform_map<double> : glt_constant<&glGetUniformdv> {};
+	template <> struct pp_gl_get_uniform_map<int> : glt_constant<&glGetUniformiv> {};
+	template <> struct pp_gl_get_uniform_map<unsigned int> : glt_constant<&glGetUniformuiv> {};
 
 }
