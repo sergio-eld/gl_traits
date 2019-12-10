@@ -42,3 +42,11 @@ add_test(NAME TesValid3
 		-B "C:/builds/folder name" 
 		-S "C:/My Sources/marconi" 
 	)
+	
+add_test(NAME TesFalseValid1
+	COMMAND 
+		$<TARGET_FILE:app> 
+		-B "C:/builds/folder name" 
+		-B "sdfsdgsdgdg" 
+		-S "C:/My Sources/marconi" 
+	)

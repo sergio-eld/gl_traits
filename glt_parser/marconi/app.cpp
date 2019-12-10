@@ -28,10 +28,10 @@ std::map<TagStr, std::string> clArgs
 
 using RefString = std::reference_wrapper<std::string>;
 
-std::optional<RefString> GetValue(const char *tag)
+std::optional<RefString> GetValue(const TagStr& tag)
 {
 	using Iter = std::map<TagStr, std::string>::iterator;
-	if (!tag) // is nullptr
+	if (tag.empty())
 		return std::nullopt;
 
 	Iter found = clArgs.find(tag);
@@ -76,6 +76,19 @@ bool ArgValidThreads(const std::string& val)
 	}
 }
 
+bool IsHelp(std::string_view tag)//const std::string& tag)
+{
+	// static std::string help1{ tagHelp1 },
+		// help2{ tagHelp1 };
+	std::string_view help1{ tagHelp1 },
+		help2{ tagHelp2 };
+
+	return tag == help1 ||
+		tag == help2;
+}
+
+
+
 void PrintHelp()
 {
 	std::cout << "Usage: ./app.exe " << tagSource << " [source path] " <<
@@ -88,78 +101,63 @@ int main(int argc, const char *argv[])
 {
 	std::vector<std::string_view> commands{ argv, std::next(argv, argc) };
 
-	if (commands.size() <= 1)
+	using CIter = std::vector<std::string_view>::const_iterator;
+	CIter iCommand = std::next(commands.cbegin()); // 0 arg is exe path
+
+	if (iCommand == commands.cend() ||
+		IsHelp(iCommand->data()))
 	{
 		PrintHelp();
 		return -1;
 	}
 
-	using CIter = std::vector<std::string_view>::const_iterator;
 
-
-	CIter iCommand = std::next(commands.cbegin()); // 0 arg is exe path
-
-	while (iCommand != commands.cend())
+	// break loop if starting conditions not met for new iteration
+	auto IsArgName = [](std::string_view str, bool * loop_broken = nullptr)
 	{
-		// is prev/current argument a Name
-		static bool prevName = false,
-			curName = false;
+		bool res = str[0] == '-';;
+		if (loop_broken)
+			*loop_broken = !res;
+		return res;
+	};
 
-		curName = (*iCommand)[0] == '-';
+	std::string tag;
+	bool loop_broken = false;
 
-		if (prevName && curName)
-		{
-			// empty value for current argument
-			++iCommand;
+	// starting conditions: first command is an arg name
+	while (IsArgName(*iCommand, &loop_broken) &&
+		++iCommand != commands.cend())
+	{
+		static std::optional<RefString> refargVal = std::nullopt;
+
+		// next command is also an arg name. Leaving current arg's value empty/default
+		if (IsArgName(*iCommand))
 			continue;
-		}
 
-		if (!prevName && !curName)
+		tag.assign(*std::prev(iCommand));
+		refargVal = GetValue(tag);
+
+		if (!refargVal.has_value())
 		{
-			std::cerr << "Argument name expected. Recieved:" <<
-				*iCommand << std::endl;
-			PrintHelp();
-			return -1;
-		}
-		
-		if (curName)
-		{
-			static std::string help1{ tagHelp1 },
-				help2{ tagHelp1 };
-
-			std::string tag{ *iCommand };
-
-			bool isHelp = tag == help1 ||
-				tag == help2;
-
-			if (isHelp)
-			{
-				PrintHelp();
-				return -1;
-			}
-
-			// value for the argument is expected in the next elem
-			prevName = true;
-			++iCommand;
-			continue;
-		}
-
-		// get tag for the current argument
-		CIter prev = std::prev(iCommand);
-		std::optional<RefString> refVal = GetValue(prev->data());
-
-		if (!refVal.has_value())
-		{
-			std::cerr << "Error: Unrecognized tag \"" << *iCommand << "\"" << std::endl;
+			std::cerr << "Error: Unrecognized tag \"" << tag << "\"" << std::endl;
 			PrintHelp();
 			return -1;
 		}
 
-		std::string& val = refVal->get();
-		val = *iCommand;
-		++iCommand;
+		std::string& argVal = *refargVal;
+		argVal = *iCommand;
+		if (++iCommand == commands.cend())
+			break;
 	}
 
+	if (loop_broken)
+	{
+		std::cerr << "Error: expected argument name. Recieved: "
+			<< *iCommand << std::endl;
+		PrintHelp();
+		return -1;
+	}
+	
 	bool validInput = true;
 
 	for (const auto& t : clArgs)
