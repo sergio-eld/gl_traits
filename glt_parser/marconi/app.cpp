@@ -1,12 +1,12 @@
 ﻿
 #include <iostream>
 
-#include <map>
 #include <string_view>
-#include <string>
 #include <optional>
 
+#include <string>
 #include <vector>
+#include <map>
 
 constexpr const char tagSource[] = "-S",
 tagOutput[] = "-B",
@@ -15,7 +15,7 @@ tagThreads[] = "-T",
 tagHelp1[] = "-H",
 tagHelp2[] = "-Help";
 
-using TagStr = std::string;
+using TagStr = std::string_view;
 
 // it will sort tags in alphabetic order
 std::map<TagStr, std::string> clArgs
@@ -28,74 +28,13 @@ std::map<TagStr, std::string> clArgs
 
 using RefString = std::reference_wrapper<std::string>;
 
-std::optional<RefString> GetValue(const TagStr& tag)
-{
-	using Iter = std::map<TagStr, std::string>::iterator;
-	if (tag.empty())
-		return std::nullopt;
+std::optional<RefString> GetValue(const TagStr& tag);
 
-	Iter found = clArgs.find(tag);
-	if (found == clArgs.cend())
-		return std::nullopt;
+bool IsHelp(std::string_view tag);
+void PrintHelp();
 
-	return std::reference_wrapper(found->second);
-
-}
-
-bool ArgValidConfig(const std::string& val)
-{
-	static std::string x32{ "x32" },
-		x64{ "x64" };
-	return val == x32 ||
-		val == x64;
-}
-
-bool ArgValidThreads(const std::string& val)
-{
-	static std::string msg{ "Invalid value for \"threads\" parameter: " };
-
-	try
-	{
-		int threads = std::stoi(val);
-		return threads >= 1 && threads < 11;
-	}
-	catch (const std::invalid_argument& e)
-	{
-		std::cerr << msg << e.what() << std::endl;
-		return false;
-	}
-	catch (const std::out_of_range& e)
-	{
-		std::cerr << msg << e.what() << std::endl;
-		return false;
-	}
-	catch (...)
-	{
-		std::cerr << msg << "unknown error." << std::endl;
-		return false;
-	}
-}
-
-bool IsHelp(std::string_view tag)//const std::string& tag)
-{
-	// static std::string help1{ tagHelp1 },
-		// help2{ tagHelp1 };
-	std::string_view help1{ tagHelp1 },
-		help2{ tagHelp2 };
-
-	return tag == help1 ||
-		tag == help2;
-}
-
-
-
-void PrintHelp()
-{
-	std::cout << "Usage: ./app.exe " << tagSource << " [source path] " <<
-		tagOutput << " [output path] " << tagConfig << " [configuration = x32] " <<
-		tagThreads << " [threads = 1]\n" <<
-		"./app.exe -h\nor\n./app.exe --help\nto print this message." << std::endl;
-}
+bool ArgValidConfig(const std::string& val);
+bool ArgValidThreads(const std::string& val);
 
 int main(int argc, const char *argv[])
 {
@@ -112,7 +51,7 @@ int main(int argc, const char *argv[])
 	}
 
 
-	// break loop if starting conditions not met for new iteration
+	// break loop if starting conditions have not been met for new iteration
 	auto IsArgName = [](std::string_view str, bool * loop_broken = nullptr)
 	{
 		bool res = str[0] == '-';;
@@ -121,20 +60,20 @@ int main(int argc, const char *argv[])
 		return res;
 	};
 
-	std::string tag;
 	bool loop_broken = false;
 
 	// starting conditions: first command is an arg name
 	while (IsArgName(*iCommand, &loop_broken) &&
 		++iCommand != commands.cend())
 	{
+		static std::string_view tag;
 		static std::optional<RefString> refargVal = std::nullopt;
 
 		// next command is also an arg name. Leaving current arg's value empty/default
 		if (IsArgName(*iCommand))
 			continue;
 
-		tag.assign(*std::prev(iCommand));
+		tag = *std::prev(iCommand);
 		refargVal = GetValue(tag);
 
 		if (!refargVal.has_value())
@@ -199,4 +138,69 @@ int main(int argc, const char *argv[])
 		std::cout << a.first << " " << a.second << std::endl;
 
 	return 0;
+}
+
+std::optional<RefString> GetValue(const TagStr & tag)
+{
+	using Iter = std::map<TagStr, std::string>::iterator;
+	if (tag.empty())
+		return std::nullopt;
+
+	Iter found = clArgs.find(tag);
+	if (found == clArgs.cend())
+		return std::nullopt;
+
+	return std::reference_wrapper(found->second);
+}
+
+bool IsHelp(std::string_view tag)
+{
+	static std::string_view help1{ tagHelp1 },
+		help2{ tagHelp2 };
+
+	return tag == help1 ||
+		tag == help2;
+}
+
+void PrintHelp()
+{
+	std::cout << "Usage: ./app.exe " << tagSource << " [source path] " <<
+		tagOutput << " [output path] " << tagConfig << " [configuration = x32] " <<
+		tagThreads << " [threads = 1]\n" <<
+		"./app.exe -h\nor\n./app.exe --help\nto print this message." << std::endl;
+}
+
+
+bool ArgValidConfig(const std::string & val)
+{
+	static std::string x32{ "x32" },
+		x64{ "x64" };
+	return val == x32 ||
+		val == x64;
+}
+
+bool ArgValidThreads(const std::string & val)
+{
+	static std::string msg{ "Invalid value for \"threads\" parameter: " };
+
+	try
+	{
+		int threads = std::stoi(val);
+		return threads >= 1 && threads < 11;
+	}
+	catch (const std::invalid_argument& e)
+	{
+		std::cerr << msg << e.what() << std::endl;
+		return false;
+	}
+	catch (const std::out_of_range& e)
+	{
+		std::cerr << msg << e.what() << std::endl;
+		return false;
+	}
+	catch (...)
+	{
+		std::cerr << msg << "unknown error." << std::endl;
+		return false;
+	}
 }
