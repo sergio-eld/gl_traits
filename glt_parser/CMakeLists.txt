@@ -42,4 +42,4 @@ set_target_properties(${PROJECT_NAME}
 		VS_DEBUGGER_COMMAND_ARGUMENTS ${ARGUMENTS}
 	)
 	
-add_subdirectory(marconi)
+add_subdirectory(parsecl)
