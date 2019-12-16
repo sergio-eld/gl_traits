@@ -2,7 +2,61 @@
 
 project(glt_parser LANGUAGES CXX)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRES True)
 
+add_library(ParseAlgorithm
+	OBJECT
+		include/IParseAlgorithm.h
+		src/ParseAlgorithm.h
+		src/ParseAlgorithm.cpp
+	)
+
+target_include_directories(ParseAlgorithm 
+	PRIVATE
+		${PROJECT_SOURCE_DIR}/include
+	)
+		
+add_library(SourceFile
+	OBJECT
+		include/ISourceFile.h
+		src/SourceFile.h
+		src/SourceFile.cpp
+	)
+
+target_include_directories(SourceFile 
+	PRIVATE
+		${PROJECT_SOURCE_DIR}/include
+	)
+	
+# consider removing layers of inheritence, leave one class for data holding?
+add_library(Variable
+	OBJECT
+		include/IVariable.h
+		src/Variable.h
+		src/Variable.cpp
+	)
+
+target_include_directories(Variable 
+	PRIVATE
+		${PROJECT_SOURCE_DIR}/include
+	)
+
+# test ParseAlgorithm
+add_executable(test_ParseAlgorithm
+		sandbox/test_ParseAlgorithm.cpp
+	
+		$<TARGET_OBJECTS:ParseAlgorithm>
+		$<TARGET_OBJECTS:Variable>
+	)
+	
+target_include_directories(test_ParseAlgorithm 
+	PRIVATE
+		${PROJECT_SOURCE_DIR}/include
+		${PROJECT_SOURCE_DIR}/src
+	)
+
+# main app
 add_executable(${PROJECT_NAME}
 	src/${PROJECT_NAME}.cpp
 	src/Arguments.cpp
@@ -11,12 +65,17 @@ add_executable(${PROJECT_NAME}
 	src/ShaderParser.cpp
 	src/ShaderParser.h
 
-	src/Variable.h
-	src/Variable.cpp
+	
+	$<TARGET_OBJECTS:Variable>
+	$<TARGET_OBJECTS:SourceFile>
+	$<TARGET_OBJECTS:ParseAlgorithm>
+	
 	
 	src/GeneratorGLT.cpp
 	
 	include/IParser.h
+	
+	
 	include/IShaderParser.h
 	include/IGeneratorGLT.h
 

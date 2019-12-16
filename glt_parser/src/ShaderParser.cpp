@@ -235,9 +235,6 @@ struct ShaderParser::ParseImpl
 	{
 		size_t subs = regVarGLSL.mark_count() + 1;
 
-		assert(fsys::exists(shInfo.filePath) && "ShaderParser::ParseImpl::ParseFile"
-			" File does't exist");
-
 		std::fstream f{ shInfo.filePath, std::fstream::in };
 		if (!f.is_open())
 			throw std::exception(std::string("Failed to open for parsing: " +

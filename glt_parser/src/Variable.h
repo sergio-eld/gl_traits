@@ -1,4 +1,4 @@
-﻿#include "IShaderParser.h"
+﻿#include "IVariable.h"
 
 #include <cassert>
 
@@ -70,7 +70,7 @@ public:
 };
 
 
-std::shared_ptr<IVariable> IVariable::Create(const std::string & name,
+std::unique_ptr<IVariable> IVariable::Create(const std::string & name,
 	const std::string & typeGLSL,
 	VarType type, 
 	int location)
@@ -78,17 +78,17 @@ std::shared_ptr<IVariable> IVariable::Create(const std::string & name,
 	switch (type)
 	{
 	case vertex_in:
-		return std::make_shared<VarPublic<vertex_in>>(name, typeGLSL, location);
+		return std::make_unique<VarPublic<vertex_in>>(name, typeGLSL, location);
 	case uniform:
-		return std::make_shared<VarPublic<uniform>>(name, typeGLSL, location);
+		return std::make_unique<VarPublic<uniform>>(name, typeGLSL, location);
 	case var_in:
-		return std::make_shared<VarPrivate<var_in>>(name, typeGLSL);
+		return std::make_unique<VarPrivate<var_in>>(name, typeGLSL);
 	case var_out:
-		return std::make_shared<VarPrivate<var_out>>(name, typeGLSL);
+		return std::make_unique<VarPrivate<var_out>>(name, typeGLSL);
 
 	default:
 		assert(false && "Unhadled case for IVariable::VarType!");
-		return std::shared_ptr<IVariable>();
+		return std::unique_ptr<IVariable>();
 	}
 	
 }
