@@ -5,6 +5,17 @@ project(glt_parser LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRES True)
 
+add_library(FolderScanner
+	OBJECT
+		include/FolderScanner.h
+		src/FolderScanner.cpp
+	)
+	
+target_include_directories(FolderScanner 
+	PRIVATE
+		${PROJECT_SOURCE_DIR}/include
+	)
+
 add_library(ParseAlgorithm
 	OBJECT
 		include/IParseAlgorithm.h
@@ -55,6 +66,21 @@ target_include_directories(test_ParseAlgorithm
 		${PROJECT_SOURCE_DIR}/include
 		${PROJECT_SOURCE_DIR}/src
 	)
+
+# test FolderScanner
+add_executable(test_FolderScanner
+		sandbox/test_FolderScanner.cpp
+	
+		$<TARGET_OBJECTS:FolderScanner>
+	)
+	
+target_include_directories(test_FolderScanner 
+	PRIVATE
+		${PROJECT_SOURCE_DIR}/include
+		${PROJECT_SOURCE_DIR}/src
+	)
+
+
 
 # main app
 add_executable(${PROJECT_NAME}

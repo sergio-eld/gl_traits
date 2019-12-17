@@ -32,3 +32,36 @@ struct IVariable
 	virtual ~IVariable() = default;
 
 };
+
+struct Variable2
+{
+	enum VarType : unsigned char
+	{
+		vertex_in,
+		uniform,
+		var_in,
+		var_out,
+
+		unknown
+	};
+
+	std::string name,
+		typeGLSL;
+	size_t definitionOrder;
+	VarType type;
+	int location;
+
+	
+	Variable2(const std::string vname,
+		const std::string vtypeGLSL, 
+		size_t vdefinitionOrder,
+		VarType vtype,
+		int vloc = -1)
+		: name(vname),
+		typeGLSL(vtypeGLSL),
+		definitionOrder(vdefinitionOrder),
+		type(vtype),
+		location(vloc)
+	{}
+	
+};

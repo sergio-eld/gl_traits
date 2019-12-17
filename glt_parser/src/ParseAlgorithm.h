@@ -10,6 +10,6 @@ class ParseAlgorithm
 {
 
 public:
-	static std::vector<std::unique_ptr<IVariable>> Parse(const std::string& filePath);
+	static std::vector<Variable2> Parse(const std::string& filePath);
 
 };

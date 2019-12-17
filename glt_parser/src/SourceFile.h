@@ -16,12 +16,12 @@ template <ISourceFile::Type type>
 class SourceFile : public ISourceFile
 {
 	std::string filePath_;
-	std::vector<std::unique_ptr<IVariable>> variables_;
+	std::vector<Variable2> variables_;
 
 public:
 
-	SourceFile(std::string_view filePath)
-		: filePath_(filePath),
+	SourceFile(std::string&& filePath)
+		: filePath_(std::move(filePath)),
 		variables_(ParseAlgorithm<type>::Parse(filePath_))
 	{}
 

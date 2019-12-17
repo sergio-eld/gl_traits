@@ -32,7 +32,7 @@ struct glsl_variable_info
 	constexpr static size_t layout_slots = 5;
 
 	Mask mask_;
-	IVariable::VarType var_type_;
+	Variable2::VarType var_type_;
 
 	glsl_variable_info(const bool(&layout_pat)[layout_slots])
 		: mask_(GetMask(layout_pat, std::make_index_sequence<layout_slots>())),
@@ -41,30 +41,31 @@ struct glsl_variable_info
 
 	}
 
-	IVariable::VarType GetVarType() const
+	Variable2::VarType GetVarType() const
 	{
 		return var_type_;
 	}
 
 	// TODO: chande this! ITS VERY CLUMSY 
 	template <size_t sz, size_t ... indx>
-	constexpr static IVariable::VarType DeduceType(const bool(&layout_pat)[sz],
+	constexpr static Variable2::VarType DeduceType(const bool(&layout_pat)[sz],
 		std::index_sequence<indx...>)
 	{
+		// form the mask from bools
 		switch (((layout_pat[indx] << indx) | ...))
 		{
 		case m_out:
-			return IVariable::VarType::var_out;
+			return Variable2::VarType::var_out;
 		case m_in:
-			return IVariable::VarType::var_in;
+			return Variable2::VarType::var_in;
 		case m_uniform_type:
 		case m_uniform_loc_type:
-			return IVariable::VarType::uniform;
+			return Variable2::VarType::uniform;
 		case m_vertex_in_type:
 		case m_vertex_loc_in_type:
-			return IVariable::VarType::vertex_in;
+			return Variable2::VarType::vertex_in;
 		default:
-			return IVariable::VarType::unknown;
+			return Variable2::VarType::unknown;
 		}
 	}
 
@@ -76,28 +77,28 @@ struct glsl_variable_info
 		return ((layout_pat[indx] << indx) | ...);
 	}
 
-	static IVariable::VarType DeduceType(Mask mask)
+	static Variable2::VarType DeduceType(Mask mask)
 	{
 		switch (mask)
 		{
 		case m_out:
-			return IVariable::VarType::var_out;
+			return Variable2::VarType::var_out;
 		case m_in:
-			return IVariable::VarType::var_in;
+			return Variable2::VarType::var_in;
 		case m_uniform_type:
 		case m_uniform_loc_type:
-			return IVariable::VarType::uniform;
+			return Variable2::VarType::uniform;
 		case m_vertex_in_type:
 		case m_vertex_loc_in_type:
-			return IVariable::VarType::vertex_in;
+			return Variable2::VarType::vertex_in;
 		default:
-			return IVariable::VarType::unknown;
+			return Variable2::VarType::unknown;
 		}
 	}
 
 };
 
-
+/*
 template <>
 std::vector<std::unique_ptr<IVariable>> 
 ParseAlgorithm<ISourceFile::text_source>::Parse(const std::string& filePath)
@@ -144,14 +145,104 @@ ParseAlgorithm<ISourceFile::text_source>::Parse(const std::string& filePath)
 		auto &type = (iter++)->str(),
 			&name = (iter++)->str();
 
+		int location = -1;
+
+		try
+		{
+			if (pat[2])
+				location = std::stoi(sm[3].str());
+		}
+		catch (...)
+		{
+			throw std::exception("Invalid value for location received!");
+		}
+
 		IVariable::VarType var_type =
 			glsl_variable_info::DeduceType(pat,
 				std::make_index_sequence<glsl_variable_info::layout_slots>());
+		if (var_type == IVariable::unknown)
+		{
+			assert(false && "Unknown variable type received!");
+			throw std::exception("Unknown variable type received!");
+		}
 
-		assert(var_type != IVariable::unknown && "Unknown variable type received!");
+		out.emplace_back(IVariable::Create(name, type, var_type, location));
+		++start;
+	}
 
-		out.emplace_back(IVariable::Create(name, type, var_type));
+	return out;
+}*/
 
+template <>
+std::vector<Variable2>
+ParseAlgorithm<ISourceFile::text_source>::Parse(const std::string& filePath)
+{
+	std::vector<Variable2> out;
+	static std::regex regVarGLSL
+	{
+		R"((?:(layout)\s+|(uniform)\s+)?)"
+		R"((?:[(]location\s*=\s*(\d+)\s*[)]\s+)?)"
+		R"((?:(in)\s+|(out)\s+)?)"
+		R"((\w+)\s+)"
+		R"((\w+)\s*;)"
+	};
+
+	static size_t subs = regVarGLSL.mark_count() + 1;
+
+	std::fstream f{ filePath, std::fstream::in };
+	if (!f.is_open())
+		throw std::exception(std::string("Failed to open for parsing: " +
+			filePath).data());
+
+	std::string fileLoaded{ std::istreambuf_iterator<char>(f),
+			std::istreambuf_iterator<char>() };
+
+	// TODO: do not load huge files. Load file only up to "void main()"
+
+	std::sregex_iterator start{ fileLoaded.cbegin(),
+		fileLoaded.cend(),
+		regVarGLSL },
+		end{};
+
+	size_t found = std::distance(start, end);
+
+	size_t definitionOrder = 0;
+
+	while (start != end)
+	{
+		bool pat[glsl_variable_info::layout_slots];
+
+		const std::smatch& sm = *start;
+		auto iter = ++sm.cbegin();
+
+		for (size_t i = 0; i != glsl_variable_info::layout_slots; ++i)
+			pat[i] = (iter++)->matched;
+
+		auto &type = (iter++)->str(),
+			&name = (iter++)->str();
+
+		int location = -1;
+
+		try
+		{
+			if (pat[2])
+				location = std::stoi(sm[3].str());
+		}
+		catch (...)
+		{
+			throw std::exception("Invalid value for location received!");
+		}
+
+		Variable2::VarType var_type =
+			glsl_variable_info::DeduceType(pat,
+				std::make_index_sequence<glsl_variable_info::layout_slots>());
+		if (var_type == Variable2::unknown)
+		{
+			assert(false && "Unknown variable type received!");
+			throw std::exception("Unknown variable type received!");
+		}
+
+		out.emplace_back(name, type, definitionOrder++, var_type, location);
 		++start;
 	}
 
@@ -159,10 +250,10 @@ ParseAlgorithm<ISourceFile::text_source>::Parse(const std::string& filePath)
 }
 
 template <>
-std::vector<std::unique_ptr<IVariable>>
+std::vector<Variable2>
 ParseAlgorithm<ISourceFile::header_common>::Parse(const std::string& filePath)
 {
-	std::vector<std::unique_ptr<IVariable>> out;
+	std::vector<Variable2> out;
 
 	return out;
 }
