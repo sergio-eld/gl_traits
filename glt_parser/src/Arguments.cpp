@@ -19,7 +19,6 @@ descr_name_pred[] = "Name predicates that shader source files contain."
 descr_extension[] = "Shader source files' Extensions to be considered.",
 descr_severity[] = "Error severity level";
 
-
 class Argument : public IArgument
 {
     std::string tag_;

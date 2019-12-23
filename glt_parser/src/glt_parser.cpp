@@ -4,6 +4,12 @@
 
 #include <cassert>
 
+#include <regex>
+
+#include "FolderScanner.h"
+#include "SourceFile.h"
+#include "IHeaderGenerator.h"
+
 
 int main(int argc, const char** argv)
 {
@@ -36,21 +42,72 @@ int main(int argc, const char** argv)
 		&argNamePred = *foundArgNamePred,
 		&argExtensions = *foundArgExtensions;
 
+	
+	fsys::path sourcePath{ argSourcePath.Value() },
+		outputPath{ argOutPath.Value() };
+
+	if (!fsys::exists(sourcePath))
+	{
+		std::cerr << "Source path does not exist!" << std::endl;
+		return -1;
+	}
+
+	if (!fsys::exists(outputPath))
+	{
+		std::cerr << "Output path does not exist!" << std::endl;
+		return -1;
+	}
+
+	// TODO: all received cl arguments must be valid and accessable by this point!
+
+	FolderScanner fs{};
+
+	std::regex extPat{ R"(.\w+)" };
+
+	const std::string& args = argExtensions.Value();
+
+	std::sregex_iterator start{ args.cbegin(), args.cend(), extPat },
+		end{};
+
+	auto extIter = ShaderFileInfo::list_types.cbegin();
+
+	while (start != end)
+		fs.SetExtension(*extIter++, (start++)->str());
+
+	try
+	{
+		fs.SearchSources(sourcePath);
+	}
+	catch (const std::invalid_argument& e)
+	{
+		std::cout << e.what() << std::endl;
+		return -1;
+	}
+
+	std::vector<std::unique_ptr<ISourceFile>> sources;
+
+	std::optional<ShaderFileInfo> fInfo = fs.FetchSourceFile();
+	while (fInfo)
+	{
+		ShaderFileInfo& info = *fInfo;
+		sources.emplace_back(ISourceFile::Create(std::move(info)));
+		fInfo = fs.FetchSourceFile();
+	}
+
+	IHeaderGenerator generator{ std::move(outputPath) };
+	for (const std::unique_ptr<ISourceFile>& sf : sources)
+		generator.CollectVariables(*sf);
+
 	try 
 	{
-		// TODO: add argument for severity (find none || find one || find all)
-		std::unique_ptr<IGeneratorGLT> gltGenerator =
-			IGeneratorGLT::Create(argSourcePath.Value(),
-				argOutPath.Value(),
-				argNamePred.Value(),
-				argExtensions.Value());
-
+		generator.GenerateCommonHeader();
 	}
 	catch (const std::exception& e)
 	{
 		std::cerr << e.what() << std::endl;
 		return -1;
 	}
+
 
 	return 0;
 }

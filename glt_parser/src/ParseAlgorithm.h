@@ -1,15 +1,25 @@
 ﻿#pragma once
 
-#include "ISourceFile.h"
-#include "IVariable.h"
+#include "IParseAlgorithm.h"
 
-#include <vector>
 
-template <ISourceFile::Type type>
-class ParseAlgorithm
+template <ShaderFileInfo::SourceType type>
+class ParseAlgorithm : public IParseAlgorithm
 {
 
 public:
-	static std::vector<Variable2> Parse(const std::string& filePath);
+
+	ShaderFileInfo::SourceType SourceType() const override
+	{
+		return type;
+	}
+
+	std::vector<Variable> Parse(const fsys::path& filePath) override
+	{
+		return ParseImpl(filePath);
+	}
+
+	static std::vector<Variable> ParseImpl(const fsys::path& filePath);
 
 };
+

@@ -1,4 +1,5 @@
-﻿#include "ParseAlgorithm.h"
+﻿#include "..\include\IParseAlgorithm.h"
+#include "ParseAlgorithm.h"
 
 #include <filesystem>
 
@@ -32,7 +33,7 @@ struct glsl_variable_info
 	constexpr static size_t layout_slots = 5;
 
 	Mask mask_;
-	Variable2::VarType var_type_;
+	Variable::VarType var_type_;
 
 	glsl_variable_info(const bool(&layout_pat)[layout_slots])
 		: mask_(GetMask(layout_pat, std::make_index_sequence<layout_slots>())),
@@ -41,31 +42,31 @@ struct glsl_variable_info
 
 	}
 
-	Variable2::VarType GetVarType() const
+	Variable::VarType GetVarType() const
 	{
 		return var_type_;
 	}
 
 	// TODO: chande this! ITS VERY CLUMSY 
 	template <size_t sz, size_t ... indx>
-	constexpr static Variable2::VarType DeduceType(const bool(&layout_pat)[sz],
+	constexpr static Variable::VarType DeduceType(const bool(&layout_pat)[sz],
 		std::index_sequence<indx...>)
 	{
 		// form the mask from bools
 		switch (((layout_pat[indx] << indx) | ...))
 		{
 		case m_out:
-			return Variable2::VarType::var_out;
+			return Variable::VarType::var_out;
 		case m_in:
-			return Variable2::VarType::var_in;
+			return Variable::VarType::var_in;
 		case m_uniform_type:
 		case m_uniform_loc_type:
-			return Variable2::VarType::uniform;
+			return Variable::VarType::uniform;
 		case m_vertex_in_type:
 		case m_vertex_loc_in_type:
-			return Variable2::VarType::vertex_in;
+			return Variable::VarType::vertex_in;
 		default:
-			return Variable2::VarType::unknown;
+			return Variable::VarType::unknown;
 		}
 	}
 
@@ -77,33 +78,33 @@ struct glsl_variable_info
 		return ((layout_pat[indx] << indx) | ...);
 	}
 
-	static Variable2::VarType DeduceType(Mask mask)
+	static Variable::VarType DeduceType(Mask mask)
 	{
 		switch (mask)
 		{
 		case m_out:
-			return Variable2::VarType::var_out;
+			return Variable::VarType::var_out;
 		case m_in:
-			return Variable2::VarType::var_in;
+			return Variable::VarType::var_in;
 		case m_uniform_type:
 		case m_uniform_loc_type:
-			return Variable2::VarType::uniform;
+			return Variable::VarType::uniform;
 		case m_vertex_in_type:
 		case m_vertex_loc_in_type:
-			return Variable2::VarType::vertex_in;
+			return Variable::VarType::vertex_in;
 		default:
-			return Variable2::VarType::unknown;
+			return Variable::VarType::unknown;
 		}
 	}
 
 };
 
-/*
+
 template <>
-std::vector<std::unique_ptr<IVariable>> 
-ParseAlgorithm<ISourceFile::text_source>::Parse(const std::string& filePath)
+std::vector<Variable>
+ParseAlgorithm<ShaderFileInfo::text_source>::ParseImpl(const fsys::path& filePath)
 {
-	std::vector<std::unique_ptr<IVariable>> out;
+	std::vector<Variable> out;
 	static std::regex regVarGLSL
 	{
 		R"((?:(layout)\s+|(uniform)\s+)?)"
@@ -118,81 +119,7 @@ ParseAlgorithm<ISourceFile::text_source>::Parse(const std::string& filePath)
 	std::fstream f{ filePath, std::fstream::in };
 	if (!f.is_open())
 		throw std::exception(std::string("Failed to open for parsing: " +
-			filePath).data());
-
-	std::string fileLoaded{ std::istreambuf_iterator<char>(f),
-			std::istreambuf_iterator<char>() };
-
-	// TODO: do not load huge files. Load file only up to "void main()"
-
-	std::sregex_iterator start{ fileLoaded.cbegin(),
-		fileLoaded.cend(),
-		regVarGLSL },
-		end{};
-
-	size_t found = std::distance(start, end);
-
-	while (start != end)
-	{
-		bool pat[glsl_variable_info::layout_slots];
-
-		const std::smatch& sm = *start;
-		auto iter = ++sm.cbegin();
-
-		for (size_t i = 0; i != glsl_variable_info::layout_slots; ++i)
-			pat[i] = (iter++)->matched;
-
-		auto &type = (iter++)->str(),
-			&name = (iter++)->str();
-
-		int location = -1;
-
-		try
-		{
-			if (pat[2])
-				location = std::stoi(sm[3].str());
-		}
-		catch (...)
-		{
-			throw std::exception("Invalid value for location received!");
-		}
-
-		IVariable::VarType var_type =
-			glsl_variable_info::DeduceType(pat,
-				std::make_index_sequence<glsl_variable_info::layout_slots>());
-		if (var_type == IVariable::unknown)
-		{
-			assert(false && "Unknown variable type received!");
-			throw std::exception("Unknown variable type received!");
-		}
-
-		out.emplace_back(IVariable::Create(name, type, var_type, location));
-		++start;
-	}
-
-	return out;
-}*/
-
-template <>
-std::vector<Variable2>
-ParseAlgorithm<ISourceFile::text_source>::Parse(const std::string& filePath)
-{
-	std::vector<Variable2> out;
-	static std::regex regVarGLSL
-	{
-		R"((?:(layout)\s+|(uniform)\s+)?)"
-		R"((?:[(]location\s*=\s*(\d+)\s*[)]\s+)?)"
-		R"((?:(in)\s+|(out)\s+)?)"
-		R"((\w+)\s+)"
-		R"((\w+)\s*;)"
-	};
-
-	static size_t subs = regVarGLSL.mark_count() + 1;
-
-	std::fstream f{ filePath, std::fstream::in };
-	if (!f.is_open())
-		throw std::exception(std::string("Failed to open for parsing: " +
-			filePath).data());
+			filePath.generic_string()).data());
 
 	std::string fileLoaded{ std::istreambuf_iterator<char>(f),
 			std::istreambuf_iterator<char>() };
@@ -233,10 +160,10 @@ ParseAlgorithm<ISourceFile::text_source>::Parse(const std::string& filePath)
 			throw std::exception("Invalid value for location received!");
 		}
 
-		Variable2::VarType var_type =
+		Variable::VarType var_type =
 			glsl_variable_info::DeduceType(pat,
 				std::make_index_sequence<glsl_variable_info::layout_slots>());
-		if (var_type == Variable2::unknown)
+		if (var_type == Variable::unknown)
 		{
 			assert(false && "Unknown variable type received!");
 			throw std::exception("Unknown variable type received!");
@@ -250,10 +177,31 @@ ParseAlgorithm<ISourceFile::text_source>::Parse(const std::string& filePath)
 }
 
 template <>
-std::vector<Variable2>
-ParseAlgorithm<ISourceFile::header_common>::Parse(const std::string& filePath)
+std::vector<Variable>
+ParseAlgorithm<ShaderFileInfo::header_common>::ParseImpl(const fsys::path& filePath)
 {
-	std::vector<Variable2> out;
-
-	return out;
+	return std::vector<Variable>();
 }
+
+std::unique_ptr<IParseAlgorithm> IParseAlgorithm::GetAlgorithm(ShaderFileInfo::SourceType sourceType)
+{
+	switch (sourceType)
+	{
+	case ShaderFileInfo::text_source:
+		return std::make_unique<ParseAlgorithm<ShaderFileInfo::text_source>>();
+	case ShaderFileInfo::header_common:
+		return std::make_unique<ParseAlgorithm<ShaderFileInfo::header_common>>();
+	default:
+		assert(false && "Unknown shader source file!");
+		return nullptr;
+	}
+}
+
+/*
+std::unique_ptr<IParseAlgorithm> IParseAlgorithm::GetAlgorithm(ShaderFileInfo::ShaderType)
+{
+	return std::make_unique<ParseAlgorithm<ShaderFileInfo::text_source>>();
+}*/
+
+template class ParseAlgorithm<ShaderFileInfo::text_source>;
+template class ParseAlgorithm<ShaderFileInfo::header_common>;

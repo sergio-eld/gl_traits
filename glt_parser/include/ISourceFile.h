@@ -1,32 +1,22 @@
 ﻿#pragma once
 
-#include <limits>
-#include <string>
+#include "IDataType.h"
 
 struct ISourceFile
 {
-	enum Type : unsigned char
-	{
-		text_source,
-		text_vertex_shader_source,
-		text_fragment_shader_source,
-		text_geometry_shader_source,
-		// add missing shader types
-
-		header_common,
-		header_shader,
-
-		unknown = std::numeric_limits<unsigned char>::max()
-	};
-
-	virtual const std::string& Name() const = 0;
-	virtual Type FileType() const = 0;
-
+	virtual const fsys::path& Name() const = 0;
+	virtual ShaderFileInfo::SourceType SourceType() const = 0;
+	virtual ShaderFileInfo::ShaderType ShaderType() const = 0;
 	//virtual void Parse() = 0;
 
 	virtual ~ISourceFile() = default;
 
-	static std::unique_ptr<ISourceFile> Create(std::string&& filePath, Type);
+	static std::unique_ptr<ISourceFile> Create(ShaderFileInfo&& info);
+	static std::unique_ptr<ISourceFile> Create(fsys::path&& filePath, 
+		ShaderFileInfo::SourceType, ShaderFileInfo::ShaderType = ShaderFileInfo::none);
+	
 	// iterators
+	virtual size_t VarsCount() const = 0;
+	virtual const Variable& GetVariable(size_t indx) const = 0;
 
 };

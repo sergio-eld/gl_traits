@@ -1,13 +1,12 @@
 ﻿#pragma once
 
-#include "ISourceFile.h"
+#include "IDataType.h"
 
 #include <string_view>
-#include <string>
 #include <set>
 #include <list>
 
-#include <filesystem>
+#include <optional>
 
 namespace fsys = std::filesystem;
 
@@ -16,23 +15,25 @@ class FolderScanner
 	friend struct PrivateImpl;
 	struct PrivateImpl;
 
-	using ExtensionType = std::pair<std::string, ISourceFile::Type>;
-
-	static bool type_compare_less(const ExtensionType& e1, const ExtensionType& e2);
-	using comparator_less = std::integral_constant<decltype(&type_compare_less),
-		&type_compare_less>;
-
-	std::set<ExtensionType, comparator_less> extensions_;
-	std::list<fsys::path> locatedSources_;
+	std::set<ShaderFileInfo::ShaderExtensionInfo> extensions_;
+	std::list<ShaderFileInfo> locatedSources_;
 
 public:
 
 	FolderScanner();
 
-	void SetExtension(ISourceFile::Type t, std::string_view ext);
+	void SetExtension(ShaderFileInfo::ShaderType t, std::string_view ext);
 
-	bool ExtensionAssigned(ISourceFile::Type t);
+	bool ExtensionAssigned(ShaderFileInfo::ShaderType t) const;
 
-	std::unique_ptr<ISourceFile> FetchSourceFile();
+	std::optional<ShaderFileInfo> FetchSourceFile();
+
+	void SearchSources(const fsys::path& sourceFolder);
+	void operator()(std::string_view folderPath);
+
+
+	static std::list<ShaderFileInfo> SearchSources(const fsys::path& sourceFolder,
+		const std::set<ShaderFileInfo::ShaderExtensionInfo>& extensions);
+
 
 };

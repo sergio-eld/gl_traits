@@ -14,11 +14,11 @@ int main(int argc, const char* argv[])
 
 	try
 	{
-		std::vector<Variable2> vars =
-			ParseAlgorithm<ISourceFile::text_source>::Parse(filePath);
+		std::vector<Variable> vars =
+			ParseAlgorithm<ShaderFileInfo::text_source>::ParseImpl(filePath);
 
 		std::string_view type;
-		for (const Variable2& v : vars)
+		for (const Variable& v : vars)
 		{
 			using namespace std::literals;
 
@@ -29,16 +29,16 @@ int main(int argc, const char* argv[])
 
 			switch (v.type)
 			{
-			case Variable2::vertex_in:
+			case Variable::vertex_in:
 				type = vertex_in;
 				break;
-			case Variable2::uniform:
+			case Variable::uniform:
 				type = uniform;
 				break;
-			case Variable2::var_in:
+			case Variable::var_in:
 				type = var_in;
 				break;
-			case Variable2::var_out:
+			case Variable::var_out:
 				type = var_out;
 				break;
 			default:
