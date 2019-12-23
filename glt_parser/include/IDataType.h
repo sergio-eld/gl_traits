@@ -73,15 +73,27 @@ struct Variable
 		unknown
 	};
 
-	std::string name,
-		typeGLSL;
+    // TODO: add arrays
+    enum GLSLDataType : unsigned char
+    {
+        user_defined = 0,
+        scalar = 1,
+        vector = 2,
+        matrix = 4,
+        sampler = 6,
+        image = 8
+    };
+
+    std::string name,
+        typeGLSL;
+    GLSLDataType glslDataType;
 	size_t definitionOrder;
 	VarType type;
 	int location;
 
 
-	Variable(const std::string vname,
-		const std::string vtypeGLSL,
+	Variable(const std::string& vname,
+		const std::string& vtypeGLSL,
 		size_t vdefinitionOrder,
 		VarType vtype,
 		int vloc = -1);
@@ -90,6 +102,13 @@ struct Variable
 	Variable(Variable&&) = default;
 
 	bool operator<(const Variable& other) const;
+    bool Valid() const;
+    operator bool() const
+    {
+        return Valid();
+    }
 
+    static GLSLDataType get_glsl_type(const std::string& rawtypeGLSL);
+    static std::string cpp_glsl_type(GLSLDataType, const std::string& rawtypeGLSL);
 
 };

@@ -39,7 +39,17 @@ void IHeaderGenerator::GenerateCommonHeader()
 
 	commonHeader.clear();
 
+    commonHeader << "#pragma once\n\n#include \"glm/glm.hpp\"\n\n"
+        "#define GLSLT_TYPE(NAME, VAR_NAME, TYPE) struct name{\\\n"
+        "constexpr static const char* name(){ return \"VAR_NAME\";}\\\n"
+        "using type = TYPE};\n\n";
+    // TODO: write generation time, user, files and\or license, etc.
 
+    for (const Variable& var : vars_)
+    {
+        commonHeader << "GLSLT_TYPE(" << var.name << '_' << var.typeGLSL << ", " <<
+            var.name << ", " << Variable::cpp_glsl_type(var.glslDataType, var.typeGLSL) << ")\n";
+    }
 
 }
 

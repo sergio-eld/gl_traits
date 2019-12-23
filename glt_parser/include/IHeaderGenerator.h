@@ -33,6 +33,4 @@ public:
 	Container::const_iterator cbegin() const;
 	Container::const_iterator cend() const;
 
-
-
 };

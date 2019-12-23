@@ -145,7 +145,5 @@ set_target_properties(${PROJECT_NAME}
 		CXX_STANDARD_REQUIRED True
 		VS_DEBUGGER_COMMAND_ARGUMENTS ${ARGUMENTS}
 		
-		RUNTIME_OUTPUT_DIRECTORY bin
+		#RUNTIME_OUTPUT_DIRECTORY bin
 	)
-	
-add_subdirectory(marconi)
