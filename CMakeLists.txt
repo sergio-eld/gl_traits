@@ -36,11 +36,21 @@ message(STATUS "glm found: ${glm_FOUND}")
 # TODO: header-only library?
 add_library(${PROJECT_NAME}
 	OBJECT
+		# basic types
+		include/enums.hpp
+		include/gltHandle.hpp
+		include/glslt_traits.hpp
+		include/type_converions.hpp
+		include/basic_types.hpp
+		##############
+		
+		include/shader_traits.hpp
+
 		include/gl_traits.hpp
 		
 		include/gltEnums.hpp
 		include/traits.hpp
-		include/gltHandle.hpp
+		
 
 		src/gl_traits.cpp
 	)

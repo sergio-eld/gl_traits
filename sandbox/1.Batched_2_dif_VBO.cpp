@@ -7,11 +7,30 @@
 #include "glt_Common.h"
 #include "glt_CommonValidate.h"
 
+
+constexpr const char a[] = "StringA",
+a1[] = "StringA";
+
+
 int main()
 {
 	FragColor_vec4::glt_name();
 	glt::variable_traits<FragColor_vec4>::name;
 	glt::variable_traits<FragColor_vec4>::type;
+
+	glt::variable_traits<glm::vec4>::name;
+	glt::variable_traits<glm::vec4>::type;
+
+	glt::variable_traits<float>::name;
+	glt::variable_traits<float>::type;
+
+	glt::compare_const_strings(a, a1);
+	constexpr bool eq = glt::str_compare<a, a1>();
+
+	constexpr bool all_unique = 
+		glt::all_names_unique<FragColor_vec4,
+		TexCoord_vec2, 
+		aPos_vec3>();
 
 	std::cout << path.generic_string() << std::endl;
 	SmartGLFW glfw{ 3, 3 };

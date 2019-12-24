@@ -47,6 +47,8 @@ is currently active or bound if required by version of OpenGL specification
 //restructurised
 /////////////////////////
 
+#include "basic_types.hpp"
+
 #include "gltEnums.hpp"     // includes glad
 #include "gltHandle.hpp"    // includes gltEnums
 
