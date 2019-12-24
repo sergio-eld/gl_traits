@@ -287,6 +287,8 @@ namespace glt
 
 	enum class ShaderTarget : int
 	{
+		unknown,
+
 		compute = GL_COMPUTE_SHADER,
 		vertex = GL_VERTEX_SHADER,
 		tess_control = GL_TESS_CONTROL_SHADER,

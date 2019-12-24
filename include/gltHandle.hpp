@@ -85,7 +85,6 @@ namespace glt
         // handle is not aware if it is or can be bound to a target
         ~Handle()
         {
-
             if (handle_)
             {
                 // TODO: do i need to check?
@@ -205,13 +204,6 @@ namespace glt
 		handle_accessor(const Handle<eTargetType>& handle)
 			: raw_handle_(handle)
 		{}
-
-		/*
-        GLuint operator()(const Handle<eTargetType>& handle) const
-        {
-            return handle;
-        }
-		*/
 
 		operator GLint() const
 		{

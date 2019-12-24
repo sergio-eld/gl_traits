@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "IShaderParser.h"
+#include "IVariable.h"
 
 #include <vector>
 #include <list>
@@ -9,7 +10,7 @@ struct ShaderInfo : public IShaderInfo
 {
 	std::string filePath;
 
-	std::vector<std::shared_ptr<IVariable>> vao_,
+	std::vector<std::unique_ptr<IVariable>> vao_,
 		uniforms_,
 		var_in_,
 		var_out;

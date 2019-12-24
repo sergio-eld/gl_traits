@@ -4,9 +4,14 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
+#include "glt_Common.h"
+#include "glt_CommonValidate.h"
 
 int main()
 {
+	FragColor_vec4::glt_name();
+	glt::variable_traits<FragColor_vec4>::name;
+	glt::variable_traits<FragColor_vec4>::type;
 
 	std::cout << path.generic_string() << std::endl;
 	SmartGLFW glfw{ 3, 3 };

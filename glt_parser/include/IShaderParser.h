@@ -4,37 +4,7 @@
 #include <optional>
 #include <string_view>
 
-// ownership by ShaderInfo
-struct IVariable
-{
-	enum VarType : unsigned char
-	{
-		vertex_in,
-		uniform,
-		var_in,
-		var_out,
-
-		unknown
-	};
-
-	virtual const std::string& Name() const = 0;
-	virtual const std::string& TypeGLSL() const = 0;
-	virtual VarType Type() const = 0;
-
-	// only for vertex_in and uniforms (?)
-	virtual int location() const
-	{
-		return -1;
-	}
-
-	static std::shared_ptr<IVariable> Create(const std::string& name,
-		const std::string& typeGLSL,
-		VarType type,
-		int location = -1);
-
-	virtual ~IVariable() = default;
-
-};
+#include "IVariable.h"
 
 struct IShaderInfo
 {
