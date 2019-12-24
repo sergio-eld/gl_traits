@@ -5,20 +5,20 @@ project(gl_traits LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 
-execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/glt_parser)
+execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/glt_parser)
 execute_process(COMMAND ${CMAKE_COMMAND} -G ${CMAKE_GENERATOR}
-					-S ${CMAKE_SOURCE_DIR}/glt_parser -B ${CMAKE_BINARY_DIR}/glt_parser/build
-					-A x64 -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=${CMAKE_BINARY_DIR}/glt_parser
+					-S ${PROJECT_SOURCE_DIR}/glt_parser -B ${PROJECT_BINARY_DIR}/glt_parser/build
+					-A x64 -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=${PROJECT_BINARY_DIR}/glt_parser
 					-DCMAKE_BUILD_TYPE=Release
 				)
-execute_process(COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}/glt_parser/build --target glt_parser --config Release)
+execute_process(COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target glt_parser --config Release -- /nologo /verbosity:minimal)
 
 
-find_program(GLT_GENERATOR ${CMAKE_BINARY_DIR}/glt_parser/glt_parser.exe)
+find_program(GLT_GENERATOR ${PROJECT_BINARY_DIR}/glt_parser/glt_parser.exe REQUIRED)
 
 
 # add_subdirectory(glt_parser)

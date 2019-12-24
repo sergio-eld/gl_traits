@@ -6,11 +6,42 @@
 
 namespace glt
 {
+	// TODO: separate to a standalone header that will also be used by glt_parser to run tests
+	
+	template <typename T, typename = std::void_t<>>
+	struct has_name : std::false_type {};
+
+	template <typename T>
+	struct has_name<T, std::void_t<decltype(&T::glt_name)>> : std::true_type {};
+
+	template <typename T>
+	constexpr inline bool has_name_v = has_name<T>();
+
+	template <typename T, typename = std::void_t<>>
+	struct has_type : std::false_type {};
+
+	template <typename T>
+	struct has_type<T, std::void_t<typename T::glt_type>> : std::true_type {};
+
+	template <typename T>
+	constexpr inline bool has_type_v = has_type<T>();
+
+	template <class T>
+	struct variable_traits
+	{
+		static_assert(has_name_v<T> && has_type_v<T>, 
+			"T is not a valid glt variable type!");
+
+		// name and type have different aliases than glt variables
+		constexpr static const char* name = T::glt_name();
+		using type = typename T::glt_type;
+	};
+
+
+
 	//////////////////////////////////////////////////
 	// common traits
 	//////////////////////////////////////////////////
-
-
 
 	template <class T>
 	struct is_tuple : std::false_type {};

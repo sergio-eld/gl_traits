@@ -24,6 +24,7 @@ target_link_libraries(gl_sandbox
 target_include_directories(gl_sandbox
 	PUBLIC
 		${CMAKE_CURRENT_SOURCE_DIR}
+		${CMAKE_CURRENT_BINARY_DIR}/include # created via add_custom_command
 	)
 	
 # VBO cases
@@ -59,7 +60,9 @@ target_link_libraries(${USE_CASE}
 		PlatformPath
 	)
 endforeach()
-	
+
+find_program(GLT_GENERATOR ${CMAKE_BINARY_DIR}/glt_parser/glt_parser.exe REQUIRED)
+
 
 add_custom_command(TARGET gl_sandbox PRE_BUILD
 	COMMAND ${CMAKE_COMMAND} -E  copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/shaders 
@@ -67,4 +70,12 @@ add_custom_command(TARGET gl_sandbox PRE_BUILD
 	COMMAND ${CMAKE_COMMAND} -E  copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/resources $<TARGET_PROPERTY:gl_sandbox,RUNTIME_OUTPUT_DIRECTORY>/$(ConfigurationName)/resources
 
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:glfw> $<TARGET_PROPERTY:gl_sandbox,RUNTIME_OUTPUT_DIRECTORY>/$(ConfigurationName)
+	
+	COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/include
+	
+	COMMAND ${GLT_GENERATOR} -s ${CMAKE_CURRENT_SOURCE_DIR}/shaders 
+		-d ${CMAKE_CURRENT_BINARY_DIR}/include
+		-p Shader # dummy value
+		-e ".vs .fs .gs"
+		-w warnings
 	)	

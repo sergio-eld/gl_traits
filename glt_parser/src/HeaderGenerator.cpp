@@ -26,8 +26,10 @@ void IHeaderGenerator::CollectVariables(const ISourceFile & sf)
 
 void IHeaderGenerator::GenerateCommonHeader()
 {
-	fsys::path commonPath{ outputFolder_ };
+	fsys::path commonPath{ outputFolder_ },
+		commonPathValidate{ outputFolder_ };
 	commonPath.append(commonName);
+	commonPathValidate.append(commonValidate);
 
 	std::fstream commonHeader{ commonPath, std::fstream::out };
 
@@ -39,10 +41,10 @@ void IHeaderGenerator::GenerateCommonHeader()
 
 	commonHeader.clear();
 
-    commonHeader << "#pragma once\n\n#include \"glm/glm.hpp\"\n\n"
-        "#define GLSLT_TYPE(NAME, VAR_NAME, TYPE) struct name{\\\n"
-        "constexpr static const char* name(){ return \"VAR_NAME\";}\\\n"
-        "using type = TYPE};\n\n";
+    commonHeader << "#pragma once\n\n#include \"gl_traits.hpp\"\n\n"
+        "#define GLSLT_TYPE(NAME, VAR_NAME2, TYPE) struct NAME\\\n"
+        "{constexpr static const char* glt_name(){ return #VAR_NAME2;}\\\n"
+        "using glt_type = TYPE;};\n\n";
     // TODO: write generation time, user, files and\or license, etc.
 
     for (const Variable& var : vars_)
@@ -50,6 +52,27 @@ void IHeaderGenerator::GenerateCommonHeader()
         commonHeader << "GLSLT_TYPE(" << var.name << '_' << var.typeGLSL << ", " <<
             var.name << ", " << Variable::cpp_glsl_type(var.glslDataType, var.typeGLSL) << ")\n";
     }
+
+	// create validation file
+
+	commonHeader.close();
+	commonHeader.open(commonPathValidate, std::fstream::out);
+	if (!commonHeader.is_open())
+	{
+		std::string msg{ "Failed to open file " + commonPathValidate.generic_string() };
+		throw std::exception(msg.c_str());
+	}
+
+	commonHeader << "#pragma once\n\n#include \"" << commonName << "\"\n\n";
+	for (const Variable& var : vars_)
+	{
+		commonHeader << "static_assert(glt::has_name_v<" << 
+			var.name << '_' << var.typeGLSL << ">, \"" << 
+			var.name << '_' << var.typeGLSL << " glt_name assertion failed!\");\n"
+			"static_assert(glt::has_type_v<" << 
+			var.name << '_' << var.typeGLSL << ">, \"" << 
+			var.name << '_' << var.typeGLSL << " glt_type assertion failed!\");\n";
+	}
 
 }
 

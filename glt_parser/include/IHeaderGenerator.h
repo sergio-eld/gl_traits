@@ -12,7 +12,8 @@ class IHeaderGenerator
 	using comp_less = std::integral_constant<decltype(&compare_less),
 		&compare_less>;
 
-	constexpr static const char *commonName = "glt_Common.h";
+	constexpr static const char *commonName = "glt_Common.h",
+		*commonValidate = "glt_CommonValidate.h";
 
 public:
 	using Container = std::set<std::reference_wrapper<const Variable>, comp_less>;
