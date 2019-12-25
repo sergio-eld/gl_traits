@@ -1,5 +1,5 @@
 ﻿
-#include "traits.hpp"
+#include "basic_types.hpp"
 
 struct Vertex
 {
@@ -41,19 +41,19 @@ int main()
     static_assert(std::is_same_v<glm::vec2, glt::nth_element_t<2, float, glm::vec3, glm::vec2, Vertex>>);
     static_assert(std::is_same_v<Vertex, glt::nth_element_t<3, float, glm::vec3, glm::vec2, Vertex>>);
 
-	static_assert(std::is_same_v<int, glt::unwrap_glslt_t<int>>);
-	static_assert(std::is_same_v<int, glt::unwrap_glslt_t<glt::glslt<int, 0>>>);
+	static_assert(std::is_same_v<int, glt::variable_traits_type<int>>);
+	static_assert(std::is_same_v<int, glt::variable_traits_type<glt::glslt<int, uname_model>>>);
 
-	static_assert(std::is_same_v<glm::vec4, glt::unwrap_glslt_t<glm::vec4>>);
+	static_assert(std::is_same_v<glm::vec4, glt::variable_traits_type<glm::vec4>>);
 	static_assert(std::is_same_v<glm::vec4, 
-		glt::unwrap_glslt_t<glt::glslt<glm::vec4, 0>>>);
+		glt::variable_traits_type<glt::glslt<glm::vec4, uname_model>>>);
 
-	static_assert(std::is_same_v<glm::mat4, glt::unwrap_glslt_t<glm::mat4>>);
+	static_assert(std::is_same_v<glm::mat4, glt::variable_traits_type<glm::mat4>>);
 	static_assert(std::is_same_v<glm::mat4,
-		glt::unwrap_glslt_t<glt::glslt<glm::mat4, 0>>>);
+		glt::variable_traits_type<glt::glslt<glm::mat4, uname_model>>>);
 
 
-	static_assert(uname_model == glt::get_glslt_name_v<utype_model>);
+	static_assert(uname_model == glt::variable_traits_name<utype_model>);
 
 	return 0;
 }

@@ -1,5 +1,5 @@
 ﻿
-#include "traits.hpp"
+#include "basic_types.hpp"
 
 constexpr const char xyz[] = "xyz";
 
@@ -8,8 +8,8 @@ using NamedSimple = glt::glslt<glm::vec3, xyz>;
 int main()
 {
 
-    static_assert(glt::is_named_attr_v<NamedSimple>);
-    static_assert(!glt::is_named_attr_v<glm::vec3>);
+    static_assert(glt::has_name_v<NamedSimple>);
+    static_assert(!glt::has_name_v<glm::vec3>);
 
     static_assert(glt::is_compound_attr_v<glt::compound<glm::vec3, glm::vec2>>);
     static_assert(!glt::is_compound_attr_v<glt::compound<glm::vec3>>);

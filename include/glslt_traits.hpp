@@ -7,8 +7,6 @@
 // for check for uniqueness
 #include <algorithm>
 
-#include "glm/glm.hpp"
-
 namespace glt
 {
 	constexpr bool compare_const_strings(const char *lhs, const char *rhs)
@@ -34,7 +32,7 @@ namespace glt
 	template <class T, const char * glslName>
 	struct glslt
 	{
-		static_assert(glslName,
+		static_assert((bool)glslName,
 			"glsl Name must not be nullptr! Use fundamental or glm types instead");
 		constexpr static const char * glt_name() { return glslName; }
 		using glt_type = typename T;
@@ -307,16 +305,16 @@ namespace glt
 	template <class ... Types>
 	constexpr bool all_names_unique()
 	{
-		constexpr const char *names[]{ variable_traits_name<Types> ... };
-		constexpr bool ended[sizeof...(Types)]{};
-		
 		std::string_view strs[]{ variable_traits_name<Types> ... };
 
-		std::sort(strs, std::next(strs, sizeof...(Types)));
-
-
+		for (size_t i = 0; i + 1 != sizeof...(Types); ++i)
+			for (size_t j = i + 1; j != sizeof...(Types); ++j)
+				if (strs[i] == strs[j])
+					return false;
 		return true;
 	}
+
+
 
 	//////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////

@@ -49,13 +49,11 @@ is currently active or bound if required by version of OpenGL specification
 
 #include "basic_types.hpp"
 
-#include "gltEnums.hpp"     // includes glad
-#include "gltHandle.hpp"    // includes gltEnums
+#include "shader_traits.hpp"
+#include "program_traits.hpp"
+
 
 /////////////////////////
-
-
-//#include "dhconstexpr_lib.hpp"
 
 #include <thread>
 #include <functional>
@@ -66,11 +64,6 @@ is currently active or bound if required by version of OpenGL specification
 #include <vector>
 #include <array>
 
-//#include "traits_common.hpp"
-
-//#include "uniform_traits.hpp"
-//#include "buffer_traits.hpp"
-//#include "texture_traits.hpp"
 
 
 struct frameBuffer_traits;          //-
@@ -126,15 +119,6 @@ struct vertexArrays_traits;          //-
 
 
 
-
-
-
-//////////////////////////////////////////////////////////////////////////////////////
-//classes 
-///////////////////////////////////////////////////////////////////////////////////////
-
-
-
 struct GLT_API gl_state
 {
 	template <class ... glCapabilities>
@@ -147,181 +131,3 @@ struct GLT_API gl_state
 	}
 };
 
-//shaders
-
-
-/*
-class GLT_API shader_traits
-{
-	static GLuint GenShaderPrivate(ShaderTarget target);
-	static bool CompileStatusPrivate(GLuint handle);
-	static bool CompileShaderPrivate(GLuint handle, const std::string& source);
-	static void AttachShaderPrivate(GLuint prog, GLuint shader);
-
-	static std::string ShaderInfoLogPrivate(GLuint shader);
-
-public:
-
-	static Handle<glProgramTarget::program> GenProgram();
-	static void LinkProgram(const Handle<glProgramTarget::program>& prog);
-	static bool LinkStatus(const Handle<glProgramTarget::program>& prog);
-
-	template <ShaderTarget target>
-	static Handle<target> GenShader()
-	{
-		return GenShaderPrivate(target);
-	}
-
-	template <ShaderTarget target>
-	static bool CompileStatus(const Handle<target>& handle)
-	{
-		return CompileStatusPrivate(handle);
-	}
-
-	template <ShaderTarget target>
-	static std::string ShaderInfoLog(const Handle<target>& handle)
-	{
-		return ShaderInfoLogPrivate(handle);
-	}
-
-
-	template <ShaderTarget target>
-	static bool CompileShader(const Handle<target>& handle, const std::string& source)
-	{
-		return CompileShaderPrivate(handle, source);
-	}
-
-	template <ShaderTarget target>
-	static void AttachShader(const Handle<glProgramTarget::program>& prog, const Handle<target>& handleShader)
-	{
-		AttachShaderPrivate(prog, handleShader);
-	}
-
-};
-
-
-template <ShaderTarget target>
-class gltShader
-{
-	Handle<target> handle_ = shader_traits::GenShader<target>();
-
-	bool compiled_ = false;
-
-public:
-	gltShader()
-	{}
-
-	gltShader(const std::string& sourceCode)
-		: compiled_(shader_traits::CompileShader(handle_, sourceCode))
-	{
-		if (!compiled_)
-		{
-			std::string errorMsg = shader_traits::ShaderInfoLog(handle_);
-			DEBUG_START
-				std::cout << errorMsg << std::endl;
-			DEBUG_END
-		}
-		assert(compiled_ && "Failed to compile shader!");
-		
-	}
-
-	void Compile_(const std::string& source)
-	{
-		compiled_ = shader_traits::CompileShader(handle_, source);
-		if (!compiled_)
-		{
-			std::string errorMsg = shader_traits::ShaderInfoLog(handle_);
-			DEBUG_START
-				std::cout << errorMsg << std::endl;
-			DEBUG_END
-		}
-	}
-
-	bool IsValid() const
-	{
-		return compiled_;
-	}
-
-	const Handle<target>& Handle() const
-	{
-		return handle_;
-	}
-
-	constexpr operator const Handle<target>&() const
-	{
-		return handle_;
-	}
-};
-
-
-template <class UniformCollection>
-class gltShaderProgram;
-
-//TODO: add input layout traits
-template <class ... unifDescrs>
-class gltShaderProgram<gltUniformCollection<std::tuple<unifDescrs...>>>
-{
-	using glUniforms = gltUniformCollection<std::tuple<unifDescrs...>>;
-	Handle<glProgramTarget::program> handle_;
-	glUniforms uniforms_;
-
-	//TODO: remove in release?
-	bool attachedVertex_ = false;
-	bool attachedFragment_ = false;
-
-	bool linked_ = false;
-
-public:
-
-	gltShaderProgram()
-	{}
-
-	template <ShaderTarget ... shaders>
-	gltShaderProgram(Handle<glProgramTarget::program>&& handle,
-		const gltShader<ShaderTarget::gl_vertex_shader>& vShader,
-		const gltShader<ShaderTarget::gl_fragment_shader>& fShader, 
-		const gltShader<shaders>& ... otherShaders)
-		: handle_(std::move(handle)),
-		attachedVertex_(true),
-		attachedFragment_(true)
-	{
-		AttachShaders(vShader, fShader, otherShaders...);
-		Link();
-	}
-
-	void ResetHandle(Handle<glProgramTarget::program>&& handle)
-	{
-		handle_ = std::move(handle);
-	}
-
-	template <ShaderTarget ... shTarget>
-	void AttachShaders(const gltShader<shTarget>& ... shaders)
-	{
-		(shader_traits::AttachShader<shTarget>(handle_, shaders), ...);
-		attachedVertex_ = true;
-		attachedFragment_ = true;
-	}
-
-	void Link()
-	{
-		assert(attachedVertex_ && attachedFragment_ &&
-			"At least vertex and fragment shaders must be attached!");
-		shader_traits::LinkProgram(handle_);
-		linked_ = shader_traits::LinkStatus(handle_);
-		uniforms_.InitAll(handle_);
-	}
-
-	bool Linked() const
-	{
-		return linked_;
-	}
-
-	const glUniforms& Uniforms() const
-	{
-		return uniforms_;
-	}
-
-};
-
-*/
-//#include "glt_definitions.hpp"

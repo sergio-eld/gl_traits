@@ -1,207 +1,299 @@
 #pragma once
 
-////////////////////////////////////////////////////////////////
-//glUniform Wrappers
-////////////////////////////////////////////////////////////////
-
-//struct to describe glUniform with 1 - 4 arguments
-template <typename cType, size_t elem, typename tuple = typename gen_tuple<cType, elem>::tuple>
-struct unif_info;
-
-struct UnifType
+namespace glt
 {
-	enum type { def, vect, matrx };
-};
+	/////////////////////////////////////////////////////////////////////////
+	///// UNIFORMS
+	/////////////////////////////////////////////////////////////////////////
 
-typedef cexpr_generic_map <
-	cexpr_pair<unif_info<float, 1>, auto_t<&glUniform1f>>,
-	cexpr_pair<unif_info<float, 2>, auto_t<&glUniform2f>>,
-	cexpr_pair<unif_info<float, 3>, auto_t<&glUniform3f>>,
-	cexpr_pair<unif_info<float, 4>, auto_t<&glUniform4f>>,
+	template <class glslt_T>
+	struct get_uniform_elems_count;
 
-	cexpr_pair<unif_info<int, 1>, auto_t<&glUniform1i>>,
-	cexpr_pair<unif_info<int, 2>, auto_t<&glUniform2i>>,
-	cexpr_pair<unif_info<int, 3>, auto_t<&glUniform3i>>,
-	cexpr_pair<unif_info<int, 4>, auto_t<&glUniform4i>>,
-
-	cexpr_pair<unif_info<unsigned int, 1>, auto_t<&glUniform1ui>>,
-	cexpr_pair<unif_info<unsigned int, 2>, auto_t<&glUniform2ui>>,
-	cexpr_pair<unif_info<unsigned int, 3>, auto_t<&glUniform3ui>>,
-	cexpr_pair<unif_info<unsigned int, 4>, auto_t<&glUniform4ui>>,
-
-	cexpr_pair<glm::vec1, auto_t<&glUniform1fv>>,
-	cexpr_pair<glm::vec2, auto_t<&glUniform2fv>>,
-	cexpr_pair<glm::vec3, auto_t<&glUniform3fv>>,
-	cexpr_pair<glm::vec4, auto_t<&glUniform4fv>>,
-
-	cexpr_pair<glm::ivec1, auto_t<&glUniform1iv>>,
-	cexpr_pair<glm::ivec2, auto_t<&glUniform2iv>>,
-	cexpr_pair<glm::ivec3, auto_t<&glUniform3iv>>,
-	cexpr_pair<glm::ivec4, auto_t<&glUniform4iv>>,
-
-	cexpr_pair<glm::uvec1, auto_t<&glUniform1uiv>>,
-	cexpr_pair<glm::uvec2, auto_t<&glUniform2uiv>>,
-	cexpr_pair<glm::uvec3, auto_t<&glUniform3uiv>>,
-	cexpr_pair<glm::uvec4, auto_t<&glUniform4uiv>>,
-
-	cexpr_pair<glm::mat2, auto_t<&glUniformMatrix2fv>>,
-	cexpr_pair<glm::mat3, auto_t<&glUniformMatrix3fv>>,
-	cexpr_pair<glm::mat4, auto_t<&glUniformMatrix4fv>>,
-
-	cexpr_pair<glm::mat2x3, auto_t<&glUniformMatrix2x3fv>>,
-	cexpr_pair<glm::mat3x2, auto_t<&glUniformMatrix3x2fv>>,
-
-	cexpr_pair<glm::mat2x4, auto_t<&glUniformMatrix2x4fv>>,
-	cexpr_pair<glm::mat4x2, auto_t<&glUniformMatrix4x2fv>>,
-
-	cexpr_pair<glm::mat4x3, auto_t<&glUniformMatrix4x3fv>>,
-	cexpr_pair<glm::mat3x4, auto_t<&glUniformMatrix3x4fv>>
-
-> glUniformMap;
-
-
-//primary
-template <const char* uniformName, typename gltype>
-struct gltUnifDescr;
-
-//regular
-template <const char* uniformName, typename cType, size_t elems>
-struct gltUnifDescr<uniformName, unif_info<cType, elems>>
-{
-	constexpr static const char* name = uniformName;
-	typedef cType type;
-	constexpr static size_t count = elems;
-	constexpr static UnifType::type glm_type = UnifType::def;
-};
-
-//vectors
-template <const char* uniformName,
-	glm::length_t elems, typename cType, glm::qualifier Q>
-	struct gltUnifDescr<uniformName, glm::vec<elems, cType, Q>>
-{
-	constexpr static const char* name = uniformName;
-	typedef cType type;
-	constexpr static size_t count = elems;
-	constexpr static UnifType::type glm_type = UnifType::vect;
-};
-
-//matrices
-template <const char* uniformName,
-	glm::length_t C, glm::length_t R, typename cType, glm::qualifier Q>
-	struct gltUnifDescr<uniformName, glm::mat<C, R, cType, Q>>
-{
-	constexpr static const char* name = uniformName;
-	typedef cType type;
-	constexpr static size_t columns = C,
-		rows = R;
-	constexpr static UnifType::type glm_type = UnifType::matrx;
-};
-
-template <class>
-class gltUniform_impl;
-
-template <const char* unifromName, typename uniformSpec>
-class gltUniform_impl<gltUnifDescr<unifromName, uniformSpec>>;
-
-/*Here a trick is used: tuple in unif_info is generated as a default
-argument (tuple with "elems" number of cType template arguments)*/
-//specialization for regular uniform taking 1 to 4 arguments of type T
-template <const char* uniformName, typename cType, size_t elems, typename ... cTypes>
-class gltUniform_impl<gltUnifDescr<uniformName, unif_info<cType, elems, std::tuple<cTypes ...>>>>
-{
-	GLint handle_ = -1;
-
-public:
-
-	void Init(char_t<uniformName>&&, GLuint handleShaderProg)
+	template <class T, const char *name>
+	struct get_uniform_elems_count<glslt<T, name>>
 	{
-		//uniform name has to be a null terminated string
-		handle_ = glGetUniformLocation(handleShaderProg, uniformName);
+		constexpr static size_t value = 1;
+	};
 
-		//this is critical
-		assert(handle_ != -1 && "Failed to get uniform location!");
-	}
-
-	void UpdateUniform(char_t<uniformName>&&, cTypes ... args)
+	template <class T, const char *name, glm::length_t L>
+	struct get_uniform_elems_count<glslt<glm::vec<L, T>, name>>
 	{
-		// find function pointer in the generic map
-		constexpr auto pUnifFunc = glUniformMap::found_pair<unif_info<cType, sizeof...(cTypes)>>::value::value;
-		(*pUnifFunc)(handle_, args...);
-	}
+		constexpr static size_t value = L;
+	};
 
-};
-
-//specialization for vectors
-template <const char* uniformName, glm::length_t elems, typename cType, glm::qualifier Q>
-class gltUniform_impl<gltUnifDescr<uniformName, glm::vec<elems, cType, Q>>>
-{
-	GLint handle_ = -1;
-public:
-
-	void Init(char_t<uniformName>&&, GLuint handleShaderProg)
+	template <class T, const char * name, glm::length_t C, glm::length_t R>
+	struct get_uniform_elems_count <glslt<glm::mat<C, R, T>, name>>
 	{
-		//uniform name has to be a null terminated string
-		handle_ = glGetUniformLocation(handleShaderProg, uniformName);
+		constexpr static size_t value = 0;
+	};
 
-		//this is critical
-		assert(handle_ != -1 && "Failed to get uniform location!");
-	}
+	template <class T>
+	constexpr inline size_t get_uniform_elems_count_v =
+		get_uniform_elems_count<T>::value;
 
-	//did not check. But assume that it works
-	void UpdateUniform(char_t<uniformName>&&, const glm::vec<elems, cType, Q>& vec)
+
+	template <typename T, size_t sz = 0,
+		class = decltype(std::make_index_sequence<sz>())>
+		struct UniformModifier;
+
+	template <typename T, size_t sz, size_t ... indx>
+	struct UniformModifier<T, sz, std::index_sequence<indx...>>
 	{
-		constexpr //void(__stdcall *pUnifFunc)(GLint, GLsizei, GLboolean, const cType*) =
-			auto pUnifFunc =
-			glUniformMap::found_pair<glm::vec<elems, cType, Q>>::value::value;
-		(*pUnifFunc)(handle_, 1, glm::value_ptr(vec));
-	}
-};
+		using ret_type = std::conditional_t<(sz > 1), glm::vec<sz, T>, T>;
 
-//specialization for matrices
-template <const char* uniformName, glm::length_t C, glm::length_t R, typename cType, glm::qualifier Q>
-class gltUniform_impl<gltUnifDescr<uniformName, glm::mat<C, R, cType, Q>>>
-{
-	GLint handle_ = -1;
+		// TODO: change GLint to handle
+		static void Update(GLint handle,
+			convert_v_to<T, indx>... vals)
+		{
+			p_gl_uniform_t<T, sz> pglUniformT = get_p_gl_uniform<T, sz>();
 
-public:
+			(*pglUniformT)(handle, vals...);
+		}
 
-	void Init(char_t<uniformName>&&, GLuint handleShaderProg)
+		static void Get(const HandleProg& prog, GLint handle, ret_type&ret)
+		{
+			void(*ptr)(GLint, GLint, ret_type*) = *pp_gl_get_uniform_map<ret_type>();
+
+			(*ptr)(handle_accessor(prog), handle, &ret);
+		}
+
+
+		static ret_type Get(const HandleProg& prog, GLint handle)
+		{
+			ret_type ret{};
+			void(*ptr)(GLint, GLint, ret_type&) =
+				reinterpret_cast<decltype(ptr)>(*pp_gl_get_uniform_map<ret_type>());
+
+			(*ptr)(handle_accessor(prog), handle, ret);
+
+			return ret;
+		}
+
+
+	};
+
+	template <typename T, glm::length_t L>
+	struct UniformModifier<glm::vec<L, T>>
 	{
-		//uniform name has to be a null terminated string
-		handle_ = glGetUniformLocation(handleShaderProg, uniformName);
+		// TODO: change GLint to handle
+		static void Update(GLint handle, const glm::vec<L, T>& vec)
+		{
+			p_gl_uniform_t<glm::vec<L, T>> pglUniformT =
+				get_p_gl_uniform<glm::vec<L, T>, 1>();
 
-		//this is critical
-		assert(handle_ != -1 && "Failed to get uniform location!");
-	}
+			(*pglUniformT)(handle, L, vec);
+		}
 
-	//works
-	void UpdateUniform(char_t<uniformName>&&, const glm::mat<C, R, cType, Q>& matrx, bool transpose = false)
+		static void Get(const HandleProg& prog, GLint handle, glm::vec<L, T>&ret)
+		{
+			void(*ptr)(GLint, GLint, glm::vec<L, T>&) =
+				reinterpret_cast<decltype(ptr)>(*pp_gl_get_uniform_map<T>());
+
+			(*ptr)(handle_accessor(prog), handle, ret);
+		}
+
+		static glm::vec<L, T> Get(const HandleProg& prog, GLint handle)
+		{
+			glm::vec<L, T> ret;
+			void(*ptr)(GLint, GLint, glm::vec<L, T>&) =
+				reinterpret_cast<decltype(ptr)>(*pp_gl_get_uniform_map<T>());
+
+			(*ptr)(handle_accessor(prog), handle, ret);
+
+			return ret;
+		}
+
+	};
+
+	template <typename T, glm::length_t C, glm::length_t R>
+	struct UniformModifier<glm::mat<C, R, T>>
 	{
-		constexpr //void(__stdcall *pUnifFunc)(GLint, GLsizei, GLboolean, const cType*) =
-			auto pUnifFunc =
-			glUniformMap::found_pair<glm::mat<C, R, cType, Q>>::value::value;
-		(*pUnifFunc)(handle_, 1, transpose, glm::value_ptr(matrx));
-	}
-};
+		// TODO: change GLint to handle
+		static void Update(GLint handle, const glm::mat<C, R, T>& mat,
+			bool transpose = false)
+		{
+			p_gl_uniform_t<glm::mat<C, R, T >> pglUniformT =
+				get_p_gl_uniform<glm::mat<C, R, T>, 1>();
 
+			(*pglUniformT)(handle, 1, transpose, mat);
+		}
 
-template <class ... glUniform_impls>
-struct gltUniformCollection_base : public glUniform_impls...
-{
-	using glUniform_impls::Init...;
-	using glUniform_impls::UpdateUniform...;
-};
+		static void Get(const HandleProg& prog, GLint handle, glm::mat<C, R, T>&ret)
+		{
+			void(*ptr)(GLint, GLint, glm::mat<C, R, T>&) =
+				reinterpret_cast<decltype(ptr)>(*pp_gl_get_uniform_map<T>());
 
+			(*ptr)(handle_accessor(prog), handle, ret);
+		}
 
-template <class>
-struct gltUniformCollection;
+		static glm::mat<C, R, T> Get(const HandleProg& prog, GLint handle)
+		{
+			glm::mat<C, R, T> ret;
+			void(*ptr)(GLint, GLint, glm::mat<C, R, T>&) =
+				reinterpret_cast<decltype(ptr)>(*pp_gl_get_uniform_map<T>());
 
-template <class ... UnifDescrs>
-struct gltUniformCollection<std::tuple<UnifDescrs...>> : public gltUniformCollection_base<gltUniform_impl<UnifDescrs>...>
-{
-	//TODO: assert that provided UnifDescrs all have ::name
-	void InitAll(GLuint hShaderProg)
+			(*ptr)(handle_accessor(prog), handle, ret);
+
+			return ret;
+		}
+
+	};
+
+	template <typename T, const char *name>
+	class UniformBase
 	{
-		(Init(char_t<UnifDescrs::name>(), hShaderProg), ...);
-	}
-};
+	protected:
+
+		// TODO: make prog a pointer?
+		const HandleProg& prog_;
+		GLint handle_ = -1;
+
+		UniformBase(const HandleProg& prog)
+			: prog_(prog),
+			handle_(GetHandle())
+		{
+			assert(handle_ != -1 && "Uniform::Failed to get Uniform location!");
+		}
+
+	private:
+		GLint GetHandle()
+		{
+			assert(ActiveProgram::IsActive(prog_) &&
+				"Uniform::Trying to access a uniform when Program is not active!");
+			return glGetUniformLocation(handle_accessor(prog_),
+				name);
+		}
+
+	};
+
+
+	template <class glslt_T,
+		class =
+		decltype(std::make_index_sequence<get_uniform_elems_count_v<glslt_T>>())>
+		class Uniform;
+
+	// glUniform1* and glUniform1*v
+	template <typename T, const char *name>
+	class Uniform<glslt<T, name>, std::index_sequence<0>>
+		: protected UniformBase<T, name>
+	{
+
+	public:
+
+		Uniform(const HandleProg& prog)
+			: UniformBase<T, name>(prog)
+		{}
+
+		void Update(tag_c<name>, T val) const
+		{
+			assert(ActiveProgram::IsActive(prog_) &&
+				"Uniform::Trying to modify a uniform for a non-active Program!");
+			UniformModifier<T, 1>::Update(handle_, val);
+		}
+
+		void Update(tag_c<name>, const glm::vec<1, T>& val) const
+		{
+			assert(ActiveProgram::IsActive(prog_) &&
+				"Uniform::Trying to modify a uniform for a non-active Program!");
+			UniformModifier<glm::vec<1, T>>::Update(handle_, val);
+		}
+
+		void Get(tag_c<name>, T& val) const
+		{
+			UniformModifier<T, 1>::Get(prog_, handle_, val);
+		}
+
+		T Get(tag_c<name>) const
+		{
+			return UniformModifier<T, 1>::Get(prog_, handle_);
+		}
+
+	};
+
+	// glUniform1-4* and glUniform1-4*v
+	template <glm::length_t L, typename T, const char *name, size_t ... indx>
+	class Uniform<glslt<glm::vec<L, T>, name>,
+		std::index_sequence<indx...>>
+		: protected UniformBase<glm::vec<L, T>, name>
+	{
+
+	public:
+
+		Uniform(const HandleProg& prog)
+			: UniformBase<glm::vec<L, T>, name>(prog)
+		{}
+
+		void Update(tag_c<name>, convert_v_to<T, indx> ... val) const
+		{
+			assert(ActiveProgram::IsActive(prog_) &&
+				"Uniform::Trying to modify a uniform for a non-active Program!");
+			UniformModifier<T, L>::Update(handle_, val ...);
+		}
+
+		void Update(tag_c<name>, const glm::vec<L, T>& val) const
+		{
+			assert(ActiveProgram::IsActive(prog_) &&
+				"Uniform::Trying to modify a uniform for a non-active Program!");
+			UniformModifier<glm::vec<L, T>>::Update(handle_, val);
+		}
+
+	};
+
+	// glUniformMatrix
+	template <glm::length_t C, glm::length_t R, typename T,
+		const char *name>
+		class Uniform<glslt<glm::mat<C, R, T>, name>,
+		std::index_sequence<>>
+		: protected UniformBase<glm::mat<C, R, T>, name>
+	{
+	public:
+
+		Uniform(const HandleProg& prog)
+			: UniformBase<glm::mat<C, R, T>, name>(prog)
+		{
+			assert(handle_ != -1 && "Uniform::Failed to get Uniform location!");
+		}
+
+		void Update(tag_c<name>, const glm::mat<C, R, T>& val, bool transpose = false) const
+		{
+			assert(ActiveProgram::IsActive(prog_) &&
+				"Uniform::Trying to modify a uniform for a non-active Program!");
+			UniformModifier<glm::mat<C, R, T>>::Update(handle_, val, transpose);
+		}
+
+		void Get(tag_c<name>, glm::mat<C, R, T>& val) const
+		{
+			UniformModifier<glm::mat<C, R, T>>::Get(prog_, handle_, val);
+		}
+
+		glm::mat<C, R, T> Get(tag_c<name>) const
+		{
+			return UniformModifier<glm::mat<C, R, T>>::Get(prog_, handle_);
+		}
+
+	};
+
+
+	template <class TupleArgs,
+		class = decltype(std::make_index_sequence<std::tuple_size_v<TupleArgs>>())>
+		class UniformCollection;
+
+	template <class ... Attribs, size_t ... indx>
+	class UniformCollection<std::tuple<Attribs...>, std::index_sequence<indx...>>
+		: Uniform<Attribs> ...
+	{
+
+		template <size_t i>
+		using UnifBase = Uniform<nth_element_t<i, Attribs...>>;
+
+	public:
+
+		UniformCollection(const HandleProg& handle)
+			: Uniform<Attribs>(handle)...
+		{}
+
+		using UnifBase<indx>::Update...;
+		using UnifBase<indx>::Get...;
+
+	};
+}

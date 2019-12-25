@@ -1,5 +1,7 @@
 ﻿cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
 
+# TODO: must have an install command and export Release version for glt_parser, Release and Debug Version for ParseAlgorithmPublic (for shader text sources for now) static library
+
 project(glt_parser LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -30,8 +32,8 @@ target_include_directories(FolderScanner
 
 add_library(ParseAlgorithm
 	OBJECT
-		include/IParseAlgorithm.h
-		src/ParseAlgorithm.h
+		include/ParseAlgorithm/IParseAlgorithm.h
+		include/ParseAlgorithm/ParseAlgorithm.h
 		src/ParseAlgorithm.cpp
 	)
 
@@ -39,7 +41,19 @@ target_include_directories(ParseAlgorithm
 	PRIVATE
 		${PROJECT_SOURCE_DIR}/include
 	)
-		
+
+# module for export
+add_library(ParseAlgorithmPublic
+	STATIC
+		$<TARGET_OBJECTS:ParseAlgorithm>
+		$<TARGET_OBJECTS:IDataType>
+	)
+
+target_include_directories(ParseAlgorithmPublic 
+	PRIVATE
+		${PROJECT_SOURCE_DIR}/include
+	)
+	
 add_library(SourceFile
 	OBJECT
 		include/ISourceFile.h
@@ -146,5 +160,4 @@ set_target_properties(${PROJECT_NAME}
 		VS_DEBUGGER_COMMAND_ARGUMENTS ${ARGUMENTS}
 		
 		#RUNTIME_OUTPUT_DIRECTORY bin
-	
 	)

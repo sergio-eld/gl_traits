@@ -1,10 +1,10 @@
 ﻿cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 
-
 # sandbox
 find_package(glfw3 REQUIRED)
 message(STATUS "glfw3 found: ${glfw3_FOUND}")
 
+# TODO: remove PlatformPath from here! Get path from command line input
 find_package(PlatformPath REQUIRED)
 message(STATUS "PlatformPath found: ${PlatformPath_FOUND}")
 
@@ -29,13 +29,15 @@ target_include_directories(gl_sandbox
 	
 # VBO cases
 
-set(VBO_USE_CASES
+set(TEST_CASES
 	"traits_common"
 	"traits_attribute_compound"
 	"traits_attribute_nth_attribute"
 	"traits_equivalence"
 	
 	"uniforms_test" # TODO: implement for just unifroms. Update and Query values
+	
+	"shaders_test" # test compile various shaders
 	
 	"map_uniform_funcs"
 	"buffer_fetch_attributes"
@@ -49,7 +51,7 @@ set(VBO_USE_CASES
 		
 )
 
-foreach(USE_CASE ${VBO_USE_CASES})
+foreach(USE_CASE ${TEST_CASES})
 	add_executable(${USE_CASE}
 		${USE_CASE}.cpp
 	)

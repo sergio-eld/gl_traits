@@ -101,6 +101,8 @@ struct Variable
 	Variable(const Variable&) = default;
 	Variable(Variable&&) = default;
 
+	Variable& operator=(const Variable&) = default;
+
 	bool operator<(const Variable& other) const;
     bool Valid() const;
     operator bool() const

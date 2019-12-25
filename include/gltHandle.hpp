@@ -1,8 +1,8 @@
 ﻿#pragma once
 
-#include "gltEnums.hpp"
 
 #include "traits.hpp"
+#include "enums.hpp"
 
 #include <map>
 
@@ -10,7 +10,7 @@ namespace glt
 {
     // constructs handles
     template <typename>
-    struct Allocator;
+    struct AllocatorSpecific;
 
     template <typename eTargetType>
     class handle_accessor;
@@ -21,12 +21,12 @@ namespace glt
 	Need to implement shared handle?
 	*/
     template <typename eTargetType>
-    class Handle//<target, typename decltype(target)>
+    class Handle
     {
         //TODO: add Glsync handle type
         GLuint handle_;// = 0;
 
-        friend struct Allocator<eTargetType>;
+        friend struct AllocatorSpecific<eTargetType>;
         friend class handle_accessor<eTargetType>;
 
 
@@ -77,10 +77,10 @@ namespace glt
             return (bool)handle_;
         }
 
-        bool operator!() const
-        {
-            return !IsValid();
-        }
+		operator bool() const
+		{
+			return IsValid();
+		}
 
         // handle is not aware if it is or can be bound to a target
         ~Handle()
@@ -119,23 +119,44 @@ namespace glt
 
     };
 
+	// traits for classes that has handle accessor functions
+	template <class T, typename = std::void_t<>>
+	struct has_GetHandle : std::false_type {};
+
+	template <template <typename>  class T, typename TargetType>
+	struct has_GetHandle<T<TargetType>,
+		std::void_t<decltype(	// get type from function pointer
+		(const Handle<TargetType>&(T<TargetType>::*)() const)	// cast function pointer to type
+			&T<TargetType>::GetHandle)>> : std::true_type {};	// function pointer
+
     using HandleBuffer = Handle<BufferTarget>;
     using HandleVAO = Handle<VAOTarget>;
 	using HandleShader = Handle<ShaderTarget>;
-	using HandleProg = Handle<glProgramTarget>;
+	using HandleProg = Handle<ProgramTarget>;
 
-	// TODO: change invocation routine 
-	// (make one class, generating all the Allocation functions and using tags?)
+	using TargetTypes = std::tuple<BufferTarget,
+		FrameBufferTarget,
+		TextureTarget,
+		VAOTarget,
+		TransformFeedBackTarget,
+		QueryTarget,
+		ProgramPipeLineTarget,
+		RenderBufferTarget,
+		SamplerTarget,
+		ShaderTarget,
+		ProgramTarget>;
+
+
     // TODO: add responsibility to delete handle?
     // TODO: unbind handle when deleting?
     template <typename eTargetType>
-    struct Allocator
+    struct AllocatorSpecific
     {
         // retrieve pointer to allocator function pointer
         constexpr static auto ppAllocFunc = pp_gl_allocator<eTargetType>::value;
 
         //template <typename = std::enable_if_t<!std::is_same_v<ShaderTarget, decltype(target)>>>
-        static Handle<eTargetType> Allocate()
+        static Handle<eTargetType> Allocate(eTargetType)
         {
             // TODO: also check for deleter function pointers to be loaded
             // TODO: throw exception inside the function to which ppAllocFunc points by default
@@ -174,7 +195,7 @@ namespace glt
     };
 
     template <>
-    struct Allocator<ShaderTarget>
+    struct AllocatorSpecific<ShaderTarget>
     {
         constexpr static auto ppAllocFunc = pp_gl_allocator_v<ShaderTarget>;
 
@@ -192,8 +213,29 @@ namespace glt
         {
             return Allocate(target);
         }
-
     };
+
+	// TODO: add specialization for glProgram
+
+
+	template <class TupleTargets,
+		class = decltype(std::make_index_sequence<std::tuple_size_v<TupleTargets>>())>
+		class AllocatorCommon;
+
+	template <typename ... TargetTypes, size_t ... indx>
+	class AllocatorCommon<std::tuple<TargetTypes...>, std::index_sequence<indx...>>
+		: AllocatorSpecific<TargetTypes>...
+	{
+		template <size_t i>
+		using AllocBase = AllocatorSpecific<std::tuple_element_t<i, std::tuple<TargetTypes...>>>;
+
+	public:
+
+		using AllocBase<indx>::Allocate...;
+		using AllocBase<indx>::operator()...;
+	};
+
+	using Allocator = AllocatorCommon<TargetTypes>;
 
     template <typename eTargetType>
     class handle_accessor
@@ -291,9 +333,6 @@ namespace glt
             return bool(handle == raw_handle_);
         }
     };
-
-
-
 
     template <typename ... gl_cur_obj>
     struct bound_handle_collection : gl_cur_obj...
@@ -844,7 +883,7 @@ namespace glt
 
     public:
 
-        Buffer(Handle<BufferTarget>&& handle = Allocator<BufferTarget>::Allocate())
+        Buffer(Handle<BufferTarget>&& handle = Allocator::Allocate(BufferTarget()))
             : handle_(std::move(handle))
         {
             if (!handle_)
@@ -1094,642 +1133,5 @@ namespace glt
     using BufferL = typename BufferListWrapper<AttrList>::type;
     
 
-	class ActiveVAO
-	{
-		inline static GLuint vao_ = 0;
-
-	public:
-
-		static bool IsBound(const HandleVAO& handle)
-		{
-			return handle == vao_;
-		}
-
-		static void Bind(const HandleVAO& handle)
-		{
-			vao_ = handle_accessor(handle);
-			glBindVertexArray(vao_);
-		}
-
-		static void UnBind()
-		{
-			vao_ = 0;
-			glBindVertexArray(0);
-		}
-
-	};
-
-	/*
-	Implements glVertexAttribPointer usage
-
-	// TODO: exclude compound attributes, VAO is agnostic to how a buffer stores data
-	*/
-	template <class ... Attribs>
-	class VAO
-	{
-		// What about glm::mat????
-		static_assert(!std::disjunction_v<is_compound_attr<Attribs>...>,
-			"Compaund attributes are not allowed in VAO!");
-		HandleVAO handle_;
-
-		/*
-		glVertexAttributePointer(
-		0. GLuint index,
-		1. GLenum type,
-		2. GLboolean normalized,
-		3. GLsizei stride,
-		4. const void* offset
-		)
-
-        const GLvoid *offset - is the offset from the start of the buffer
-            object CURRENTLY bound.
-
-        What about Normalized parameter?????
-		*/
-
-	public:
-		VAO(HandleVAO&& handle = Allocator<VAOTarget>::Allocate())
-			: handle_(std::move(handle))
-		{
-			if (!handle_)
-				throw std::exception("Invalid VAO handle");
-		}
-
-		void Bind() const
-		{
-			ActiveVAO::Bind(handle_);
-		}
-
-		void UnBind() const
-		{
-			ActiveVAO::UnBind();
-		}
-
-        // TODO: generate overloaded functions for all the Attributes?
-		// No runtime safety:
-		// - VAO does not know if it is bound or not;
-		// - VAO does not know if a Vertex Attribute belongs to a bound Buffer
-        template <size_t indx, typename A>
-        void AttributePointer(VertexAttrib<A>&& attrib, tag_s<indx>, bool normalize = false)
-        {
-			static_assert(std::is_same_v<A, nth_element_t<indx, Attribs...>>,
-				"AttributePointer::Invalid Attribute type for provided index!");
-			assert(ActiveVAO::IsBound(handle_) &&
-				"Setting Vertex Attribute for non-active VAO");
-
-			auto sz = (GLint)vao_attrib_size<A>()();
-			GLenum glType = (GLenum)c_to_gl_v<A>;
-			GLsizei stride = (GLsizei)attrib.Stride();
-			void *voffset = (void*)attrib.Offset();
-
-            glVertexAttribPointer((GLuint)indx,
-				sz,
-				glType,
-                normalize,
-				stride,
-                voffset);
-        }
-
-		void EnableVertexAttribPointer(size_t indx) const
-		{
-			assert(ActiveVAO::IsBound(handle_));
-
-			// TODO: move to another class
-			glEnableVertexAttribArray((GLuint)indx);
-		}
-
-		/*
-		Defines a vertex attribute of Name or at Index
-		1. by index
-		- Need to provide an index
-		- compare the Input type for equivalence with the type at Index
-		- using name
-		*/
-		template <size_t indx, typename Attr>
-		void AttributePointer(const Buffer<Attr>& buffer, bool normalized = false)
-		{
-
-		}
-	};
-
-	template <ShaderTarget target>
-	class Shader
-	{
-		HandleShader handle_;
-		bool compiled_ = false;
-
-	public:
-
-		// default case
-		Shader(HandleShader&& handle = Allocator<ShaderTarget>::Allocate(target))
-			: handle_(std::move(handle))
-		{}
-
-		template <size_t length>
-		Shader(const char(&source)[length],
-			HandleShader&& handle = Allocator<ShaderTarget>::Allocate(target))
-			: handle_(std::move(handle)),
-			compiled_(Compile_(source, length))
-		{
-			assert(IsValid() && "Shader::Failed to compile shader!");
-		}
-
-		Shader(const char* source, size_t length,
-			HandleShader&& handle = Allocator<ShaderTarget>::Allocate(target))
-			: handle_(std::move(handle)),
-			compiled_(Compile_(source, length))
-		{
-			assert(IsValid() && "Shader::Failed to compile shader!");
-		}
-
-		Shader(const std::string& source,
-			HandleShader&& handle = Allocator<ShaderTarget>::Allocate(target))
-			: handle_(std::move(handle)),
-			compiled_(Compile_(source.data(), source.size()))
-		{
-			assert(IsValid() && "Shader::Failed to compile shader!");
-		}
-
-		// shaders actually may be allowed to be copied, but what about the handle?
-		Shader(const Shader&) = delete;
-		Shader& operator=(const Shader&) = delete;
-
-		bool Compile(const std::string& source)
-		{
-			compiled_ = Compile_(source.data(), source.length());
-			return IsValid();
-		}
-
-		bool Compile(const char *source, size_t length)
-		{
-			compiled_ = Compile_(source, length);
-			return IsValid();
-		}
-
-		template <size_t length>
-		bool Compile(const char(&source)[length])
-		{
-			compiled_ = Compile_(source, length);
-			return IsValid();
-		}
-
-		bool IsValid() const
-		{
-			return compiled_;
-		}
-
-		bool operator!() const
-		{
-			return !IsValid();
-		}
-
-		const HandleShader& GetHandle() const
-		{
-			return handle_;
-		}
-
-	private:
-
-		bool Compile_(const char* source, size_t length)
-		{
-			assert(handle_.IsValid() && "Shader::Invalid shader handle!");
-			
-			glShaderSource(handle_accessor(handle_), 1, &source, (GLint*)&length);
-			glCompileShader(handle_accessor(handle_));
-			GLint res = false;
-			glGetShaderiv(handle_accessor(handle_), GL_COMPILE_STATUS, &res);
-
-			return (bool)res;
-		}
-
-	};
-
-	using VertexShader = Shader<ShaderTarget::vertex>;
-	using FragmentShader = Shader<ShaderTarget::fragment>;
-
-	// Checks and sets an active Shader Program
-	class ActiveProgram
-	{
-		inline static GLuint raw_handle_ = 0;
-
-	public:
-
-		static bool IsActive(const HandleProg& handle)
-		{
-			return handle == raw_handle_;
-		}
-
-		static void Use(const HandleProg& handle)
-		{
-			glUseProgram(handle_accessor(handle));
-			raw_handle_ = handle_accessor(handle);
-		}
-
-		static void Reset()
-		{
-			glUseProgram(0);
-			raw_handle_ = 0;
-		}
-
-	};
 	
-	
-	/////////////////////////////////////////////////////////////////////////
-	///// UNIFORMS
-	/////////////////////////////////////////////////////////////////////////
-
-
-	template <class glslt_T>
-	struct get_uniform_elems_count;
-
-	template <class T, const char *name>
-	struct get_uniform_elems_count<glslt<T, name>>
-	{
-		constexpr static size_t value = 1;
-	};
-
-	template <class T, const char *name, glm::length_t L>
-	struct get_uniform_elems_count<glslt<glm::vec<L, T>, name>>
-	{
-		constexpr static size_t value = L;
-	};
-
-	template <class T, const char * name, glm::length_t C, glm::length_t R>
-	struct get_uniform_elems_count <glslt<glm::mat<C, R, T>, name>>
-	{
-		constexpr static size_t value = 0;
-	};
-
-	template <class T>
-	constexpr inline size_t get_uniform_elems_count_v =
-		get_uniform_elems_count<T>::value;
-
-
-	template <typename T, size_t sz = 0,
-		class = decltype(std::make_index_sequence<sz>())>
-		struct UniformModifier;
-
-	template <typename T, size_t sz, size_t ... indx>
-	struct UniformModifier<T, sz, std::index_sequence<indx...>>
-	{
-		using ret_type = std::conditional_t<(sz > 1), glm::vec<sz, T>, T>;
-
-		// TODO: change GLint to handle
-		static void Update(GLint handle,
-			convert_v_to<T, indx>... vals)
-		{
-			p_gl_uniform_t<T, sz> pglUniformT = get_p_gl_uniform<T, sz>();
-
-			(*pglUniformT)(handle, vals...);
-		}
-
-		static void Get(const HandleProg& prog, GLint handle, ret_type&ret)
-		{
-			void(*ptr)(GLint, GLint, ret_type*) = *pp_gl_get_uniform_map<ret_type>();
-
-			(*ptr)(handle_accessor(prog), handle, &ret);
-		}
-
-
-		static ret_type Get(const HandleProg& prog, GLint handle)
-		{
-			ret_type ret{};
-			void(*ptr)(GLint, GLint, ret_type&) =
-				reinterpret_cast<decltype(ptr)>(*pp_gl_get_uniform_map<ret_type>());
-
-			(*ptr)(handle_accessor(prog), handle, ret);
-
-			return ret;
-		}
-
-
-	};
-
-	template <typename T, glm::length_t L>
-	struct UniformModifier<glm::vec<L, T>>
-	{
-		// TODO: change GLint to handle
-		static void Update(GLint handle, const glm::vec<L, T>& vec)
-		{
-			p_gl_uniform_t<glm::vec<L, T>> pglUniformT =
-				get_p_gl_uniform<glm::vec<L, T>, 1>();
-
-			(*pglUniformT)(handle, L, vec);
-		}
-
-		static void Get(const HandleProg& prog, GLint handle, glm::vec<L, T>&ret)
-		{
-			void(*ptr)(GLint, GLint, glm::vec<L, T>&) =
-				reinterpret_cast<decltype(ptr)>(*pp_gl_get_uniform_map<T>());
-
-			(*ptr)(handle_accessor(prog), handle, ret);
-		}
-
-		static glm::vec<L, T> Get(const HandleProg& prog, GLint handle)
-		{
-			glm::vec<L, T> ret;
-			void(*ptr)(GLint, GLint, glm::vec<L, T>&) =
-				reinterpret_cast<decltype(ptr)>(*pp_gl_get_uniform_map<T>());
-
-			(*ptr)(handle_accessor(prog), handle, ret);
-
-			return ret;
-		}
-
-	};
-
-	template <typename T, glm::length_t C, glm::length_t R>
-	struct UniformModifier<glm::mat<C, R, T>>
-	{
-		// TODO: change GLint to handle
-		static void Update(GLint handle, const glm::mat<C, R, T>& mat,
-			bool transpose = false)
-		{
-			p_gl_uniform_t<glm::mat<C, R, T >> pglUniformT =
-				get_p_gl_uniform<glm::mat<C, R, T>, 1>();
-
-			(*pglUniformT)(handle, 1, transpose, mat);
-		}
-
-		static void Get(const HandleProg& prog, GLint handle, glm::mat<C, R, T>&ret)
-		{
-			void(*ptr)(GLint, GLint, glm::mat<C, R, T>&) =
-				reinterpret_cast<decltype(ptr)>(*pp_gl_get_uniform_map<T>());
-
-			(*ptr)(handle_accessor(prog), handle, ret);
-		}
-
-		static glm::mat<C, R, T> Get(const HandleProg& prog, GLint handle)
-		{
-			glm::mat<C, R, T> ret;
-			void(*ptr)(GLint, GLint, glm::mat<C, R, T>&) =
-				reinterpret_cast<decltype(ptr)>(*pp_gl_get_uniform_map<T>());
-
-			(*ptr)(handle_accessor(prog), handle, ret);
-
-			return ret;
-		}
-
-	};
-
-	template <typename T, const char *name>
-	class UniformBase
-	{
-	protected:
-
-		// TODO: make prog a pointer?
-		const HandleProg& prog_;
-		GLint handle_ = -1;
-
-		UniformBase(const HandleProg& prog)
-			: prog_(prog),
-			handle_(GetHandle())
-		{
-			assert(handle_ != -1 && "Uniform::Failed to get Uniform location!");
-		}
-
-	private:
-		GLint GetHandle()
-		{
-			assert(ActiveProgram::IsActive(prog_) &&
-				"Uniform::Trying to access a uniform when Program is not active!");
-			return glGetUniformLocation(handle_accessor(prog_),
-				name);
-		}
-
-	};
-
-
-	template <class glslt_T,
-		class =
-		decltype(std::make_index_sequence<get_uniform_elems_count_v<glslt_T>>())>
-		class Uniform;
-
-	// glUniform1* and glUniform1*v
-	template <typename T, const char *name>
-	class Uniform<glslt<T, name>, std::index_sequence<0>>
-		: protected UniformBase<T, name>
-	{
-
-	public:
-
-		Uniform(const HandleProg& prog)
-			: UniformBase<T, name>(prog)
-		{}
-
-		void Update(tag_c<name>, T val) const
-		{
-			assert(ActiveProgram::IsActive(prog_) &&
-				"Uniform::Trying to modify a uniform for a non-active Program!");
-			UniformModifier<T, 1>::Update(handle_, val);
-		}
-
-		void Update(tag_c<name>, const glm::vec<1, T>& val) const
-		{
-			assert(ActiveProgram::IsActive(prog_) &&
-				"Uniform::Trying to modify a uniform for a non-active Program!");
-			UniformModifier<glm::vec<1, T>>::Update(handle_, val);
-		}
-
-		void Get(tag_c<name>, T& val) const
-		{
-			UniformModifier<T, 1>::Get(prog_, handle_, val);
-		}
-
-		T Get(tag_c<name>) const
-		{
-			return UniformModifier<T, 1>::Get(prog_, handle_);
-		}
-
-	};
-
-	// glUniform1-4* and glUniform1-4*v
-	template <glm::length_t L, typename T, const char *name, size_t ... indx>
-	class Uniform<glslt<glm::vec<L, T>, name>,
-		std::index_sequence<indx...>>
-		: protected UniformBase<glm::vec<L, T>, name>
-	{
-
-	public:
-
-		Uniform(const HandleProg& prog)
-			: UniformBase<glm::vec<L, T>, name>(prog)
-		{}
-
-		void Update(tag_c<name>, convert_v_to<T, indx> ... val) const
-		{
-			assert(ActiveProgram::IsActive(prog_) &&
-				"Uniform::Trying to modify a uniform for a non-active Program!");
-			UniformModifier<T, L>::Update(handle_, val ...);
-		}
-
-		void Update(tag_c<name>, const glm::vec<L, T>& val) const
-		{
-			assert(ActiveProgram::IsActive(prog_) &&
-				"Uniform::Trying to modify a uniform for a non-active Program!");
-			UniformModifier<glm::vec<L, T>>::Update(handle_, val);
-		}
-
-	};
-
-	// glUniformMatrix
-	template <glm::length_t C, glm::length_t R, typename T,
-		const char *name>
-		class Uniform<glslt<glm::mat<C, R, T>, name>,
-		std::index_sequence<>>
-		: protected UniformBase<glm::mat<C, R, T>, name>
-	{
-	public:
-
-		Uniform(const HandleProg& prog)
-			: UniformBase<glm::mat<C, R, T>, name>(prog)
-		{
-			assert(handle_ != -1 && "Uniform::Failed to get Uniform location!");
-		}
-
-		void Update(tag_c<name>, const glm::mat<C, R, T>& val, bool transpose = false) const
-		{
-			assert(ActiveProgram::IsActive(prog_) &&
-				"Uniform::Trying to modify a uniform for a non-active Program!");
-			UniformModifier<glm::mat<C, R, T>>::Update(handle_, val, transpose);
-		}
-
-		void Get(tag_c<name>, glm::mat<C, R, T>& val) const
-		{
-			UniformModifier<glm::mat<C, R, T>>::Get(prog_, handle_, val);
-		}
-
-		glm::mat<C, R, T> Get(tag_c<name>) const
-		{
-			return UniformModifier<glm::mat<C, R, T>>::Get(prog_, handle_);
-		}
-
-	};
-
-
-	template <class TupleArgs,
-		class = decltype(std::make_index_sequence<std::tuple_size_v<TupleArgs>>())>
-		class UniformCollection;
-
-	template <class ... Attribs, size_t ... indx>
-	class UniformCollection<std::tuple<Attribs...>, std::index_sequence<indx...>>
-		: Uniform<Attribs> ...
-	{
-
-		template <size_t i>
-		using UnifBase = Uniform<nth_element_t<i, Attribs...>>;
-
-	public:
-
-		UniformCollection(const HandleProg& handle)
-			: Uniform<Attribs>(handle)...
-		{}
-
-		using UnifBase<indx>::Update...;
-		using UnifBase<indx>::Get...;
-
-	};
-
-
-	//template <class VAOdescr, class UniformCollect, class ...>
-	//class Program;
-
-	//template <class ... Attribs, class UniformCollect>
-	class Program//<VAO<Attribs...>, UniformCollect>
-	{
-		HandleProg handle_;
-
-		bool linked_ = false;
-		// VAO<Attribs> vao_;
-
-	public:
-		// default
-		Program(HandleProg&& handle = Allocator<glProgramTarget>::Allocate())
-			: handle_(std::move(handle))
-		{
-			assert(handle_.IsValid() && "Program::Invalid handle!");
-		}
-
-		Program(const Program&) = delete;
-		Program& operator=(const Program&) = delete;
-
-		// TODO: fix. will not compile with additional shaders
-		template <ShaderTarget ... targets>
-		Program(const VertexShader& vShader, const FragmentShader& fShader,
-			const Shader<targets>& ... otherShaders,
-			HandleProg&& handle = Allocator<glProgramTarget>::Allocate())
-			: handle_(std::move(handle)),
-			linked_(Link_(vShader, fShader, otherShaders...))
-		{
-			assert(IsValid() && "Program::Failed to link program!");
-		}
-
-		const HandleProg& GetHandle() const
-		{
-			return handle_;
-		}
-
-		bool IsActive() const
-		{
-			return ActiveProgram::IsActive(handle_);
-		}
-
-		void Use() const
-		{
-			ActiveProgram::Use(handle_);
-		}
-
-		void UnUse() const
-		{
-			if (!IsActive())
-				throw std::exception("Program::Deactivating"
-					" a program wich is not currently active!");
-			ActiveProgram::Reset();
-		}
-
-		bool IsValid() const
-		{
-			return linked_;
-		}
-
-		bool operator!() const
-		{
-			return !IsValid();
-		}
-
-		template <ShaderTarget ... targets>
-		bool Link(const VertexShader& vShader, const FragmentShader& fShader,
-			const Shader<targets>& ... otherShaders)
-		{
-			linked_ = Link_(vShader, fShader, otherShaders...);
-			return IsValid();
-		}
-
-	private:
-
-		template <ShaderTarget ... targets>
-		bool Link_(const VertexShader& vShader, const FragmentShader& fShader,
-			const Shader<targets>& ... otherShaders) const
-		{
-			assert(handle_.IsValid() && "Program::Invalid handle!");
-
-			glAttachShader(handle_accessor(handle_),
-				handle_accessor(vShader.GetHandle()));
-
-			glAttachShader(handle_accessor(handle_),
-				handle_accessor(fShader.GetHandle()));
-
-			if constexpr(sizeof...(targets))
-				(glAttachShader(handle_accessor(handle_),
-					handle_accessor(otherShaders.GetHandle())), ...);
-
-			glLinkProgram(handle_accessor(handle_));
-
-			GLint res = false;
-			glGetProgramiv(handle_accessor(handle_), GL_LINK_STATUS, &res);
-			return (bool)res;
-		}
-
-	};
-
 }
