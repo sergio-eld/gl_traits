@@ -13,11 +13,11 @@ int CheckHandle()
 		t = glt::ShaderTarget::vertex;
 
     glt::Handle<T> h1 = glt::Allocator::Allocate(t);
-    glt::Handle<T> h2 = glt::Allocator::Allocate(t);
+	glt::Handle<T> h2 = glt::Allocator::Allocate(t);
 
-    if (glt::handle_accessor(h1) != 1 ||
+	if (glt::handle_accessor(h1) != 1 ||
 		glt::handle_accessor(h2) != 2)
-        throw ("Invalid values' sequence!");
+		return 1;
 
     return 0;
 }
@@ -35,6 +35,11 @@ int main()
 
     sglfw.MakeContextCurrent(window);
     sglfw.LoadOpenGL();
+
+	// see disassembly for these 3 lines
+	GLuint rawHandle;
+	(*glt::pp_gl_allocator_v<glt::BufferTarget>)(1, &rawHandle);
+	glt::HandleBuffer handle = glt::Allocator::Allocate(glt::BufferTarget());
 
 	return CheckHandles<glt::BufferTarget,
 		glt::FrameBufferTarget,

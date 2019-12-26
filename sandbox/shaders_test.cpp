@@ -7,6 +7,7 @@
 #include <fstream>
 #include <streambuf>
 
+
 int main(int argc, const char *argv[])
 {
 	std::filesystem::path exePath{ argv[0] };
@@ -36,8 +37,6 @@ int main(int argc, const char *argv[])
 	}
 
 	glt::Shader<glt::ShaderTarget::vertex> vertexShader{ vertexSource };
-
-
 
 	return 0;
 }

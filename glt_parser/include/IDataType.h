@@ -104,6 +104,10 @@ struct Variable
 	Variable& operator=(const Variable&) = default;
 
 	bool operator<(const Variable& other) const;
+	bool operator==(const Variable& other) const
+	{
+		return !(*this < other) && !(other < *this);
+	}
     bool Valid() const;
     operator bool() const
     {

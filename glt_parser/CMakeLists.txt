@@ -41,18 +41,6 @@ target_include_directories(ParseAlgorithm
 	PRIVATE
 		${PROJECT_SOURCE_DIR}/include
 	)
-
-# module for export
-add_library(ParseAlgorithmPublic
-	STATIC
-		$<TARGET_OBJECTS:ParseAlgorithm>
-		$<TARGET_OBJECTS:IDataType>
-	)
-
-target_include_directories(ParseAlgorithmPublic 
-	PRIVATE
-		${PROJECT_SOURCE_DIR}/include
-	)
 	
 add_library(SourceFile
 	OBJECT
@@ -159,5 +147,92 @@ set_target_properties(${PROJECT_NAME}
 		CXX_STANDARD_REQUIRED True
 		VS_DEBUGGER_COMMAND_ARGUMENTS ${ARGUMENTS}
 		
+		DEBUG_POSTFIX "_d"
+		OUTPUT_NAME_RelWithDebInfo ${PROJECT_NAME}_r_d
+		OUTPUT_NAME_MinSizeRel ${PROJECT_NAME}_r_min
 		#RUNTIME_OUTPUT_DIRECTORY bin
+	)
+	
+# module for export
+add_library(ParseAlgorithmPublic
+	STATIC
+		$<TARGET_OBJECTS:ParseAlgorithm>
+		$<TARGET_OBJECTS:IDataType>
+	)
+
+target_include_directories(ParseAlgorithmPublic
+	PUBLIC
+		$<INSTALL_INTERFACE:include> # copy headers IDataType.h, IParseAlgorithm.h and ParseAlgorithm.h
+	PRIVATE
+		${PROJECT_SOURCE_DIR}/include
+	)
+	
+set_target_properties(ParseAlgorithmPublic
+	PROPERTIES
+		CXX_STANDARD 17
+		CXX_STANDARD_REQUIRED True
+		DEBUG_POSTFIX "_d"
+		OUTPUT_NAME_RelWithDebInfo ParseAlgorithmPublic_r_d
+		OUTPUT_NAME_MinSizeRel ParseAlgorithmPublic_r_min
+	)
+	
+# installation
+
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+	set(CMAKE_INSTALL_PREFIX "${PROJECT_BINARY_DIR}/install" CACHE PATH "Default Installation folder" FORCE)
+endif()
+
+
+set(config_install_dir ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
+set(version_config ${PROJECT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake)
+set(project_config ${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake)
+set(targets_export_name ${PROJECT_NAME}Targets)
+
+include(CMakePackageConfigHelpers)
+include(GNUInstallDirs)
+message(STATUS "${PROJECT_NAME} will be installed to ${CMAKE_INSTALL_PREFIX}")
+
+configure_package_config_file(
+		${PROJECT_SOURCE_DIR}/config/${PROJECT_NAME}Config.cmake.in
+		${project_config}
+	INSTALL_DESTINATION
+		${config_install_dir}
+	)
+	
+install(TARGETS
+		${PROJECT_NAME}
+		ParseAlgorithmPublic
+	CONFIGURATIONS
+		Debug
+		RelWithDebInfo
+		Release
+		MinSizeRel
+	EXPORT 
+		${targets_export_name}
+	RUNTIME
+		DESTINATION ${CMAKE_INSTALL_BINDIR}
+	LIBRARY
+		DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	)
+	
+message(STATUS "Installing headers to ${CMAKE_INSTALL_INCLUDEDIR}")
+install(FILES 
+		${PROJECT_SOURCE_DIR}/include/IDataType.h
+		${PROJECT_SOURCE_DIR}/include/ParseAlgorithm/ParseAlgorithm.h
+		${PROJECT_SOURCE_DIR}/include/ParseAlgorithm/IParseAlgorithm.h
+	DESTINATION
+		${CMAKE_INSTALL_INCLUDEDIR}
+	)
+
+install(EXPORT
+		${targets_export_name}
+	DESTINATION
+		${config_install_dir}
+	)
+
+install(FILES
+		${project_config}
+		#${version_config}
+	DESTINATION
+		${config_install_dir}
 	)

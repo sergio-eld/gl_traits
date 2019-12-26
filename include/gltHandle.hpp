@@ -38,12 +38,12 @@ namespace glt
         Handle(const Handle<eTargetType>& other) = delete;
         Handle<eTargetType>& operator=(const Handle<eTargetType>& other) = delete;
 
-        Handle(Handle<eTargetType>&& other)
+		constexpr Handle(Handle<eTargetType>&& other)
             : handle_(other.handle_)
         {
             other.handle_ = 0;
         }
-        Handle<eTargetType>& operator=(Handle<eTargetType>&& other)
+		Handle<eTargetType>& operator=(Handle<eTargetType>&& other)
         {
             if (handle_)
                 DestroyHandle();
@@ -52,32 +52,32 @@ namespace glt
             return *this;
         }
 
-        bool operator==(GLuint raw_handle) const
+		constexpr bool operator==(GLuint raw_handle) const
         {
             return handle_ == raw_handle;
         }
 
-        bool operator!=(GLuint raw_handle) const
+		constexpr bool operator!=(GLuint raw_handle) const
         {
             return !operator==(raw_handle);
         }
 
-        bool operator==(const Handle<eTargetType>& other) const
+		constexpr bool operator==(const Handle<eTargetType>& other) const
         {
             return handle_ == other.handle_;
         }
 
-        bool operator!=(const Handle<eTargetType>& other) const
+		constexpr bool operator!=(const Handle<eTargetType>& other) const
         {
             return !operator==(other);
         }
 
-        bool IsValid() const
+		constexpr bool IsValid() const
         {
             return (bool)handle_;
         }
 
-		operator bool() const
+		constexpr operator bool() const
 		{
 			return IsValid();
 		}
@@ -105,8 +105,8 @@ namespace glt
 
     protected:
 
-        Handle() = default;
-        Handle(GLuint handle) noexcept
+		constexpr Handle() = default;
+        constexpr Handle(GLuint handle) noexcept
             : handle_(handle)
         {
 			static_assert(sizeof(decltype(*this)) == sizeof(GLuint));
@@ -203,9 +203,7 @@ namespace glt
         {
             // TODO: also check for deleter function pointers to be loaded
             assert(*ppAllocFunc && "Pointers to OpenGL allocator functions have not been initialiized!");
-            if (!*ppAllocFunc)
-                throw("Pointers to OpenGL allocator functions have not been initialiized!");
-
+            
             return Handle<ShaderTarget>((*ppAllocFunc)((GLenum)target));
         }
 
@@ -240,14 +238,14 @@ namespace glt
     template <typename eTargetType>
     class handle_accessor
     {
-		GLuint raw_handle_ = 0;
+		GLuint &&raw_handle_ = 0;
 	public:
-		handle_accessor() = default;
-		handle_accessor(const Handle<eTargetType>& handle)
+		constexpr handle_accessor() = default;
+		constexpr handle_accessor(const Handle<eTargetType>& handle) noexcept
 			: raw_handle_(handle)
 		{}
 
-		operator GLint() const
+		constexpr operator GLint() const noexcept
 		{
 			assert(raw_handle_ && "handle_accessor::Invalid handle!");
 			return raw_handle_;

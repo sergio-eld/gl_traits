@@ -28,3 +28,4 @@ public:
 	static std::vector<Variable> ParseImpl(std::string_view shaderSource);
 };
 
+using ShaderSourceParceAlg = ParseAlgorithm<ShaderFileInfo::text_source>;
