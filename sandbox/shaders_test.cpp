@@ -36,6 +36,8 @@ int main(int argc, const char *argv[])
 		return -1;
 	}
 
+    glt::identical_sets_v<std::tuple<>, std::tuple<>>;
+
 	glt::Shader<glt::ShaderTarget::vertex> vertexShader{ vertexSource };
 
 	return 0;

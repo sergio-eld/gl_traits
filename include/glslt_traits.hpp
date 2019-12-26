@@ -302,19 +302,51 @@ namespace glt
 	- check if 2 sets of glsl types has zero common subset
 	*/
 
+    // 2 empty names are considered equal. Shader must not be provided with non-named variables
 	template <class ... Types>
 	constexpr bool all_names_unique()
 	{
-		std::string_view strs[]{ variable_traits_name<Types> ... };
+        if constexpr (sizeof...(Types))
+        {
+            std::string_view strs[]{ variable_traits_name<Types> ... };
 
-		for (size_t i = 0; i + 1 != sizeof...(Types); ++i)
-			for (size_t j = i + 1; j != sizeof...(Types); ++j)
-				if (strs[i] == strs[j])
-					return false;
-		return true;
+            for (size_t i = 0; i + 1 != sizeof...(Types); ++i)
+                for (size_t j = i + 1; j != sizeof...(Types); ++j)
+                    if (strs[i] == strs[j])
+                        return false;
+            return true;
+        }
+        // empty set yields true
+        else
+            return true;
 	}
 
+    template <class Tuple>
+    struct tuple_unique_names : std::false_type {};
 
+    template <class ... Vars, template <class ...> class T>
+    struct tuple_unique_names<T<Vars...>> 
+        : std::bool_constant<all_names_unique<Vars...>()> {};
+
+    template <class Tuple>
+    constexpr inline bool tuple_unique_names_v = tuple_unique_names<Tuple>();
+
+    template <class ... Vars1, class ... Vars2>
+    constexpr bool get_sets_identical(std::tuple<Vars1...>, std::tuple<Vars2...>)
+    {
+        return true;
+    }
+
+    template <class Set1, class Set2>
+    struct identical_sets : std::false_type {};
+
+    template <template <class ...> class S1, class ... Vars1, template <class ...> class S2, class ... Vars2>
+    struct identical_sets<S1<Vars1...>, S2<Vars2...>> 
+        : std::bool_constant<get_sets_identical(std::tuple<Vars1...>(), 
+            std::tuple<Vars2...>())> {};
+
+    template <class Set1, class Set2>
+    constexpr inline bool identical_sets_v = identical_sets<Set1, Set2>();
 
 	//////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////

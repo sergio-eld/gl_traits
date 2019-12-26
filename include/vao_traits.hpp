@@ -33,6 +33,13 @@ namespace glt
 	/*
 	Implements glVertexAttribPointer usage
 
+    // TODO: Attributes locationes may be undefined in source code. Meaning that 
+    attribute location can be changed dynamically, several attributes can point to the same location.
+    Need to store that information.
+    Need to distinct between VAO with statically defined (in-source) and undefined
+    attributes' locations.
+    For dynamic definitions need to restrict different types for pointing to the same location
+
 	// TODO: exclude compound attributes, VAO is agnostic to how a buffer stores data
 	*/
 	template <class ... Attribs>

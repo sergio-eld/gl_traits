@@ -36,11 +36,17 @@ int main()
     sglfw.MakeContextCurrent(window);
     sglfw.LoadOpenGL();
 
-	// see disassembly for these 3 lines
-	GLuint rawHandle;
-	(*glt::pp_gl_allocator_v<glt::BufferTarget>)(1, &rawHandle);
-	glt::HandleBuffer handle = glt::Allocator::Allocate(glt::BufferTarget());
+    {
+        // see disassembly for these 3 lines
+        GLuint rawHandle;
+        (*glt::pp_gl_allocator_v<glt::BufferTarget>)(1, &rawHandle);
+        (*glt::pp_gl_deleter_v<glt::BufferTarget>)(1, &rawHandle);
+        glt::HandleBuffer handle = glt::Allocator::Allocate(glt::BufferTarget());
 
+    }
+
+
+  
 	return CheckHandles<glt::BufferTarget,
 		glt::FrameBufferTarget,
 		glt::TextureTarget,

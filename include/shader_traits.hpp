@@ -51,6 +51,13 @@ namespace glt
 			return source_checker<TupleIn, TupleOut>::check_source(source);
 		}
 
+        static bool CompileStatus(const HandleShader& handle)
+        {
+            GLint res = false;
+            glGetShaderiv(handle_accessor(handle), GL_COMPILE_STATUS, &res);
+            return (bool)res;
+        }
+
 		static bool Compile(const HandleShader& handle, const std::string& source)
 		{
 			return Compile(std::forward<const HandleShader&>(handle),
@@ -63,10 +70,10 @@ namespace glt
 
 			glShaderSource(handle_accessor(handle), 1, &source, (GLint*)&length);
 			glCompileShader(handle_accessor(handle));
-			GLint res = false;
-			glGetShaderiv(handle_accessor(handle), GL_COMPILE_STATUS, &res);
-			return (bool)res;
+			
+            return CompileStatus(handle);
 		}
+
 	};
 
 
@@ -74,68 +81,65 @@ namespace glt
 	class Shader
 	{
 		HandleShader handle_;
+
+        // TODO: remove from Shader and store in map of compiled shaders at shader_traits?
 		bool compiled_ = false;
+
+        static_assert(tuple_unique_names_v<VarsIn>,
+            "Shader inut variables have identical aliases!");
+        static_assert(tuple_unique_names_v<VarsOut>,
+            "Shader inut variables have identical aliases!");
 
 	public:
 
 		// default case
 		constexpr Shader(HandleShader&& handle = Allocator::Allocate(target)) noexcept
-			: handle_(std::move(handle))
+			: handle_(std::move(handle)),
+            compiled_(shader_traits::CompileStatus(handle_))
 		{}
+
+        constexpr Shader(const char* source, size_t length,
+            HandleShader&& handle = Allocator::Allocate(target))
+            : handle_(std::move(handle)),
+            compiled_(shader_traits::Compile(handle_, source, length))
+        {
+            assert(IsValid() && "Shader::Failed to compile shader!");
+        }
+
+        constexpr Shader(const std::string& source,
+            HandleShader&& handle = Allocator::Allocate(target))
+            : Shader(source.c_str(), source.size(), std::move(handle))
+        {}
 
 		template <size_t length>
 		constexpr Shader(const char(&source)[length],
 			HandleShader&& handle = Allocator::Allocate(target))
-			: handle_(std::move(handle)),
-			compiled_(shader_traits::Compile(handle_, source, length))
-		{
-			assert(IsValid() && "Shader::Failed to compile shader!");
-		}
+            : Shader(source, length, std::move(handle))
+        {}
 
-		constexpr Shader(const char* source, size_t length,
-			HandleShader&& handle = Allocator::Allocate(target))
-			: handle_(std::move(handle)),
-			compiled_(shader_traits::Compile(handle_, source, length))
-		{
-			assert(IsValid() && "Shader::Failed to compile shader!");
-		}
-
-		constexpr Shader(const std::string& source,
-			HandleShader&& handle = Allocator::Allocate(target))
-			: handle_(std::move(handle)),
-			compiled_(shader_traits::Compile(handle_, source.data(), source.size()))
-		{
-			assert(IsValid() && "Shader::Failed to compile shader!");
-		}
-
+		
 		// shaders actually may be allowed to be copied, but what about the handle?
 		Shader(const Shader&) = delete;
 		Shader& operator=(const Shader&) = delete;
 
+        bool Compile(const char *source, size_t length)
+        {
+            assert((shader_traits::check_source<VarsIn, VarsOut>(std::string_view(source))) &&
+                "Invalid shader source file! Variables mismatch!");
+            compiled_ = shader_traits::Compile(handle_, source, length);
+            return IsValid();
+        }
+
 		bool Compile(const std::string& source)
 		{
-			assert(shader_traits::check_source<VarsIn, VarsOut>(std::string_view(source)) &&
-				"Invalid shader source file! Variables mismatch!");
-			compiled_ = shader_traits::Compile(handle_, source.data(), source.length());
-			return IsValid();
+			return Compile(source.c_str(), source.size());
 		}
 
-		bool Compile(const char *source, size_t length)
-		{
-			assert(shader_traits::check_source<VarsIn, VarsOut>(std::string_view(source, length)) &&
-				"Invalid shader source file! Variables mismatch!");
-			compiled_ = shader_traits::Compile(handle_, source, length);
-			return IsValid();
-		}
-
-		template <size_t length>
-		bool Compile(const char(&source)[length])
-		{
-			assert(shader_traits::check_source<VarsIn, VarsOut>(std::string_view(source, length)) &&
-				"Invalid shader source file! Variables mismatch!");
-			compiled_ = shader_traits::Compile(handle_, source, length);
-			return IsValid();
-		}
+        template <size_t length>
+        bool Compile(const char(&source)[length])
+        {
+            return Compile(source, length);
+        }
 
 		constexpr bool IsValid() const noexcept
 		{

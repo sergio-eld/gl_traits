@@ -22,6 +22,16 @@ Each class should have 2 levels of indirection:
 1. With runtime checks: i.e. ensure that object which functions are being invoked
 is currently active or bound if required by version of OpenGL specification
 
+There are properties for variables (in/out/uniform/blocks/etc) in glsl shader 
+source code that may be defined explicitly (like location or binding) in the source
+or omitted. In the latter case they may be set dinamically by user.
+Need to implement algorithm selection based on template parameters:
+For example: if VAO template arguments are not defined with locations, a run-time
+map will be used to bind and validate its indexes.
+For such a case may also provide an explicict parameter, that will enforce
+location indexes according to the order template arguments had been specified.
+
+TODO: analize possible VertexArrayPointer assignment routines
 */
 
 #ifndef _gl_traits_

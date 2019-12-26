@@ -238,7 +238,7 @@ namespace glt
     template <typename eTargetType>
     class handle_accessor
     {
-		GLuint &&raw_handle_ = 0;
+		GLuint raw_handle_ = 0;
 	public:
 		constexpr handle_accessor() = default;
 		constexpr handle_accessor(const Handle<eTargetType>& handle) noexcept
