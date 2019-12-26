@@ -2,6 +2,7 @@
 
 #include "IParseAlgorithm.h"
 
+// TODO: udate implementation according to https://www.khronos.org/opengl/wiki/Layout_Qualifier_(GLSL)
 
 template <ShaderFileInfo::SourceType type>
 class ParseAlgorithm : public IParseAlgorithm

@@ -6,17 +6,19 @@
 
 class IHeaderGenerator
 {
-	static bool compare_less(std::reference_wrapper<const Variable> w1,
-		std::reference_wrapper<const Variable> w2);
+	static bool compare_less(CRefVariable w1,
+        CRefVariable w2);
 
 	using comp_less = std::integral_constant<decltype(&compare_less),
 		&compare_less>;
 
-	constexpr static const char *commonName = "glt_Common.h",
-		*commonValidate = "glt_CommonValidate.h";
+    constexpr static const char *commonName = "glt_Common.h",
+        *commonValidate = "glt_CommonValidate.h",
+        *shaderHeaderFolder = "gltShadersGenerated",
+        *shaderHeaderPrefix = "gltShader"; // + filename
 
 public:
-	using Container = std::set<std::reference_wrapper<const Variable>, comp_less>;
+	using Container = std::set<CRefVariable, comp_less>;
 
 private:
 	fsys::path outputFolder_;
@@ -33,5 +35,11 @@ public:
 
 	Container::const_iterator cbegin() const;
 	Container::const_iterator cend() const;
+
+    void GenerateShaderHeader(const std::vector<CRefISourceFile>& sources) const;
+
+private:
+
+    static void WriteGeneratedShaderHeader();
 
 };

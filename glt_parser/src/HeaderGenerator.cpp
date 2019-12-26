@@ -3,8 +3,8 @@
 #include <cassert>
 #include <fstream>
 
-bool IHeaderGenerator::compare_less(std::reference_wrapper<const Variable> w1, 
-	std::reference_wrapper<const Variable> w2)
+bool IHeaderGenerator::compare_less(CRefVariable w1,
+    CRefVariable w2)
 {
 	const Variable &v1 = w1.get(),
 		&v2 = w2.get();
@@ -24,6 +24,10 @@ void IHeaderGenerator::CollectVariables(const ISourceFile & sf)
 		vars_.emplace(sf.GetVariable(i));
 }
 
+/* Common header must contain:
+- all the variables (1 instance for each) from all the shader sources. 
+- 
+*/
 void IHeaderGenerator::GenerateCommonHeader()
 {
 	fsys::path commonPath{ outputFolder_ },
@@ -89,4 +93,11 @@ IHeaderGenerator::Container::const_iterator IHeaderGenerator::cbegin() const
 IHeaderGenerator::Container::const_iterator IHeaderGenerator::cend() const
 {
 	return vars_.cend();
+}
+
+// input requirements: all sources are unique (unique names)
+void IHeaderGenerator::GenerateShaderHeader(const std::vector<CRefISourceFile>& sources) const
+{
+    // for each source file get vars in and vars out and shader name
+    // how to group sources into files??
 }

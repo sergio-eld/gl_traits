@@ -174,6 +174,9 @@ set_target_properties(ParseAlgorithmPublic
 		DEBUG_POSTFIX "_d"
 		OUTPUT_NAME_RelWithDebInfo ParseAlgorithmPublic_r_d
 		OUTPUT_NAME_MinSizeRel ParseAlgorithmPublic_r_min
+		
+		ARCHIVE_OUTPUT_DIRECTORY lib
+		LIBRARY_OUTPUT_DIRECTORY lib
 	)
 	
 # installation
@@ -212,6 +215,8 @@ install(TARGETS
 	RUNTIME
 		DESTINATION ${CMAKE_INSTALL_BINDIR}
 	LIBRARY
+		DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	ARCHIVE 
 		DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	)
 	

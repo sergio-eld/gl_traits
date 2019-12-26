@@ -61,6 +61,8 @@ struct ShaderFileInfo
 	SourceType sourceType;
 };
 
+// TODO: udate implementation according to https://www.khronos.org/opengl/wiki/Layout_Qualifier_(GLSL)
+
 struct Variable
 {
 	enum VarType : unsigned char
@@ -118,3 +120,9 @@ struct Variable
     static std::string cpp_glsl_type(GLSLDataType, const std::string& rawtypeGLSL);
 
 };
+
+using RefShaderFileInfo = std::reference_wrapper<ShaderFileInfo>;
+using CRefShaderFileInfo = std::reference_wrapper<const ShaderFileInfo>;
+
+using RefVariable = std::reference_wrapper<Variable>;
+using CRefVariable = std::reference_wrapper<const Variable>;
