@@ -194,8 +194,13 @@ void IHeaderGenerator::WriteShaderTypes(std::basic_ostream<char>& file, const IS
 	file << "\n\n" << std::string(100, '/') <<
 		 "\n//Shader tarits: " << sf.Name().filename().generic_string() << "\n";
 
+    std::string str_vars_in{ "VarsIn_" },
+        str_vars_out{ "VarsOut_" };
+    str_vars_in += namePredicate;
+    str_vars_out += namePredicate;
+
 	// write even empty sets?
-	file << "using VarsIn_" << namePredicate << " = std::tuple<";
+	file << "using " << str_vars_in << " = std::tuple<";
 	for (const Variable& var : var_In)
 		WriteVariableClassName(file, var) << ", ";
 	size_t pos = file.tellp();
@@ -203,10 +208,19 @@ void IHeaderGenerator::WriteShaderTypes(std::basic_ostream<char>& file, const IS
 	file << ">;\n";
 
 	// write even empty sets?
-	file << "using VarsOut_" << namePredicate << " = std::tuple<";
+	file << "using " << str_vars_out << " = std::tuple<";
 	for (const Variable& var : var_Out)
 		WriteVariableClassName(file, var) << ", ";
 	pos = file.tellp();
 	file.seekp(pos - 2);
 	file << ">;\n";
+
+    file << "using Shader_" << namePredicate << " = glt::Shader<" <<
+        sf.GltShaderType() << ", " << str_vars_in << ", " << str_vars_out << ">;\n";
+
+    if (sf.ShaderType() == ShaderFileInfo::shader_vertex)
+    {
+        // TODO: decalre VAO type alias with using declaration
+    }
+
 }

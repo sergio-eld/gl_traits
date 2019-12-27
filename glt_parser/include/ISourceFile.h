@@ -19,6 +19,11 @@ struct ISourceFile
 	virtual size_t VarsCount() const = 0;
 	virtual const Variable& GetVariable(size_t indx) const = 0;
 
+    std::string_view GltShaderType() const
+    {
+        return ShaderFileInfo::cpp_glt_shader_type(ShaderType());
+    }
+
 };
 
 using RefISourceFile = std::reference_wrapper<ISourceFile>;

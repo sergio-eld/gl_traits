@@ -62,6 +62,11 @@ int main(int argc, const char** argv)
 
 	FolderScanner fs{};
 
+    ///////////////////////////////////////////////////////
+    // This is a workaround.
+    // TODO: 
+    // 1. Get a list of cl arguments that provide extension types
+    // 2. loop: fs.SetExtension(std::any_cast<ShaderFileInfo::ShaderType>(arg.get_value()));
 	std::regex extPat{ R"(.\w+)" };
 
 	const std::string& args = argExtensions.Value();
@@ -73,6 +78,7 @@ int main(int argc, const char** argv)
 
 	while (start != end)
 		fs.SetExtension(*extIter++, (start++)->str());
+    //////////////////////////////////////////////////////
 
 	try
 	{
@@ -111,6 +117,9 @@ int main(int argc, const char** argv)
 		std::cerr << e.what() << std::endl;
 		return -1;
 	}
+
+    // if verbose
+    std::cout << "Generated files have been written to " << argOutPath.Value() << std::endl;
 
 	return 0;
 }
