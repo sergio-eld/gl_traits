@@ -1,6 +1,15 @@
 ﻿#include "helpers.hpp"
 
 // TODO: add generated shader headers files
+/*
+Module testing:
+1. generate glt_Common from a list of shader files
+2. generate code for N shader sources specified in the list:
+- write a template list of pairs "FileName - Shader-Type"
+- write a function that will unfold that list into a sequence of "test" function invokations
+3. Test "TRY_COMPILE"
+4. Run Test. Return int flag result (all bits = 0 if success)
+*/
 
 #include "glt_Common.h"
 
@@ -10,7 +19,6 @@
 
 int main(int argc, const char *argv[])
 {
-
 	static_assert(!glt::has_location_v<aPos_vec3>);
 	using VAOaPos_vec3 = glt::add_qualifiers<aPos_vec3, glt::q_location<1>>;
 	static_assert(glt::has_location_v<VAOaPos_vec3>);
@@ -46,7 +54,8 @@ int main(int argc, const char *argv[])
 
     glt::identical_sets_v<std::tuple<>, std::tuple<>>;
 
-	glt::Shader<glt::ShaderTarget::vertex> vertexShader{ vertexSource };
+	//glt::Shader<glt::ShaderTarget::vertex> vertexShader{ vertexSource };
+    Shader_vshader vertexShader{ vertexSource };
 
 	return 0;
 }

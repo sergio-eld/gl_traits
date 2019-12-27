@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <utility>
 
+// TODO: https://www.khronos.org/opengl/wiki/Type_Qualifier_(GLSL)#Shader_stage_inputs_and_outputs 
+
 namespace glt
 {
 	struct shader_traits
@@ -124,6 +126,9 @@ namespace glt
 
         bool Compile(const char *source, size_t length)
         {
+            /* TODO: use a custom definition instead of assert. 
+            For test cases in Release configuration.
+            Possibly for shader-module creation process.*/
             assert((shader_traits::check_source<VarsIn, VarsOut>(std::string_view(source))) &&
                 "Invalid shader source file! Variables mismatch!");
             compiled_ = shader_traits::Compile(handle_, source, length);

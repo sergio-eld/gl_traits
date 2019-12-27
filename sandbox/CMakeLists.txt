@@ -63,10 +63,7 @@ target_link_libraries(${USE_CASE}
 	)
 endforeach()
 
-find_program(GLT_GENERATOR ${CMAKE_BINARY_DIR}/glt_parser/glt_parser.exe REQUIRED)
-
-
-add_custom_command(TARGET gl_sandbox PRE_BUILD
+add_custom_command(TARGET gl_sandbox POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E  copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/shaders 
 		$<TARGET_PROPERTY:gl_sandbox,RUNTIME_OUTPUT_DIRECTORY>/$(ConfigurationName)
 	COMMAND ${CMAKE_COMMAND} -E  copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/resources $<TARGET_PROPERTY:gl_sandbox,RUNTIME_OUTPUT_DIRECTORY>/$(ConfigurationName)/resources

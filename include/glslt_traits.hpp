@@ -348,7 +348,7 @@ namespace glt
 	template <class ... Types>
 	constexpr bool all_names_unique()
 	{
-        if constexpr (sizeof...(Types))
+        if constexpr ((bool)sizeof...(Types))
         {
             std::string_view strs[]{ variable_traits_name<Types> ... };
 
