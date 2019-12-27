@@ -10,6 +10,14 @@
 
 int main(int argc, const char *argv[])
 {
+
+	static_assert(!glt::has_location_v<aPos_vec3>);
+	using VAOaPos_vec3 = glt::add_qualifiers<aPos_vec3, glt::q_location<1>>;
+	static_assert(glt::has_location_v<VAOaPos_vec3>);
+	static_assert(glt::has_name_v<VAOaPos_vec3>);
+	static_assert(glt::has_type_v<VAOaPos_vec3>);
+	static_assert(sizeof(aPos_vec3) == sizeof(VAOaPos_vec3));
+
 	std::filesystem::path exePath{ argv[0] };
 
 	SmartGLFW glfw{ 3, 3 };
