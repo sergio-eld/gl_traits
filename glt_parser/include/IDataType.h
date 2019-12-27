@@ -116,6 +116,8 @@ struct Variable
         return Valid();
     }
 
+	std::string CppGlslType() const;
+
     static GLSLDataType get_glsl_type(const std::string& rawtypeGLSL);
     static std::string cpp_glsl_type(GLSLDataType, const std::string& rawtypeGLSL);
 

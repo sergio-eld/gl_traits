@@ -86,6 +86,8 @@ int main(int argc, const char** argv)
 
 	std::vector<std::unique_ptr<ISourceFile>> sources;
 
+
+
 	std::optional<ShaderFileInfo> fInfo = fs.FetchSourceFile();
 	while (fInfo)
 	{
@@ -95,8 +97,10 @@ int main(int argc, const char** argv)
 	}
 
 	IHeaderGenerator generator{ std::move(outputPath) };
+
 	for (const std::unique_ptr<ISourceFile>& sf : sources)
-		generator.CollectVariables(*sf);
+		generator.AppendSource(*sf);
+
 
 	try 
 	{
