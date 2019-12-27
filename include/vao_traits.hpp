@@ -4,6 +4,8 @@
 
 namespace glt
 {
+
+
 	class ActiveVAO
 	{
 		inline static GLuint vao_ = 0;

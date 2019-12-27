@@ -56,6 +56,37 @@ namespace glt
 	template <typename T>
 	constexpr inline bool has_type_v = has_type<T>();
 
+	/////////////////////////////////////
+	// Layout qualifiers
+	////////////////////////////////////
+	template <int loc>
+	struct q_location
+	{
+		constexpr static int glt_location = loc;
+	};
+
+	template <int bind>
+	struct q_binding
+	{
+		constexpr static int glt_binding = bind;
+	};
+
+	template <typename VarT, typename ... qualifiers>
+	struct add_qualifiers : VarT, public qualifiers ...
+	{
+		using VarT::glt_name;
+		using VarT::glt_type;
+	};
+
+	template <typename T, typename = std::void_t<>>
+	struct has_location : std::false_type {};
+
+	template <typename T>
+	struct has_location<T, std::void_t<decltype(&T::glt_location)>> : std::true_type {};
+
+	template <typename T>
+	constexpr inline bool has_location_v = has_location<T>();
+
 	template <class T>
 	struct is_glm_vec : std::false_type {};
 
@@ -94,6 +125,13 @@ namespace glt
 				return T::glt_name();
 		}
 
+		constexpr static int get_location()
+		{
+			if constexpr (has_location_v<T>)
+				return T::glt_location;
+			else return -1;
+		}
+
 		template <bool glm_or_fund = false>
 		struct get_type_ { using type = typename T::glt_type; };
 
@@ -103,6 +141,7 @@ namespace glt
 		// name and type have different aliases than glt variables (glt_name, glt_type)
 		constexpr static const char* name = get_name_();
 		using type = typename get_type_<glm_or_fundamental<T>>::type;
+		constexpr static int location = get_location();
 	};
 
 	template <class T>
@@ -110,6 +149,9 @@ namespace glt
 
 	template <class T>
 	using variable_traits_type = typename variable_traits<T>::type;
+
+	template <class T>
+	constexpr inline int variable_traits_location = variable_traits<T>::location;
 
 	//////////////////////////////////////////////////////////
 	// Equivalence traits
