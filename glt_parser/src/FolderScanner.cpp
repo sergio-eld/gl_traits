@@ -5,18 +5,26 @@
 
 #include <cassert>
 
+template <ShaderFileInfo::ShaderType ... types>
+struct source_types {};
+
+using ExtensionsList = source_types<
+	ShaderFileInfo::shader_vertex,
+	ShaderFileInfo::shader_fragment,
+	ShaderFileInfo::shader_geometry,
+	ShaderFileInfo::shader_compute>;
+
 
 struct FolderScanner::PrivateImpl
 {
-    /*
 	template <ShaderFileInfo::ShaderType ... types>
 	constexpr static std::set<ShaderFileInfo::ShaderExtensionInfo>
-		init_extensions(ShaderFileInfo::shader_types<types...>)
+		init_extensions(source_types<types...>)
 	{
 		std::set<ShaderFileInfo::ShaderExtensionInfo> out;
 		(out.emplace(ShaderFileInfo::ShaderExtensionInfo{ std::string(), types }), ...);
 		return out;
-	}*/
+	}
 
 	using RefExt = std::reference_wrapper<ShaderFileInfo::ShaderExtensionInfo>;
 	using CRefExt = std::reference_wrapper<const ShaderFileInfo::ShaderExtensionInfo>;
@@ -55,7 +63,7 @@ struct FolderScanner::PrivateImpl
 
 
 FolderScanner::FolderScanner()
-	//: extensions_(PrivateImpl::init_extensions(ShaderTypeList()))
+	: extensions_(PrivateImpl::init_extensions(ExtensionsList()))
 {
 	/*
 	std::optional<PrivateImpl::RefExt> found =
@@ -72,15 +80,14 @@ FolderScanner::FolderScanner()
 
 void FolderScanner::SetExtension(ShaderFileInfo::ShaderType t, std::string_view ext)
 {
-	//std::optional<PrivateImpl::RefExt> found =
-	//	PrivateImpl::FindType(t, extensions_.begin(), extensions_.end());
+	std::optional<PrivateImpl::RefExt> found =
+		PrivateImpl::FindType(t, extensions_.begin(), extensions_.end());
 
-	//if (!found)
-	//	throw std::invalid_argument("FolderScanner::SetExtension::Invalid shader type!");
+	if (!found)
+		throw std::invalid_argument("FolderScanner::SetExtension::Invalid shader type!");
 
-	//ShaderFileInfo::ShaderExtensionInfo& extType = *found;
-	//extType.extension = ext;
-    extensions_.emplace(ShaderFileInfo::ShaderExtensionInfo{ std::string(ext), t });
+	ShaderFileInfo::ShaderExtensionInfo& extType = *found;
+	extType.extension = ext;
 }
 
 bool FolderScanner::ExtensionAssigned(ShaderFileInfo::ShaderType t) const

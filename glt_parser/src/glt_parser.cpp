@@ -13,7 +13,19 @@
 
 int main(int argc, const char** argv)
 {
+	ComLineParser& parser = *ComLineParser::parser;
+
+
+	if (!parser(argc, argv))
+	{
+		parser.PrintErrors();
+		parser.PrintUsage();
+		return -1;
+	}
+
 	ComLineParser cl_parser{ argc, argv };
+
+	/*
     if (cl_parser.EmptyArgs())
     {
         cl_parser.PrintUsage();
@@ -25,19 +37,19 @@ int main(int argc, const char** argv)
 		cl_parser.PrintErrors();
         cl_parser.PrintUsage();
 		return -1;
-	}
+	}*/
 
-	std::optional<rIArgument> foundArgSourcePath = IArgument::Find("-s"),
-		foundArgOutPath = IArgument::Find("-d"),
-		foundArgNamePred = IArgument::Find("-p"),
-		foundArgExtensions = IArgument::Find("-e");
+	std::optional<rIArgumentOld> foundArgSourcePath = IArgumentOld::Find("-s"),
+		foundArgOutPath = IArgumentOld::Find("-d"),
+		foundArgNamePred = IArgumentOld::Find("-p"),
+		foundArgExtensions = IArgumentOld::Find("-e");
 
 	assert(foundArgSourcePath.has_value() && "Failed to find Source Path argument!");
 	assert(foundArgOutPath.has_value() && "Failed to find Output Path argument!");
 	assert(foundArgNamePred.has_value() && "Failed to find Name Predicates argument!");
 	assert(foundArgExtensions.has_value() && "Failed to find File extensions argument!");
 
-	IArgument &argSourcePath = *foundArgSourcePath,
+	IArgumentOld &argSourcePath = *foundArgSourcePath,
 		&argOutPath = *foundArgOutPath,
 		&argNamePred = *foundArgNamePred,
 		&argExtensions = *foundArgExtensions;
@@ -62,11 +74,6 @@ int main(int argc, const char** argv)
 
 	FolderScanner fs{};
 
-    ///////////////////////////////////////////////////////
-    // This is a workaround.
-    // TODO: 
-    // 1. Get a list of cl arguments that provide extension types
-    // 2. loop: fs.SetExtension(std::any_cast<ShaderFileInfo::ShaderType>(arg.get_value()));
 	std::regex extPat{ R"(.\w+)" };
 
 	const std::string& args = argExtensions.Value();
@@ -78,7 +85,6 @@ int main(int argc, const char** argv)
 
 	while (start != end)
 		fs.SetExtension(*extIter++, (start++)->str());
-    //////////////////////////////////////////////////////
 
 	try
 	{
@@ -117,9 +123,6 @@ int main(int argc, const char** argv)
 		std::cerr << e.what() << std::endl;
 		return -1;
 	}
-
-    // if verbose
-    std::cout << "Generated files have been written to " << argOutPath.Value() << std::endl;
 
 	return 0;
 }

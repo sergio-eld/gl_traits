@@ -13,29 +13,16 @@ struct ShaderFileInfo
 {
 	enum ShaderType : unsigned char
 	{
-        shader_compute,
-        shader_vertex,
-        shader_tess_control,
-        shader_tess_evaluation,
-        shader_geometry,
+		shader_vertex,
 		shader_fragment,
+		shader_geometry,
+
+		shader_compute,
+
+		// TODO: add other types
 
 		none = std::numeric_limits<unsigned char>::max()
 	};
-
-    /*
-    // do not need anymore?
-    template <ShaderType ... types>
-    struct shader_types {};
-
-    // do not need anymore?
-    using ShaderTypeList = shader_types<
-        shader_compute,
-        shader_vertex,
-        shader_tess_control,
-        shader_tess_evaluation,
-        shader_geometry,
-        shader_fragment>;*/
 
 	enum SourceType : unsigned char
 	{
@@ -45,17 +32,11 @@ struct ShaderFileInfo
 		unknown = std::numeric_limits<unsigned char>::max()
 	};
 
-    // TODO: remove this. THis is a workaround for setting default sequence 
-    // of extensions passed to cl parser
 	static inline std::vector<ShaderType> list_types{ shader_vertex,
-        shader_fragment,
-        shader_geometry,
-        shader_compute,
-        shader_tess_control,
-        shader_tess_evaluation };
+		shader_fragment,
+		shader_geometry,
+		shader_compute};
 
-    // this is used to look-up ShaderType by string extension. 
-    // One shader type can potentially have several extensions (.vs or .vshader, etc)
 	struct ShaderExtensionInfo
 	{
 		std::string extension;
@@ -63,12 +44,10 @@ struct ShaderFileInfo
 
 		bool operator<(const ShaderExtensionInfo& other) const
 		{
-			return std::tie(extension, type) < 
-                std::tie(other.extension, other.type);
+			return extension < other.extension
+				|| type < other.type;
 		}
 	};
-
-    static std::string_view cpp_glt_shader_type(ShaderType);
 
 	ShaderFileInfo(fsys::path&& path, const ShaderExtensionInfo& type);
 	ShaderFileInfo(fsys::path&& path, ShaderType shaderType, SourceType sourceType);

@@ -1,28 +1,12 @@
-﻿#include "IDataType.h"
+﻿#include "..\include\IDataType.h"
+#include "..\include\IDataType.h"
+#include "..\include\IDataType.h"
+#include "IDataType.h"
 
-#include <map>
 #include <bitset>
 #include <regex>
 
 #include <cassert>
-
-std::string_view ShaderFileInfo::cpp_glt_shader_type(ShaderType st)
-{
-    using namespace std::literals;
-    static std::map<ShaderType, std::string_view> types{
-        {shader_compute, "glt::ShaderTarget::compute"sv},
-        {shader_vertex, "glt::ShaderTarget::vertex"sv},
-        {shader_tess_control, "glt::ShaderTarget::tess_control"sv},
-        {shader_tess_evaluation, "glt::ShaderTarget::tess_evaluation"sv},
-        {shader_geometry, "glt::ShaderTarget::geometry"sv},
-        {shader_fragment, "glt::ShaderTarget::fragment"sv}
-    };
-
-    auto found = types.find(st);
-    assert(found != types.cend());
-    
-    return found->second;
-}
 
 ShaderFileInfo::ShaderFileInfo(fsys::path && vpath, const ShaderExtensionInfo& vtype)
 	: path(std::move(vpath)),
