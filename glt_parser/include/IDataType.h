@@ -32,11 +32,6 @@ struct ShaderFileInfo
 		unknown = std::numeric_limits<unsigned char>::max()
 	};
 
-	static inline std::vector<ShaderType> list_types{ shader_vertex,
-		shader_fragment,
-		shader_geometry,
-		shader_compute};
-
 	struct ShaderExtensionInfo
 	{
 		std::string extension;
@@ -44,8 +39,7 @@ struct ShaderFileInfo
 
 		bool operator<(const ShaderExtensionInfo& other) const
 		{
-			return extension < other.extension
-				|| type < other.type;
+			return std::tie(type, extension) < std::tie(other.type, other.extension);
 		}
 	};
 

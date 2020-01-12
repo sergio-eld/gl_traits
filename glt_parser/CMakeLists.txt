@@ -7,6 +7,23 @@ project(glt_parser LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRES True)
 
+add_library(CLParser
+	OBJECT
+		include/IParser.h
+
+		src/Arguments.cpp
+		src/ComLineParser.cpp
+		
+		src/ArgShaderExtensions.h
+		src/ArgShaderExtensions.cpp
+	)
+	
+target_include_directories(CLParser
+	PRIVATE
+		${PROJECT_SOURCE_DIR}/src
+		${PROJECT_SOURCE_DIR}/include
+	)
+
 add_library(IDataType
 	OBJECT
 		include/IDataType.h
@@ -117,8 +134,8 @@ set_target_properties(test_FolderScanner
 # main app
 add_executable(${PROJECT_NAME}
 	src/${PROJECT_NAME}.cpp
-	src/Arguments.cpp
-	src/ComLineParser.cpp
+
+	$<TARGET_OBJECTS:CLParser>
 
 	$<TARGET_OBJECTS:IDataType>
 	$<TARGET_OBJECTS:FolderScanner>
@@ -128,6 +145,11 @@ add_executable(${PROJECT_NAME}
 	$<TARGET_OBJECTS:HeaderGenerator>
 	)
 	
+#target_link_libraries(${PROJECT_NAME}
+#	PRIVATE
+#		CLParser
+#	)
+	
 target_include_directories(${PROJECT_NAME}
 	PRIVATE
 		${PROJECT_SOURCE_DIR}/include
@@ -136,10 +158,14 @@ target_include_directories(${PROJECT_NAME}
 set(ARGUMENTS
 	"-s ${PROJECT_SOURCE_DIR}/sandbox/ \
 -d ${PROJECT_BINARY_DIR}/Debug/ \
--p \"Shader Compute\" \
--e \".vs .fs .gs\" \
--w warnings"
-	)
+--vert \".vshader .vs\" \
+--frag \".fshader .fs\" \
+--geom \".gshader .gs\" \
+--comp \".cshader .cs\" 
+
+#-e \".vs .fs .gs\" \
+#-w warnings"
+	) 
 	
 set_target_properties(${PROJECT_NAME}
 	PROPERTIES

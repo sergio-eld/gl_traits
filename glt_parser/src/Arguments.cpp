@@ -221,7 +221,6 @@ std::optional<rIArgumentOld> IArgumentOld::Find(const std::string& tag)
 
 #include <map>
 
-#include "IDataType.h"
 
 class PathArgument : public IArgument
 {
@@ -257,62 +256,12 @@ public:
 
 };
 
-class ArgShaderExtensions : public IArgument
-{
-	ShaderFileInfo::ShaderType type_;
-	std::set<std::string_view> extensions_;
 
-	static inline std::regex extPat{ R"((.\w+)+)" };
-
-public:
-
-	ArgShaderExtensions(const char *tag,
-		const char *name,
-		const char *descr, ShaderFileInfo::ShaderType type, bool validByDefault = false)
-		: IArgument(tag, name, validByDefault),
-		type_(type)
-	{
-		IArgument::SetDescription(descr);
-	}
-
-	virtual bool SetValue(std::string_view s) override
-	{
-		extensions_.clear();
-
-		static std::match_results<std::string_view::const_iterator> sm;
-
-		if (s.empty() || 
-			!std::regex_match(s.cbegin(), s.cend(), sm, extPat))
-		{
-			valid_ = false;
-			return IsValid();
-		}
-
-		auto iter = std::next(sm.cbegin());
-
-		while (iter != sm.cend())
-			extensions_.emplace(iter->str());
-
-		valid_ = true;
-		return IsValid();
-	}
-
-	std::pair<ShaderFileInfo::ShaderType,
-		const std::set<std::string_view>&> SpecValue() const
-	{
-		return std::pair<ShaderFileInfo::ShaderType,
-			const std::set<std::string_view>&>(type_, extensions_);
-	}
-
-	std::any SpecificValue() const
-	{
-		return SpecValue();
-	}
-};
+#include "ArgShaderExtensions.h"
 
 /// Set arguments
 
-bool argsset = ComLineParser::parser->SetArguments(
+bool argsset = ComLineParser::InitAndSetArgs(
 	std::make_unique<PathArgument>("-s", "Source Directory", descr_source_dir),
 	std::make_unique<PathArgument>("-d", "Output Directory", descr_outout_dir),
 	std::make_unique<ArgShaderExtensions>("--vert", "Vertex Shader extensions", 

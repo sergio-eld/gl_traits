@@ -801,6 +801,46 @@ namespace glt
     };
 
 
+    class Buffer_base
+    {
+    protected:
+        HandleBuffer handle_;
+
+        Buffer_base(HandleBuffer&& handle)
+            : handle_(std::move(handle))
+        {
+            assert(handle_ && "Invalid Handle!");
+        }
+
+        Buffer_base()
+            : handle_(Allocator::Allocate(BufferTarget()))
+        {
+            assert(false && "Buffer_base default constructor called!");
+        }
+
+    };
+
+    // buffer attribute must know its offset (depends on its position via buffer)
+    // buffer attribute must provide its stride
+    // Attrib may be compound
+    template <size_t indx, class Attrib, bool fixed_size = false>
+    class Buffer_attrib : protected virtual Buffer_base
+    {
+        size_t inst_allocated_ = 0;
+
+    protected:
+        constexpr Buffer_attrib()
+        {}
+
+        void SetAllocatedInst(size_t sz)
+        {
+            inst_allocated_ = sz;
+        }
+
+
+
+    };
+
     /*
     This class is used to Set VertexAttributePointer.
     To set properties of a particular vertex attribute, one must fetch

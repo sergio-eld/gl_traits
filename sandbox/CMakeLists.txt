@@ -75,7 +75,8 @@ add_custom_command(TARGET gl_sandbox POST_BUILD
 	COMMAND $<TARGET_FILE:glt_parser> # ${GLT_GENERATOR} 
 		-s ${CMAKE_CURRENT_SOURCE_DIR}/shaders 
 		-d ${CMAKE_CURRENT_BINARY_DIR}/include
-		-p Shader # dummy value
-		-e ".vs .fs .gs"
-		-w warnings
+		--vert ".vs .vshader"
+		--frag ".fs .fshader"
+		--geom ".gs .gshader"
+		--comp ".cs .cshader"
 	)	

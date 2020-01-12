@@ -89,7 +89,7 @@ namespace glt
 	{};
 
 	template <size_t S>
-	using tag_s = tag_v<S>;
+    struct tag_s {};
 
 	template <const char* c>
 	using tag_c = tag_v<c>;

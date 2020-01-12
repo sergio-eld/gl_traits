@@ -60,7 +60,7 @@ void IArgument::SetValiator(std::function<bool(std::string_view)>&& validator)
 
 bool IArgument::SetValue(std::string_view value)
 {
-	value_ = value_;
+	value_ = value;
 	validator_ ? valid_ = validator_(value_) : valid_ = true;
 	return IsValid();
 }
@@ -79,7 +79,56 @@ void ComLineParser::Parce(int argc, const char** argv)
 {
 	std::vector<std::string_view> cl_args_{ argv, std::next(argv, argc) };
 
+    // new impl
 
+    if (cl_args_.size() < 2)
+        return;
+
+    std::vector<std::string_view>::const_iterator iter = cl_args_.cbegin();
+
+    while (++iter != cl_args_.cend())
+    {
+        if (!IsArgName(*iter))
+        {
+            std::cerr << "Invalid token: argument name expected. Received: \"" <<
+                *iter << "\"" << std::endl;
+            success_ = false;
+            return;
+        }
+
+        std::optional<RefIArgument> rArg = GetArgument(*iter);
+
+        if (!rArg.has_value())
+        {
+            std::cerr << "Argument tag not recognized: " << *iter << std::endl;
+            success_ = false;
+            return;
+        }
+
+        IArgument &arg = *rArg;
+
+        if (++iter == cl_args_.cend())
+        {
+            std::cerr << "Value expected for tag " << *iter << std::endl;
+            success_ = false;
+            return;
+        }
+
+        if (!arg.SetValue(*iter))
+        {
+            std::cerr << "Invalid value for argument: " << arg.Name() << ":[" <<
+                arg.Tag() << "]" << std::endl;
+            success_ = false;
+            return;
+        }
+    }
+
+    success_ = true;
+
+    ///////////
+
+
+    /*
 	fsys::path exePath = cl_args_[0];
 
 	auto def_order_iter = IArgumentOld::defaultArgs.begin();
@@ -96,10 +145,6 @@ void ComLineParser::Parce(int argc, const char** argv)
 	while (clArg != cl_args_.cend() &&
 		def_order_iter != IArgumentOld::defaultArgs.cend())
 	{
-		/* // invalid value is not a reason to stop parsing
-		if ((!IsArgName(*clArg) || *clArg != (*def_order_iter)->Name())  &&
-			!(*def_order_iter++)->SetValue(*clArg))
-			*/
 
 		clArg_fail = clArg;
 
@@ -116,37 +161,23 @@ void ComLineParser::Parce(int argc, const char** argv)
 
 	if (clArg == cl_args_.cend())
 		return;
-
-	/*
-	std::vector<decltype(clArg_fail)> unmatched;
-
-	// TODO: proceed matching, clArg_fail is Named at this point
-	IArgumentOld *found = IArgumentOld::Find((clArg_fail++)->data());
-
-	while (clArg_fail != cl_args_.cend())
-	{
+        */
 
 
-		if (IsArgName(*clArg_fail) &&
-			!(found = IArgumentOld::Find(std::string(*clArg_fail))))
-		{
-			unmatched.push_back(clArg_fail);
-			unmatched
-		}
-	}
-	*/
 }
 
 bool ComLineParser::Success() const
 {
+    return success_;
 	// TODO: check warning levels ??
 
+    /*
 	constexpr auto fn = [](bool init, const std::unique_ptr<IArgumentOld>& arg)
 	{
 		return init && arg->IsValid();
 	};
 	return std::accumulate(IArgumentOld::defaultArgs.cbegin(),
-		IArgumentOld::defaultArgs.cend(), true, fn);
+		IArgumentOld::defaultArgs.cend(), true, fn);*/
 }
 
 bool ComLineParser::operator()(int argc, const char** argv)
@@ -165,6 +196,26 @@ bool ComLineParser::EmptyArgs() const
     return true;
 }
 */
+
+std::optional<RefIArgument> ComLineParser::GetArgument(const char * tag) const
+{
+    auto found = FindByTag(tag);
+
+    if (found == arguments_.cend())
+        return std::nullopt;
+
+    return **found;
+}
+
+std::optional<RefIArgument> ComLineParser::GetArgument(std::string_view tag) const
+{
+    auto found = FindByTag(tag);
+
+    if (found == arguments_.cend())
+        return std::nullopt;
+
+    return **found;
+}
 
 
 void ComLineParser::PrintUsage() const
@@ -225,5 +276,15 @@ void ComLineParser::SetDefaultOrder(const std::vector<std::string_view>& order)
 
 bool ComLineParser::IsArgName(std::string_view val)
 {
+    static std::regex regArgName_{ R"(-{1,2}\D+)" };
+
     return std::regex_match(val.begin(), val.end(), regArgName_);
 }
+
+std::unique_ptr<ComLineParser> ComLineParser::TryInit()
+{
+    return parser ? std::unique_ptr<ComLineParser>(parser.release())
+        : std::make_unique<ComLineParser>();
+}
+
+std::unique_ptr<ComLineParser> ComLineParser::parser{ TryInit() };

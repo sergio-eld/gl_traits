@@ -68,6 +68,8 @@ public:
 
 	virtual bool SetValue(std::string_view value);
 
+    ~IArgument() = default;
+
 protected:
 
 	bool valid_ = false;
@@ -126,7 +128,6 @@ struct IArgumentOld
 
 class ComLineParser
 {
-
 	static bool CompLess(const std::unique_ptr<IArgument>& a1,
 		const std::unique_ptr<IArgument>& a2)
 	{
@@ -137,9 +138,9 @@ class ComLineParser
 		&CompLess>;
 
 	std::set<std::unique_ptr<IArgument>, comparator> arguments_;
+    bool success_ = false;
 
 	//std::vector<std::string_view> cl_args_;
-	inline static std::regex regArgName_{ R"(-\D)" };
 
 	std::vector<RefIArgument> defaultOrder_;
 	
@@ -153,6 +154,9 @@ public:
 	bool Success() const;
 	bool operator()(int argc, const char** argv);
 	
+    std::optional<RefIArgument> GetArgument(const char* tag) const;
+    std::optional<RefIArgument> GetArgument(std::string_view tag) const;
+
 
     //bool EmptyArgs() const;
 
@@ -160,6 +164,8 @@ public:
 	void PrintErrors() const;
 
 	void SetDefaultOrder(const std::vector<std::string_view>& order);
+
+    ~ComLineParser() = default;
 
 private:
 
@@ -184,15 +190,11 @@ private:
 	static bool IsArgName(std::string_view val);
 	// static IArgumentOld* Find(const std::string& name);
 
-	static std::unique_ptr<ComLineParser> TryInit()
-	{
-		return parser ? std::unique_ptr<ComLineParser>(parser.release()) 
-			: std::make_unique<ComLineParser>();
-	}
+    static std::unique_ptr<ComLineParser> TryInit();
 
 public:
 
-	static inline std::unique_ptr<ComLineParser> parser{ TryInit() };
+    static std::unique_ptr<ComLineParser> parser;
 
 	template <typename ... Args>
 	bool SetArguments(std::unique_ptr<Args>&& ... args)
@@ -203,5 +205,14 @@ public:
 		// TODO: check if all arguments have been emplaced
 		return (arguments_.emplace(std::move(args)).second && ...);
 	}
+
+    template <typename ... Args>
+    static bool InitAndSetArgs(std::unique_ptr<Args>&& ... args)
+    {
+        if (!parser)
+            parser = std::make_unique<ComLineParser>();
+
+        return parser->SetArguments(std::move(args)...);
+    }
 
 };

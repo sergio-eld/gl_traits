@@ -196,8 +196,9 @@ void IHeaderGenerator::WriteShaderTypes(std::basic_ostream<char>& file, const IS
 
 	// write even empty sets?
 	file << "using VarsIn_" << namePredicate << " = std::tuple<";
-	for (const Variable& var : var_In)
-		WriteVariableClassName(file, var) << ", ";
+    for (const Variable& var : var_In)
+        WriteVariableClassName(file, var) << ", ";
+
 	size_t pos = file.tellp();
 	file.seekp(pos - 2);
 	file << ">;\n";
@@ -209,4 +210,15 @@ void IHeaderGenerator::WriteShaderTypes(std::basic_ostream<char>& file, const IS
 	pos = file.tellp();
 	file.seekp(pos - 2);
 	file << ">;\n";
+
+    // write VAO
+    if (sf.ShaderType() == ShaderFileInfo::shader_vertex)
+    {
+        file << "using VAO_" << namePredicate << " = glt::VAO<";
+        for (const Variable& var : var_In)
+            WriteVariableClassName(file, var) << ", ";
+        pos = file.tellp();
+        file.seekp(pos - 2);
+        file << ">;\n";
+    }
 }

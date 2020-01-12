@@ -55,7 +55,53 @@ int main(int argc, const char *argv[])
     glt::identical_sets_v<std::tuple<>, std::tuple<>>;
 
 	//glt::Shader<glt::ShaderTarget::vertex> vertexShader{ vertexSource };
-    Shader_vshader vertexShader{ vertexSource };
+    //Shader_vshader vertexShader{ vertexSource };
+
+    class VAO_test : //  glt::VAO_base,
+        glt::VAO_attrib<0, glm::vec3>
+    {
+    public:
+        VAO_test(glt::HandleVAO&& handle)
+            : VAO_base(std::move(handle))
+        {}
+
+        using glt::VAO_attrib<0, glm::vec3>::EnablePointer;
+        using glt::VAO_attrib<0, glm::vec3>::AttributePointer;
+
+    };
+
+    class VAO_test2 : // glt::VAO_base,
+        glt::VAO_attrib<0, aPos_vec3>
+    {
+    public:
+        VAO_test2(glt::HandleVAO&& handle)
+            : VAO_base(std::move(handle))
+        {}
+
+        using glt::VAO_attrib<0, aPos_vec3>::EnablePointer;
+        using glt::VAO_attrib<0, aPos_vec3>::AttributePointer;
+
+    };
+
+    VAO_test vt{ glt::Allocator::Allocate(glt::VAOTarget()) };
+    VAO_test2 vt2{ glt::Allocator::Allocate(glt::VAOTarget()) };
+
+
+    VAO_vshader vs{};
+
+    vs.EnablePointer(glt::tag_s<0>());
+
+    vs.EnablePointer(1);
+
+    vt.EnablePointer(glt::tag_s<0>());
+    vt.AttributePointer(glt::tag_s<0>(), glt::VertexAttrib<glm::vec3>(0));
+    //vt.EnablePointer(glt::tag_t<glm::vec3>());
+    vt2.EnablePointer(glt::tag_s<0>());
+    vt2.EnablePointer(glt::tag_t<aPos_vec3>());
+    vt2.AttributePointer(glt::tag_s<0>(), glt::VertexAttrib<glm::vec3>(0));
+    vt2.AttributePointer(glt::VertexAttrib<aPos_vec3>(0));
+
+
 
 	return 0;
 }

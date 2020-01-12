@@ -10,11 +10,15 @@
 #include "SourceFile.h"
 #include "IHeaderGenerator.h"
 
+IArgument& AssertArg(std::optional<RefIArgument>&& rarg)
+{
+    assert(rarg.has_value() && "Ergument is missing!");
+    return *rarg;
+}
 
 int main(int argc, const char** argv)
-{
+{   
 	ComLineParser& parser = *ComLineParser::parser;
-
 
 	if (!parser(argc, argv))
 	{
@@ -23,68 +27,29 @@ int main(int argc, const char** argv)
 		return -1;
 	}
 
-	ComLineParser cl_parser{ argc, argv };
-
-	/*
-    if (cl_parser.EmptyArgs())
-    {
-        cl_parser.PrintUsage();
-        return -1;
-    }
-
-	if (!cl_parser.Success())
-	{
-		cl_parser.PrintErrors();
-        cl_parser.PrintUsage();
-		return -1;
-	}*/
-
-	std::optional<rIArgumentOld> foundArgSourcePath = IArgumentOld::Find("-s"),
-		foundArgOutPath = IArgumentOld::Find("-d"),
-		foundArgNamePred = IArgumentOld::Find("-p"),
-		foundArgExtensions = IArgumentOld::Find("-e");
-
-	assert(foundArgSourcePath.has_value() && "Failed to find Source Path argument!");
-	assert(foundArgOutPath.has_value() && "Failed to find Output Path argument!");
-	assert(foundArgNamePred.has_value() && "Failed to find Name Predicates argument!");
-	assert(foundArgExtensions.has_value() && "Failed to find File extensions argument!");
-
-	IArgumentOld &argSourcePath = *foundArgSourcePath,
-		&argOutPath = *foundArgOutPath,
-		&argNamePred = *foundArgNamePred,
-		&argExtensions = *foundArgExtensions;
-
-	
-	fsys::path sourcePath{ argSourcePath.Value() },
-		outputPath{ argOutPath.Value() };
-
-	if (!fsys::exists(sourcePath))
-	{
-		std::cerr << "Source path does not exist!" << std::endl;
-		return -1;
-	}
-
-	if (!fsys::exists(outputPath))
-	{
-		std::cerr << "Output path does not exist!" << std::endl;
-		return -1;
-	}
-
 	// TODO: all received cl arguments must be valid and accessable by this point!
 
 	FolderScanner fs{};
 
-	std::regex extPat{ R"(.\w+)" };
+    std::vector<std::string> shaderTags{
+        "--vert",
+        "--frag",
+        "--geom",
+        "--comp"
+    };
 
-	const std::string& args = argExtensions.Value();
+    for (const std::string& shTag : shaderTags)
+    {
+        std::pair<ShaderFileInfo::ShaderType, const std::set<std::string_view>&>
+            extensions = AssertArg(parser.GetArgument(shTag));
 
-	std::sregex_iterator start{ args.cbegin(), args.cend(), extPat },
-		end{};
+        for (std::string_view ext : extensions.second)
+            fs.SetExtension(extensions.first, ext);
+    }
 
-	auto extIter = ShaderFileInfo::list_types.cbegin();
 
-	while (start != end)
-		fs.SetExtension(*extIter++, (start++)->str());
+    fsys::path sourcePath = AssertArg(parser.GetArgument("-s")),
+        outputPath = AssertArg(parser.GetArgument("-d"));
 
 	try
 	{

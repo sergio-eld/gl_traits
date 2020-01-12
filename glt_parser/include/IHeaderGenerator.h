@@ -53,6 +53,11 @@ private:
 	static void WriteShaderTypes(std::basic_ostream<char>&, const ISourceFile&, 
 		std::string_view namePredicate = std::string_view());
 
+    /*
+    static std::basic_ostream<char>& WriteVAO(std::basic_ostream<char>&,
+        const std::vector<CRefVariable>& vars_in, const ISourceFile&,
+        std::string_view namePredicate);*/
+
     static void WriteGeneratedShaderHeader();
 
 };
