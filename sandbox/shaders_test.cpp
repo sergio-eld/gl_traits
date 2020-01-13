@@ -52,56 +52,27 @@ int main(int argc, const char *argv[])
 		return -1;
 	}
 
-    glt::identical_sets_v<std::tuple<>, std::tuple<>>;
-
-	//glt::Shader<glt::ShaderTarget::vertex> vertexShader{ vertexSource };
-    //Shader_vshader vertexShader{ vertexSource };
-
-    class VAO_test : //  glt::VAO_base,
-        glt::VAO_attrib<0, glm::vec3>
-    {
-    public:
-        VAO_test(glt::HandleVAO&& handle)
-            : VAO_base(std::move(handle))
-        {}
-
-        using glt::VAO_attrib<0, glm::vec3>::EnablePointer;
-        using glt::VAO_attrib<0, glm::vec3>::AttributePointer;
-
-    };
-
-    class VAO_test2 : // glt::VAO_base,
-        glt::VAO_attrib<0, aPos_vec3>
-    {
-    public:
-        VAO_test2(glt::HandleVAO&& handle)
-            : VAO_base(std::move(handle))
-        {}
-
-        using glt::VAO_attrib<0, aPos_vec3>::EnablePointer;
-        using glt::VAO_attrib<0, aPos_vec3>::AttributePointer;
-
-    };
-
-    VAO_test vt{ glt::Allocator::Allocate(glt::VAOTarget()) };
-    VAO_test2 vt2{ glt::Allocator::Allocate(glt::VAOTarget()) };
-
+	glt::identical_sets_v<std::tuple<>, std::tuple<>>;
 
     VAO_vshader vs{};
 
-    vs.EnablePointer(glt::tag_s<0>());
+    //vs.EnablePointer(glt::tag_s<0>());
 
+	vs.Bind();
     vs.EnablePointer(1);
 
-    vt.EnablePointer(glt::tag_s<0>());
-    vt.AttributePointer(glt::tag_s<0>(), glt::VertexAttrib<glm::vec3>(0));
-    //vt.EnablePointer(glt::tag_t<glm::vec3>());
-    vt2.EnablePointer(glt::tag_s<0>());
-    vt2.EnablePointer(glt::tag_t<aPos_vec3>());
-    vt2.AttributePointer(glt::tag_s<0>(), glt::VertexAttrib<glm::vec3>(0));
-    vt2.AttributePointer(glt::VertexAttrib<aPos_vec3>(0));
+	static_assert(glt::FetchedAttrib<glm::vec3>::size == glt::FetchedAttrib<aPos_vec3>::size);
+	static_assert(glt::FetchedAttrib<glm::vec3>::glType == glt::FetchedAttrib<aPos_vec3>::glType);
 
 
+	constexpr glt::FetchedAttrib<glm::vec3> v3{};
+	constexpr glt::FetchedAttrib<aPos_vec3> v3pos{};
+
+	constexpr  glt::FetchedAttrib<glm::vec3> v31{ glt::FetchedAttrib<aPos_vec3>()};
+	constexpr  glt::FetchedAttrib<aPos_vec3> v31pos{ glt::FetchedAttrib<glm::vec3>() };
+
+	glt::Buffer2<glm::vec3, glm::vec2, float> buf;
+	buf.AllocateMemory(1, 2, 3);
 
 	return 0;
 }

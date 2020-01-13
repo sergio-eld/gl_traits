@@ -30,6 +30,18 @@ find_package(glt_parser REQUIRED)
 message(STATUS "glt parser found at ${gl_traits_FOUND}")
 message(STATUS "ParserAlgorithmPublic found at ${ParseAlgorithmPublic_FOUND}")
 
+add_custom_target(build_glt_parser
+	COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/glt_parser
+	COMMAND ${CMAKE_COMMAND} -G ${CMAKE_GENERATOR}
+					-S ${PROJECT_SOURCE_DIR}/glt_parser -B ${PROJECT_BINARY_DIR}/glt_parser/build
+					-A x64 
+					-DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/glt_parser
+				
+	COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config Debug -- /nologo /verbosity:minimal
+	COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config Release -- /nologo /verbosity:minimal
+	COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config RelWithDebInfo -- /nologo /verbosity:minimal
+	COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config MinSizeRel -- /nologo /verbosity:minimal
+)
 
 # TODO: check if glad was generated with EXPORT
 find_package(glad REQUIRED)
@@ -66,6 +78,7 @@ add_library(${PROJECT_NAME}
 
 		src/gl_traits.cpp
 	)
+	
 	
 target_link_libraries(${PROJECT_NAME}
 	PUBLIC

@@ -820,26 +820,108 @@ namespace glt
 
     };
 
+
+	// A - is a raw glsl type or named glsl type (wrapped)
+	template <typename A>
+	struct FetchedAttrib
+	{
+		static_assert(!is_compound_attr_v<A>, "Compound attributes are not allowed!");
+
+		constexpr static GLint size = sizeof(variable_traits_type<A>);
+		constexpr static GLenum glType = (GLenum)c_to_gl_v<variable_traits_type<A>>;
+
+		// stride only depends on neighbor attributes with compound allignment
+		GLsizei stride;
+		std::ptrdiff_t offset;
+
+		constexpr FetchedAttrib(GLsizei stride = 0, std::ptrdiff_t offset = 0)
+			: stride(stride),
+			offset(offset)
+		{}
+
+		template <typename E = std::enable_if_t<std::is_same_v<
+			variable_traits_type<A>, variable_traits_type<E>>>>
+		constexpr FetchedAttrib(FetchedAttrib<E>&& attrib)
+			: stride(attrib.stride),
+			offset(attrib.offset)
+		{}
+	};
+
     // buffer attribute must know its offset (depends on its position via buffer)
     // buffer attribute must provide its stride
+	// SubData
+	// MapBufferRange
     // Attrib may be compound
-    template <size_t indx, class Attrib, bool fixed_size = false>
+	// Case for non-compound
+    template <size_t indx, class A, bool compound = is_compound_attr_v<A>>
     class Buffer_attrib : protected virtual Buffer_base
     {
-        size_t inst_allocated_ = 0;
+		// in bytes
+        const std::ptrdiff_t& offset_;
 
     protected:
-        constexpr Buffer_attrib()
+        Buffer_attrib(const std::ptrdiff_t& offset)
+			: offset_(offset)
         {}
 
-        void SetAllocatedInst(size_t sz)
-        {
-            inst_allocated_ = sz;
-        }
+	public:
 
+		constexpr static GLsizei stride = 0;
 
-
+		constexpr FetchedAttrib<variable_traits_type<A>> Fetch(tag_s<indx>) const
+		{
+			return offset_;
+		}
     };
+
+	template <class tupleAttribs, class =
+		decltype(std::make_index_sequence<std::tuple_size_v<tupleAttribs>>())>
+		class Buffer_packed;
+
+	template <class ... Attribs, size_t ... indx>
+	class Buffer_packed<std::tuple<Attribs...>, std::index_sequence<indx...>> :
+		Buffer_attrib<indx, Attribs> ...
+	{
+		// first offset must be zero!!!
+		std::array<std::ptrdiff_t, sizeof...(Attribs)> offsets_{0};
+
+		template <size_t i>
+		constexpr static size_t get_attrib_size()
+		{
+			// TODO: compound case
+
+			return sizeof(std::tuple_element_t<i, std::tuple<Attribs...>>);
+		}
+
+		template <size_t i>
+		constexpr void assign(size_t inst)
+		{
+			constexpr size_t type_s = get_attrib_size<i>();
+			if constexpr (i)
+				offsets_[i] = inst * type_s + offsets_[i - 1];
+			else
+				offsets_[i] = inst * type_s;
+		}
+
+	public:
+		Buffer_packed(HandleBuffer&& handle = Allocator::Allocate(BufferTarget()))
+			: Buffer_base(std::move(handle)),
+			Buffer_attrib<indx, Attribs>(offsets_[indx])...
+		{}
+
+		void AllocateMemory(convert_to<size_t, Attribs> ... instances)
+		{
+			size_t total_sz = ((sizeof(Attribs) * instances) + ...);
+
+			(assign<indx>(instances),...);
+
+		}
+
+	};
+
+	template <class ... Attribs>
+	using Buffer2 = Buffer_packed<std::tuple<Attribs...>>;
+
 
     /*
     This class is used to Set VertexAttributePointer.

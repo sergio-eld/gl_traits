@@ -26,11 +26,10 @@ struct Layout2
 };
 
 
+
 int main()
 {
     
-
-
     using LayoutTuple = glt::compound<char, char, float, glm::vec2, char, char, glm::vec3>;
     using LayoutTuple1 = glt::compound<char, glm::vec3, char>;
 
@@ -79,6 +78,11 @@ int main()
     static_assert(glt::is_equivalent_v<LayoutTuple, LayoutTuple>);  
     static_assert(glt::is_equivalent_v<Layout1, Layout2, LayoutTuple1>);
     static_assert(!glt::is_equivalent_v<Layout, Layout2, LayoutTuple1>);
+
+
+	static_assert(glt::FetchedAttrib<glm::vec3>::size == sizeof(glm::vec3));
+
+	glt::FetchedAttrib<glm::vec3> a{ 2, 13 };
 
     return 0;
 }

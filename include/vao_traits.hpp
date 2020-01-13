@@ -29,6 +29,8 @@ namespace glt
 
 	};
 
+
+
     class VAO_base
     {
     protected:
@@ -47,21 +49,21 @@ namespace glt
         }
     };
 
+
     // has_name_v = false
     // Attrib is not compound!
     template <size_t indx, class Attrib, bool = has_name_v<Attrib>>
     class VAO_attrib : protected virtual VAO_base
     {
     public:
+		
         void EnablePointer(tag_s<indx>) const
         {
-            ActiveVAO::IsBound(handle_);
-
             assert(ActiveVAO::IsBound(handle_));
             glEnableVertexAttribArray((GLuint)indx);
         }
 
-        void AttributePointer(tag_s<indx>, VertexAttrib<variable_traits_type<Attrib>>&& attrib, bool normalize = false)
+        void AttributePointer(tag_s<indx>, VertexAttrib<Attrib>&& attrib, bool normalize = false)
         {
             assert(ActiveVAO::IsBound(handle_) &&
                 "Setting Vertex Attribute for non-active VAO");
@@ -81,21 +83,16 @@ namespace glt
 
     protected:
         VAO_attrib() = default;
-
-        // dummy type
-        constexpr static auto GetPtrEnablePointer(tag_s<indx>)
-        {
-            return reinterpret_cast<void(VAO_attrib<0, void, false>::*)(tag_s<0>)>(&EnablePointer);
-        }
     };
 
     template <size_t indx, class Attrib>
     class VAO_attrib<indx, Attrib, true> : protected virtual VAO_base,
-        VAO_attrib<indx, Attrib, false> 
+        public VAO_attrib<indx, variable_traits_type<Attrib>>
     {
     public:
-        using VAO_attrib<indx, Attrib, false>::EnablePointer;
-        using VAO_attrib<indx, Attrib, false>::AttributePointer;
+		
+        using VAO_attrib<indx, variable_traits_type<Attrib>>::EnablePointer;
+        using VAO_attrib<indx, variable_traits_type<Attrib>>::AttributePointer;
 
         void EnablePointer(tag_t<Attrib>)
         {
@@ -107,18 +104,8 @@ namespace glt
                 reinterpret_cast<VertexAttrib<variable_traits_type<Attrib>>&&>(std::move(attrib)), normalize);
         }
 
-
     protected:
         VAO_attrib() = default;
-       // using VAO_attrib<indx, Attrib, false>::GetPtrEnablePointer;
-
-
-
-        constexpr static auto GetPtrEnablePointer(tag_s<indx>)
-        {
-           // constexpr void(VAO_attrib::*ptr)(tag_s<indx>) = &EnablePointer;
-            return reinterpret_cast<void(VAO_attrib<0, void, false>::*)(tag_s<0>)>(&VAO_attrib<indx, Attrib, false>::EnablePointer);
-        }
     };
 
  
@@ -169,11 +156,17 @@ namespace glt
 
 		What about Normalized parameter?????
 		*/
-        using DummyPtrEnablePointer = void(VAO_attrib<0, void, false>::*)(tag_s<0>);
 
-        using VAO_attr<indx>::GetPtrEnablePointer...;
+		// for run-time wrapper function
+		template <size_t i>
+		using PtrEnable = void(VAO_packed::*)(tag_s<i>) const;
 
+		template <size_t i>
+		constexpr static PtrEnable<i> enable_ptr = &VAO_packed::EnablePointer;
 
+		template <size_t i>
+		constexpr static PtrEnable<0> enable_ptr_0 =
+			reinterpret_cast<PtrEnable<0>>(enable_ptr<i>);
 
 	public:
         VAO_packed(HandleVAO&& handle = Allocator::Allocate(VAOTarget()))
@@ -182,27 +175,15 @@ namespace glt
 
         using VAO_attr<indx>::EnablePointer...;
         using VAO_attr<indx>::AttributePointer...;
-
-        template <size_t i>
-        using D = void(VAO_packed<std::tuple<Attribs...>, std::index_sequence<indx...>>::*)(tag_s<i>);
-
-        template <size_t i, auto p>
-        struct p_enable
-        {};
-
-
-
-        // TODO: run-time pointer activation
-        void EnablePointer(size_t indx)
+		
+        // run-time pointer activation
+        void EnablePointer(size_t i)
         {
+			constexpr static PtrEnable<0> enableTable[]{
+				enable_ptr_0<indx>...
+			};
 
-            using ThisPtr = void(VAO_packed::*)(tag_s<0>);
-
-           // p_func_enable<0, &VAO_attr<0>::EnablePointer>::pFunc;
-
-            const auto& table = enableTable;
-            ThisPtr ptr = reinterpret_cast<ThisPtr>(enableTable[indx]);
-            (this->*ptr)(tag_s<0>());
+			(this->*enableTable[i])(tag_s<0>());
         }
 
 
@@ -223,7 +204,7 @@ namespace glt
 
     private:
 
-        constexpr static DummyPtrEnablePointer enableTable[]{ (GetPtrEnablePointer(tag_s<indx>())) ...};
+//        constexpr static DummyPtrEnablePointer enableTable[]{ (GetPtrEnablePointer(tag_s<indx>())) ...};
 	};
 
     template <class ... Attribs>
