@@ -35,12 +35,12 @@ int main()
 
 	// first array is garbage
 	// compound = vertex with members in reversed order
-	glt::Buffer<glm::vec2, glt::compound<glm::vec2, glm::vec3>> vbo{};
+	glt::BufferOld<glm::vec2, glt::compound<glm::vec2, glm::vec3>> vbo{};
 
 
 	vbo.Bind(glt::BufferTarget::array);
 
-	vbo.AllocateMemory(texCoords.size(), vertices2.size(), glt::BufferUse::static_draw);
+	vbo.AllocateMemory(texCoords.size(), vertices2.size(), glt::BufUsage::static_draw);
 	vbo.BufferData<1>(vertices2.data(), vertices2.size());
 
 	vbo.BufferData<0>(texCoords.data(), texCoords.size());

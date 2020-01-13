@@ -59,6 +59,7 @@ TODO: analize possible VertexArrayPointer assignment routines
 
 #include "basic_types.hpp"
 
+#include "buffer_traits.hpp"
 #include "shader_traits.hpp"
 #include "program_traits.hpp"
 

@@ -4,6 +4,20 @@ using namespace glt;
 
 template class MapStatus_<BufferTargetList>;
 
+template <class>
+struct init_map;
+
+template <BufferTarget ... targets>
+struct init_map<std::integer_sequence<BufferTarget, targets...>>
+{
+    operator std::map<BufferTarget, Buffer_base*>() const
+    {
+        return { {targets, nullptr}... };
+    }
+};
+
+std::map<BufferTarget, Buffer_base*> Buffer_base::targets_{ init_map<BufferTargetList>() };
+
 // 
 
 //const Handle<VAOTarget::vao> *glt_buffers::currentVAO_ = nullptr;

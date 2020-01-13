@@ -19,7 +19,7 @@ namespace glt
 		gl_double = GL_DOUBLE
 	};
 
-	enum class BufferTarget : int
+	enum class BufferTarget : GLenum
 	{
 		none = 0,
 		array = GL_ARRAY_BUFFER,
@@ -134,8 +134,10 @@ namespace glt
 	enum class RenderBufferTarget : int;      // empty
 	enum class SamplerTarget : int;           // empty
 
-	enum class BufferUse : int
+	enum class BufUsage : GLenum
 	{
+        none = 0,
+
 		stream_draw = GL_STREAM_DRAW,
 		stream_read = GL_STREAM_READ,
 		stream_copy = GL_STREAM_COPY,

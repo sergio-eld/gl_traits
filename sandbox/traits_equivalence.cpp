@@ -80,9 +80,5 @@ int main()
     static_assert(!glt::is_equivalent_v<Layout, Layout2, LayoutTuple1>);
 
 
-	static_assert(glt::FetchedAttrib<glm::vec3>::size == sizeof(glm::vec3));
-
-	glt::FetchedAttrib<glm::vec3> a{ 2, 13 };
-
     return 0;
 }

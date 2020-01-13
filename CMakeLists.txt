@@ -66,6 +66,7 @@ add_library(${PROJECT_NAME}
 		
 		#${SHADER_SOURCE_PARSER_HEADER}
 
+		include/buffer_traits.hpp
 		include/shader_traits.hpp
 		include/uniform_traits.hpp
 		include/vao_traits.hpp

@@ -28,13 +28,13 @@ int main()
 
 
 	{
-		Buffer<glm::vec3, glm::vec2> buffer{};
+		BufferOld<glm::vec3, glm::vec2> buffer{};
 
 		std::vector<glm::vec3> cube_positions = glm_cube_positions();
 		std::vector<glm::vec2> cube_tex_coords = glm_cube_texCoords();
 
 		buffer.Bind(tag_v<BufferTarget::array>());
-		buffer.AllocateMemory(cube_positions.size(), cube_tex_coords.size(), BufferUse::static_draw);
+		buffer.AllocateMemory(cube_positions.size(), cube_tex_coords.size(), BufUsage::static_draw);
 		buffer.BufferData<0>(cube_positions.data(), cube_positions.size());
 
 		// testing offset. TODO: move to another unit test
@@ -62,13 +62,13 @@ int main()
 
 	// Loading user-defined vertexes
 	{
-		using CmpdBuffer = Buffer<compound<glm::vec3, glm::vec2>>;
+		using CmpdBuffer = BufferOld<compound<glm::vec3, glm::vec2>>;
 
 		std::vector<vertex> vertices = cube_vertexes();
 
 		CmpdBuffer buffer{};
 		buffer.Bind(tag_v<BufferTarget::array>());
-		buffer.AllocateMemory(vertices.size(), BufferUse::static_draw);
+		buffer.AllocateMemory(vertices.size(), BufUsage::static_draw);
 
 		// testing offset. TODO: move to another unit test
 		if (buffer.GetOffset(tag_s<0>(), tag_s<0>()) != 0 ||

@@ -34,16 +34,16 @@ template <class AttrList,
 template <typename ... Attr, size_t ... indx>
 struct FetchTester<glt::AttrList<Attr...>, std::index_sequence<indx...>>
 {
-    glt::Buffer<Attr...> buffer{};
+    glt::BufferOld<Attr...> buffer{};
     //std::array<size_t, sizeof...(Attr)> sizes;
 
-    FetchTester(glt::convert_to<size_t, Attr> ... sizes, glt::BufferUse use)
+    FetchTester(glt::convert_to<size_t, Attr> ... sizes, glt::BufUsage use)
     {
         buffer.Bind(glt::BufferTarget::array);
         buffer.AllocateMemory(sizes..., use);
     }
 
-    FetchTester(size_t sizes, glt::BufferUse use)
+    FetchTester(size_t sizes, glt::BufUsage use)
     {
         buffer.Bind(glt::BufferTarget::array);
         buffer.AllocateMemory(glt::convert_to<size_t, Attr>(sizes)..., use);
@@ -92,7 +92,7 @@ int main()
     sglfw.MakeContextCurrent(window);
     sglfw.LoadOpenGL();
 
-    FetchTester<attribs> fTester{ 1000, glt::BufferUse::static_draw };
+    FetchTester<attribs> fTester{ 1000, glt::BufUsage::static_draw };
 
     return fTester();
 }

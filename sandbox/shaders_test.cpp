@@ -71,8 +71,35 @@ int main(int argc, const char *argv[])
 	constexpr  glt::FetchedAttrib<glm::vec3> v31{ glt::FetchedAttrib<aPos_vec3>()};
 	constexpr  glt::FetchedAttrib<aPos_vec3> v31pos{ glt::FetchedAttrib<glm::vec3>() };
 
+    static_assert(std::is_same_v<glt::FetchedAttrib<glm::vec3>::ConvType<glm::vec3>,
+        glt::FetchedAttrib<glm::vec3>>);
+    static_assert(std::is_same_v<glt::FetchedAttrib<glm::vec3>::ConvType<aPos_vec3>,
+        glt::FetchedAttrib<aPos_vec3>>);
+
 	glt::Buffer2<glm::vec3, glm::vec2, float> buf;
-	buf.AllocateMemory(1, 2, 3);
+    buf.Bind(glt::BufferTarget::array);
+	buf.AllocateMemory(1, 2, 3, glt::BufUsage::static_draw);
+
+    glt::FetchedAttrib<glm::vec2> attr = buf.Fetch(glt::tag_s<1>());
+
+    glt::Buffer2<glm::vec2, glt::compound<glm::vec3, glm::vec2, float>> bufComp;
+    bufComp.Bind(glt::BufferTarget::array);
+    bufComp.AllocateMemory(16, 24, glt::BufUsage::static_draw);
+
+    static_assert(std::is_same_v<glt::fetch_type<glt::compound<glm::vec3, glm::vec2, float>>, glm::vec3>);
+    static_assert(!std::is_same_v<glt::fetch_type<glt::compound<glm::vec3, glm::vec2, float>>, glm::vec2>);
+
+    glt::FetchedAttrib<glm::vec3> attr2 = bufComp.Fetch(glt::tag_s<1>());
+    glt::FetchedAttrib<aPos_vec3> attr21 = bufComp.Fetch(glt::tag_s<1>());
+
+    static_assert(std::is_constructible_v<glt::FetchedAttrib<glm::vec3>, glt::FetchedAttrib<glm::vec3>>);
+    static_assert(std::is_constructible_v<glt::FetchedAttrib<glm::vec3>, glt::FetchedAttrib<aPos_vec3>>);
+    static_assert(std::is_constructible_v<glt::FetchedAttrib<glm::vec2>, glt::FetchedAttrib<aPos_vec3>>); // false
+
+    //glt::FetchedAttrib<aPos_vec3> attr2{ bufComp.Fetch(glt::tag_s<0>()) };
+
+
+    //glt::FetchedAttrib<glm::vec2> attr = buf
 
 	return 0;
 }

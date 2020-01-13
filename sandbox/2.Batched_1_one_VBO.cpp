@@ -26,9 +26,9 @@ int main()
 	glt::VAO<glm::vec3, glm::vec2> vao{};
 	vao.Bind();
 
-	glt::Buffer<glm::vec3, glm::vec2> vbo{};
+	glt::BufferOld<glm::vec3, glm::vec2> vbo{};
 	vbo.Bind(glt::tag_v<glt::BufferTarget::array>());
-	vbo.AllocateMemory(posCoords.size(), texCoords.size(), glt::BufferUse::static_draw);
+	vbo.AllocateMemory(posCoords.size(), texCoords.size(), glt::BufUsage::static_draw);
 
 	vbo.BufferData(posCoords.data(), posCoords.size());
 	vbo.BufferData<1>(texCoords.data(), texCoords.size());

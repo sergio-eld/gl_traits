@@ -36,16 +36,16 @@ int main()
 	glt::VAO<glm::vec3, glm::vec2> vao{};
 	vao.Bind();
 
-	glt::Buffer<glm::vec3> vboPos{};
+	glt::BufferOld<glm::vec3> vboPos{};
 	vboPos.Bind(glt::tag_v<glt::BufferTarget::array>());
-	vboPos.AllocateMemory(posCoords.size(), glt::BufferUse::static_draw);
+	vboPos.AllocateMemory(posCoords.size(), glt::BufUsage::static_draw);
 	vboPos.BufferData(posCoords.data(), posCoords.size());
 
 	vao.AttributePointer(vboPos.Attribute(glt::tag_s<0>()), glt::tag_s<0>());
 
-	glt::Buffer<glm::vec2> vboTex{};
+	glt::BufferOld<glm::vec2> vboTex{};
 	vboTex.Bind(glt::tag_v<glt::BufferTarget::array>());
-	vboTex.AllocateMemory(texCoords.size(), glt::BufferUse::static_draw);
+	vboTex.AllocateMemory(texCoords.size(), glt::BufUsage::static_draw);
 	vboTex.BufferData(texCoords.data(), texCoords.size());
 
 	vao.AttributePointer(vboTex.Attribute(glt::tag_s<0>()), glt::tag_s<1>());

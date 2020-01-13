@@ -37,18 +37,18 @@ int main()
 	glt::VAO<glm::vec3, glm::vec2> vao{};
 	vao.Bind();
 
-	glt::Buffer<glm::vec2> vboTex{};
-	glt::Buffer<glt::compound<glm::vec2, glm::vec3>> vboVert{};
+	glt::BufferOld<glm::vec2> vboTex{};
+	glt::BufferOld<glt::compound<glm::vec2, glm::vec3>> vboVert{};
 
 	vboTex.Bind(glt::BufferTarget::array);
-	vboTex.AllocateMemory(texCoords.size(), glt::BufferUse::static_draw);
+	vboTex.AllocateMemory(texCoords.size(), glt::BufUsage::static_draw);
 	vboTex.BufferData(texCoords.data(), texCoords.size());
 
 	// bind textures
 	vao.AttributePointer(vboTex.Attribute(glt::tag_s<0>()), glt::tag_s<1>());
 
 	vboVert.Bind(glt::BufferTarget::array);
-	vboVert.AllocateMemory(vertices2.size(), glt::BufferUse::static_draw);
+	vboVert.AllocateMemory(vertices2.size(), glt::BufUsage::static_draw);
 	vboVert.BufferData(vertices2.data(), vertices2.size());
 
 	// bind vertex coords

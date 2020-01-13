@@ -801,126 +801,10 @@ namespace glt
     };
 
 
-    class Buffer_base
-    {
-    protected:
-        HandleBuffer handle_;
-
-        Buffer_base(HandleBuffer&& handle)
-            : handle_(std::move(handle))
-        {
-            assert(handle_ && "Invalid Handle!");
-        }
-
-        Buffer_base()
-            : handle_(Allocator::Allocate(BufferTarget()))
-        {
-            assert(false && "Buffer_base default constructor called!");
-        }
-
-    };
 
 
-	// A - is a raw glsl type or named glsl type (wrapped)
-	template <typename A>
-	struct FetchedAttrib
-	{
-		static_assert(!is_compound_attr_v<A>, "Compound attributes are not allowed!");
 
-		constexpr static GLint size = sizeof(variable_traits_type<A>);
-		constexpr static GLenum glType = (GLenum)c_to_gl_v<variable_traits_type<A>>;
-
-		// stride only depends on neighbor attributes with compound allignment
-		GLsizei stride;
-		std::ptrdiff_t offset;
-
-		constexpr FetchedAttrib(GLsizei stride = 0, std::ptrdiff_t offset = 0)
-			: stride(stride),
-			offset(offset)
-		{}
-
-		template <typename E = std::enable_if_t<std::is_same_v<
-			variable_traits_type<A>, variable_traits_type<E>>>>
-		constexpr FetchedAttrib(FetchedAttrib<E>&& attrib)
-			: stride(attrib.stride),
-			offset(attrib.offset)
-		{}
-	};
-
-    // buffer attribute must know its offset (depends on its position via buffer)
-    // buffer attribute must provide its stride
-	// SubData
-	// MapBufferRange
-    // Attrib may be compound
-	// Case for non-compound
-    template <size_t indx, class A, bool compound = is_compound_attr_v<A>>
-    class Buffer_attrib : protected virtual Buffer_base
-    {
-		// in bytes
-        const std::ptrdiff_t& offset_;
-
-    protected:
-        Buffer_attrib(const std::ptrdiff_t& offset)
-			: offset_(offset)
-        {}
-
-	public:
-
-		constexpr static GLsizei stride = 0;
-
-		constexpr FetchedAttrib<variable_traits_type<A>> Fetch(tag_s<indx>) const
-		{
-			return offset_;
-		}
-    };
-
-	template <class tupleAttribs, class =
-		decltype(std::make_index_sequence<std::tuple_size_v<tupleAttribs>>())>
-		class Buffer_packed;
-
-	template <class ... Attribs, size_t ... indx>
-	class Buffer_packed<std::tuple<Attribs...>, std::index_sequence<indx...>> :
-		Buffer_attrib<indx, Attribs> ...
-	{
-		// first offset must be zero!!!
-		std::array<std::ptrdiff_t, sizeof...(Attribs)> offsets_{0};
-
-		template <size_t i>
-		constexpr static size_t get_attrib_size()
-		{
-			// TODO: compound case
-
-			return sizeof(std::tuple_element_t<i, std::tuple<Attribs...>>);
-		}
-
-		template <size_t i>
-		constexpr void assign(size_t inst)
-		{
-			constexpr size_t type_s = get_attrib_size<i>();
-			if constexpr (i)
-				offsets_[i] = inst * type_s + offsets_[i - 1];
-			else
-				offsets_[i] = inst * type_s;
-		}
-
-	public:
-		Buffer_packed(HandleBuffer&& handle = Allocator::Allocate(BufferTarget()))
-			: Buffer_base(std::move(handle)),
-			Buffer_attrib<indx, Attribs>(offsets_[indx])...
-		{}
-
-		void AllocateMemory(convert_to<size_t, Attribs> ... instances)
-		{
-			size_t total_sz = ((sizeof(Attribs) * instances) + ...);
-
-			(assign<indx>(instances),...);
-
-		}
-
-	};
-
-	template <class ... Attribs>
-	using Buffer2 = Buffer_packed<std::tuple<Attribs...>>;
+	
 
 
     /*
@@ -985,7 +869,7 @@ namespace glt
 
     // TODO: add function to return the offset for nth type
     template <typename ... Attr>
-    class Buffer : public IBindable<BufferTarget>
+    class BufferOld : public IBindable<BufferTarget>
     {
         /*
         static_assert(!std::disjunction_v<is_compound_attr<Attr>...>,
@@ -1003,7 +887,7 @@ namespace glt
 
     public:
 
-        Buffer(Handle<BufferTarget>&& handle = Allocator::Allocate(BufferTarget()))
+        BufferOld(Handle<BufferTarget>&& handle = Allocator::Allocate(BufferTarget()))
             : handle_(std::move(handle))
         {
             if (!handle_)
@@ -1078,7 +962,7 @@ namespace glt
         std::array?
         */
         // TODO: case with named attributes
-        void AllocateMemory(/* convert_to<size_t, First> inst0,*/ convert_to<size_t, Attr> ... instN, BufferUse usage)
+        void AllocateMemory(/* convert_to<size_t, First> inst0,*/ convert_to<size_t, Attr> ... instN, BufUsage usage)
         {
             ValidateBind();
 
@@ -1222,7 +1106,7 @@ namespace glt
             return VertexAttrib<A>(GetOffset(tag_s<indx>(), tag_s<subIndx>()), sizeof(Compound));
         }
 
-        ~Buffer()
+        ~BufferOld()
         {
             // check if is still bound
             if ((bool)last_bound_ && IsBound(last_bound_))
@@ -1246,7 +1130,7 @@ namespace glt
     template <class ... Attrs>
     struct BufferListWrapper<AttrList<Attrs...>>
     {
-        using type = Buffer<Attrs...>;
+        using type = BufferOld<Attrs...>;
     };
 
     template <class AttrList>

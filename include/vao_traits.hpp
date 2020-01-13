@@ -1,6 +1,6 @@
 #pragma once
 
-#include "glslt_traits.hpp"
+#include "buffer_traits.hpp"
 
 namespace glt
 {
@@ -28,8 +28,6 @@ namespace glt
 		}
 
 	};
-
-
 
     class VAO_base
     {
@@ -63,28 +61,24 @@ namespace glt
             glEnableVertexAttribArray((GLuint)indx);
         }
 
-        void AttributePointer(tag_s<indx>, VertexAttrib<Attrib>&& attrib, bool normalize = false)
+        void AttributePointer(tag_s<indx>, FetchedAttrib<Attrib>&& attrib, bool normalize = false)
         {
             assert(ActiveVAO::IsBound(handle_) &&
                 "Setting Vertex Attribute for non-active VAO");
 
-            auto sz = (GLint)vao_attrib_size<Attrib>()();
-            GLenum glType = (GLenum)c_to_gl_v<variable_traits_type<Attrib>>;
-            GLsizei stride = (GLsizei)attrib.Stride();
-            void *voffset = (void*)attrib.Offset();
-
             glVertexAttribPointer((GLuint)indx,
-                sz,
-                glType,
+                FetchedAttrib<Attrib>::size,
+                FetchedAttrib<Attrib>::glType,
                 normalize,
-                stride,
-                voffset);
+                attrib.stride,
+                attrib.offset);
         }
 
     protected:
         VAO_attrib() = default;
     };
 
+    // named attribute
     template <size_t indx, class Attrib>
     class VAO_attrib<indx, Attrib, true> : protected virtual VAO_base,
         public VAO_attrib<indx, variable_traits_type<Attrib>>
@@ -100,8 +94,8 @@ namespace glt
         }
         void AttributePointer(VertexAttrib<Attrib>&& attrib, bool normalize = false)
         {
-            VAO_attrib<indx, Attrib, false>::AttributePointer(tag_s<indx>(), 
-                reinterpret_cast<VertexAttrib<variable_traits_type<Attrib>>&&>(std::move(attrib)), normalize);
+            VAO_attrib<indx, variable_traits_type<Attrib>>::AttributePointer(tag_s<indx>(),
+                std::move(attrib), normalize);
         }
 
     protected:
