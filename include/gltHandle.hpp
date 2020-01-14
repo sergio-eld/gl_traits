@@ -29,6 +29,21 @@ namespace glt
         friend struct AllocatorSpecific<eTargetType>;
         friend class handle_accessor<eTargetType>;
 
+		void DestroyHandle()
+		{
+			// TODO: do i need to check?
+			assert(*ppDeleteFunc && "Pointers to OpenGL deleter functions have not been initialiized!");
+
+			// TODO: Unbind from bound_handle, OpenGL ubinds automaticallu after deleting
+
+			// check function signature for arguments
+			if constexpr (std::is_same_v<void(APIENTRYP *)(GLsizei, const GLuint*), pp_gl_deleter<eTargetType>::value_type>)
+				(*ppDeleteFunc)(1, &handle_);
+			else if constexpr (std::is_same_v<void(APIENTRYP *)(GLuint), pp_gl_deleter<eTargetType>::value_type>)
+				(*ppDeleteFunc)(handle_);
+			else
+				static_assert(false, "Unhandled case!");
+		}
 
     public:
 
@@ -87,18 +102,7 @@ namespace glt
         {
             if (handle_)
             {
-                // TODO: do i need to check?
-                assert(*ppDeleteFunc && "Pointers to OpenGL deleter functions have not been initialiized!");
-
-                // TODO: Unbind from bound_handle, OpenGL ubinds automaticallu after deleting
-
-                // check function signature for arguments
-                if constexpr (std::is_same_v<void(APIENTRYP *)(GLsizei, const GLuint*), pp_gl_deleter<eTargetType>::value_type>)
-                    (*ppDeleteFunc)(1, &handle_);
-                else if constexpr (std::is_same_v<void(APIENTRYP *)(GLuint), pp_gl_deleter<eTargetType>::value_type>)
-                    (*ppDeleteFunc)(handle_);
-                else
-                    static_assert(false, "Unhandled case!");
+				DestroyHandle();
             }
         }
 
@@ -1072,7 +1076,7 @@ namespace glt
 
             if constexpr (indx_compound)
             {
-                static_assert(is_compound_attr_v<AttrType>,
+                static_assert(is_compound_seq_v<AttrType>,
                     "Non-compound elements do not support sub-indexes");
                 static_assert(indx_compound < compound_attr_count<AttrType>(),
                     "Sub-index is out of range!");
@@ -1088,7 +1092,7 @@ namespace glt
         {
             static_assert(indx < num_attribs_, "Index is out of range!");
 
-            if constexpr (is_compound_attr_v<A>)
+            if constexpr (is_compound_seq_v<A>)
                 return VertexAttrib<A>(GetOffset(tag_s<indx>()), sizeof(A));
             else
                 return VertexAttrib<A>(GetOffset(tag_s<indx>()));

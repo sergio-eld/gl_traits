@@ -145,7 +145,7 @@ namespace glt
 	// TODO: add is_compound case for glslt?
 
 	template <class T>
-	constexpr inline bool is_compound_attr_v = is_compound_attr<T>();
+	constexpr inline bool is_compound_seq_v = is_compound_attr<T>();
 
 	/* Get number of attributes within the compound one. 
 	0 (and warning?) if attribute is not compound */

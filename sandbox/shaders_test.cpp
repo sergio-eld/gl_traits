@@ -76,6 +76,15 @@ int main(int argc, const char *argv[])
     static_assert(std::is_same_v<glt::FetchedAttrib<glm::vec3>::ConvType<aPos_vec3>,
         glt::FetchedAttrib<aPos_vec3>>);
 
+	glt::Buffer<glm::vec3> sbuf;
+	sbuf.Bind(glt::BufferTarget::array);
+	glt::Buffer<glm::vec3> sbuf2{ std::move(sbuf) };
+
+	sbuf = std::move(sbuf2);
+
+	sbuf.AllocateMemory(36, glt::BufUsage::static_draw);
+	
+
 	glt::Buffer2<glm::vec3, glm::vec2, float> buf;
     buf.Bind(glt::BufferTarget::array);
 	buf.AllocateMemory(1, 2, 3, glt::BufUsage::static_draw);

@@ -12,6 +12,7 @@ Goals:
 
 Detailed:
 1. gltEnums
+
  - classify OpenGL values into froups
  - provide conversion from c-types to gl types:
  ```
@@ -79,9 +80,15 @@ Some enums are declared only to be used as template parameters and have no defin
 | glCreateShader| glShaderTarget |
 | glCreateProgram| glProgramTarget |
 
-
-2. Current third-perty dependences:
+### Current third-perty dependences:
  - GLAD
  - GLM
- - pod_reflection
- - dh_constexpr lib (using cexpr_generic_map)
+
+
+## Buffer traits
+###Sequence.
+A ***Sequence*** is a strong-typed array of data contained within an OpenGL ***Buffer***. An Element of a ***Sequence*** may consist of a single-type variable (*Batched* or *Tightly-packed* Sequence), or of a multi-type struct-like variable (*Compound* Sequence).
+
+
+###Buffer
+Each ***Buffer*** stores one or several sequences. 
