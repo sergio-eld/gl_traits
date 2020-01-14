@@ -61,14 +61,14 @@ namespace glt
             glEnableVertexAttribArray((GLuint)indx);
         }
 
-        void AttributePointer(tag_s<indx>, FetchedAttrib<Attrib>&& attrib, bool normalize = false)
+        void AttributePointer(tag_s<indx>, AttribPtr<Attrib>&& attrib, bool normalize = false)
         {
             assert(ActiveVAO::IsBound(handle_) &&
                 "Setting Vertex Attribute for non-active VAO");
 
             glVertexAttribPointer((GLuint)indx,
-                FetchedAttrib<Attrib>::size,
-                FetchedAttrib<Attrib>::glType,
+                AttribPtr<Attrib>::size,
+                AttribPtr<Attrib>::glType,
                 normalize,
                 attrib.stride,
                 attrib.offset);

@@ -61,54 +61,42 @@ int main(int argc, const char *argv[])
 	vs.Bind();
     vs.EnablePointer(1);
 
-	static_assert(glt::FetchedAttrib<glm::vec3>::size == glt::FetchedAttrib<aPos_vec3>::size);
-	static_assert(glt::FetchedAttrib<glm::vec3>::glType == glt::FetchedAttrib<aPos_vec3>::glType);
+	static_assert(glt::AttribPtr<glm::vec3>::size == glt::AttribPtr<aPos_vec3>::size);
+	static_assert(glt::AttribPtr<glm::vec3>::glType == glt::AttribPtr<aPos_vec3>::glType);
 
+    /*
+	constexpr glt::AttribPtr<glm::vec3> v3{};
+	constexpr glt::AttribPtr<aPos_vec3> v3pos{};
 
-	constexpr glt::FetchedAttrib<glm::vec3> v3{};
-	constexpr glt::FetchedAttrib<aPos_vec3> v3pos{};
+	constexpr  glt::AttribPtr<glm::vec3> v31{ glt::AttribPtr<aPos_vec3>()};
+	constexpr  glt::AttribPtr<aPos_vec3> v31pos{ glt::AttribPtr<glm::vec3>() };
+    */
 
-	constexpr  glt::FetchedAttrib<glm::vec3> v31{ glt::FetchedAttrib<aPos_vec3>()};
-	constexpr  glt::FetchedAttrib<aPos_vec3> v31pos{ glt::FetchedAttrib<glm::vec3>() };
+    static_assert(std::is_same_v<glt::AttribPtr<glm::vec3>::ConvType<glm::vec3>,
+        glt::AttribPtr<glm::vec3>>);
+    static_assert(std::is_same_v<glt::AttribPtr<glm::vec3>::ConvType<aPos_vec3>,
+        glt::AttribPtr<aPos_vec3>>);
 
-    static_assert(std::is_same_v<glt::FetchedAttrib<glm::vec3>::ConvType<glm::vec3>,
-        glt::FetchedAttrib<glm::vec3>>);
-    static_assert(std::is_same_v<glt::FetchedAttrib<glm::vec3>::ConvType<aPos_vec3>,
-        glt::FetchedAttrib<aPos_vec3>>);
-
-	glt::Buffer<glm::vec3> sbuf;
+	glt::BufferSingle<glm::vec3> sbuf;
 	sbuf.Bind(glt::BufferTarget::array);
-	glt::Buffer<glm::vec3> sbuf2{ std::move(sbuf) };
+    sbuf.AllocateMemory(36, glt::BufUsage::static_draw);
 
-	sbuf = std::move(sbuf2);
+    const glt::Sequence<glm::vec3>& cseqVec3 = sbuf;
+    glt::Sequence<glm::vec3>& seqVec3 = sbuf;
+    glt::AttribPtr<glm::vec3> attr = seqVec3;
 
-	sbuf.AllocateMemory(36, glt::BufUsage::static_draw);
-	
+    glt::BufferSingle<glt::compound<glm::vec3, glm::vec2, float>> sbufCmp;
+   // sbufCmp.Bind(glt::BufferTarget::array);
+    sbufCmp.AllocateMemory(36, glt::BufUsage::static_draw);
 
-	glt::Buffer2<glm::vec3, glm::vec2, float> buf;
-    buf.Bind(glt::BufferTarget::array);
-	buf.AllocateMemory(1, 2, 3, glt::BufUsage::static_draw);
-
-    glt::FetchedAttrib<glm::vec2> attr = buf.Fetch(glt::tag_s<1>());
-
-    glt::Buffer2<glm::vec2, glt::compound<glm::vec3, glm::vec2, float>> bufComp;
-    bufComp.Bind(glt::BufferTarget::array);
-    bufComp.AllocateMemory(16, 24, glt::BufUsage::static_draw);
-
-    static_assert(std::is_same_v<glt::fetch_type<glt::compound<glm::vec3, glm::vec2, float>>, glm::vec3>);
-    static_assert(!std::is_same_v<glt::fetch_type<glt::compound<glm::vec3, glm::vec2, float>>, glm::vec2>);
-
-    glt::FetchedAttrib<glm::vec3> attr2 = bufComp.Fetch(glt::tag_s<1>());
-    glt::FetchedAttrib<aPos_vec3> attr21 = bufComp.Fetch(glt::tag_s<1>());
-
-    static_assert(std::is_constructible_v<glt::FetchedAttrib<glm::vec3>, glt::FetchedAttrib<glm::vec3>>);
-    static_assert(std::is_constructible_v<glt::FetchedAttrib<glm::vec3>, glt::FetchedAttrib<aPos_vec3>>);
-    static_assert(std::is_constructible_v<glt::FetchedAttrib<glm::vec2>, glt::FetchedAttrib<aPos_vec3>>); // false
-
-    //glt::FetchedAttrib<aPos_vec3> attr2{ bufComp.Fetch(glt::tag_s<0>()) };
+    const glt::Sequence<glt::compound<glm::vec3, glm::vec2, float>>& cseqCmp = sbufCmp;
+    glt::Sequence<glt::compound<glm::vec3, glm::vec2, float>>& seqCmp = sbufCmp;
 
 
-    //glt::FetchedAttrib<glm::vec2> attr = buf
+
+
+    sizeof(glt::Buffer_base);
+    sizeof(glt::BufferSingle<glm::vec3>);
 
 	return 0;
 }
