@@ -40,12 +40,6 @@ namespace glt
 			assert(handle_ && "Invalid Handle!");
 		}
 
-		Buffer_base()
-			: handle_(Allocator::Allocate(BufferTarget()))
-		{
-			assert(false && "Buffer_base default constructor called!");
-		}
-
 		Buffer_base(const Buffer_base&) = delete;
 		Buffer_base& operator=(const Buffer_base& other) = delete;
 
@@ -125,7 +119,7 @@ namespace glt
 		std::ptrdiff_t offset;
 		GLsizei stride;
 
-
+        /*
 		template <typename T>
 		using ConvType = std::conditional_t<std::is_same_v<variable_traits_type<A>,
 			variable_traits_type<T>>,
@@ -152,6 +146,7 @@ namespace glt
 
 		//template <class, class, size_t, size_t, bool, class>
 		//friend class get_attrib_ptr_i;
+        */
 
 		constexpr AttribPtr(std::ptrdiff_t offset = 0, GLsizei stride = 0)
 			: stride(stride),
@@ -173,56 +168,72 @@ namespace glt
 	size_t instOffset = 0) const"
 	for Named Attribute in a Buffer Sequence (if compound)
 
-	Depends:
-	- must know offset within containing buffer (provided via CRTP::Offset()); // Rename
-	- must know offset within containing sequence (provided via CRTP::SeqOffset())!!!!!!!
-	- must know stride or element_size (provided via CRTP::elem_size);
-	- must know amount of allocated instances (provided via CRTP::Allocated());
-	- must know its index in the sequence (provided as non-template parameter)
+	Depends on:
+	- the offset within the containing buffer (provided via CRTP::BufferOffsetBytes());
+	- the attribute's offset within the containing sequence (provided via CRTPSeq::AttrOffsetBytes(tag_s<indx>)); // PROBLEM HERE
+	- the stride (for Batched = 0) of the given sequence's element (provided via CRTPSeq::Stride());
+    - the size of the sequence element (provided via CRTPSeq::elem_size);
+	- amount of allocated instances/elements (provided via CRTP::Allocated());
+	- the index within the sequence (provided as non-template parameter);
 
-	Notes:
-	Base specialization:
-	Attr - is a Type of an attribute of a sequence. Provided to the base specialization.
-	indx - is an attribute position withing the compound sequence (limited to 0 if Batched)
-
-	Compound specialization:
-	Attr - compound<Attrib...> Type. Attrib may be single.
-
+	Template arguments:
+	Attr - is a Type of the Nth attribute within the sequence.
+	indx - is an attribute position within the compound sequence
+    first - true if indx = 0. 
 	*/
-	template <class CRTPSeq, class Attr, size_t indx = 0>
-	class get_attrib_ptr_i
+	template <class CRTPSeq, class Attr, size_t indx, bool first = !indx> // false case
+    class get_attrib_ptr_i
+    {
+        const CRTPSeq& seq_;
+
+    public:
+
+        constexpr get_attrib_ptr_i(const CRTPSeq& seq)
+            : seq_(seq)
+        {}
+
+        constexpr AttribPtr<Attr> AttribPointer(tag_s<indx>, size_t instOffset = 0) const
+        {
+            assert(seq_.Allocated() >= instOffset && "Pointer exceeds sequence's bounds!");
+            return AttribPtr<Attr>(CRTPSeq::AttrOffsetBytes(tag_s<indx>()) + seq_.BufferOffsetBytes() +
+                CRTPSeq::elem_size * instOffset, CRTPSeq::Stride());
+        }
+
+        constexpr AttribPtr<Attr> operator()(tag_s<indx>, size_t instOffset = 0) const
+        {
+            return AttribPointer(tag_s<indx>(), instOffset);
+        }
+
+    };
+
+    template <class CRTPSeq, class Attr>
+    class get_attrib_ptr_i<CRTPSeq, Attr, 0, true> : 
+        public get_attrib_ptr_i<CRTPSeq, Attr, 0, false>
 	{
-		const CRTPSeq& seq_;
+        using base = get_attrib_ptr_i<CRTPSeq, Attr, 0, false>;
 
-	public:
+    public:
 
-		constexpr get_attrib_ptr_i(const CRTPSeq& seq)
-			: seq_(seq)
-		{}
+        constexpr get_attrib_ptr_i(const CRTPSeq& seq)
+            : get_attrib_ptr_i<CRTPSeq, Attr, 0, false>(seq)
+        {}
 
-		constexpr AttribPtr<Attr> AttribPointer(tag_s<indx>, size_t instOffset = 0) const
-		{
-			assert(seq_.Allocated() >= instOffset && "Pointer exceeds sequence's bounds!");
-			return AttribPtr<Attr>(seq_.OffsetBytes() +
-				CRTPSeq::elem_size * instOffset);
-		}
+        constexpr AttribPtr<Attr> operator()(size_t instOffset = 0) const
+        {
+            return (*this)(tag_s<0>(), instOffset);
+        }
 
-		constexpr AttribPtr<Attr> operator()(tag_s<indx>, size_t instOffset = 0) const
-		{
-			return AttribPointer(tag_s<indx>(), instOffset);
-		}
+        constexpr operator AttribPtr<Attr>() const
+        {
+            return (*this)(tag_s<0>());
+        }
 
-		constexpr AttribPtr<Attr> operator()(size_t instOffset = 0) const
-		{
-			return (*this)(tag_s<indx>(), instOffset);
-		}
-
-		constexpr operator AttribPtr<Attr>() const
-		{
-			return (*this)(tag_s<indx>());
-		}
+        using base::operator();
+        using base::AttribPointer;
 
 	};
+
+
 
 	template <class CRTPSeq, class CompCollect,
 		class = decltype(std::make_index_sequence<seq_elem_count<CompCollect>>())>
@@ -238,115 +249,97 @@ namespace glt
 		template <size_t i>
 		using get_attrib_i = get_attrib_ptr_i<CRTPSeq, ith_type<i>, i>;
 
+        //template <size_t i>
+        //using attrib_operator_i = get_attrib_i<i>::operator();
+
 	public:
 		constexpr get_attrib_ptr(const CRTPSeq& seq)
 			: get_attrib_ptr_i<CRTPSeq, Attr, indx>(seq) ...
 		{}
 
 		using get_attrib_i<indx>::AttribPointer ...;
-
+        using get_attrib_i<indx>::operator() ...;
+        using get_attrib_i<0>::operator AttribPtr<ith_type<0>>;
 	};
-	 
-	/*
-	template <class CRTPSeq, class ... Attrs, size_t ... indx>
-		class get_attrib_ptr_i<CRTPSeq, 
-			compound<Attrs...>, 
-			std::numeric_limits<size_t>::max(), // not to confuse with 0
-			std::index_sequence<indx...>> : 
-			protected get_attrib_ptr_i<CRTPSeq, Attrs, indx> ...
-		{
 
-
-
-
-
-		public:
-			constexpr get_attrib_ptr_i(const CRTPSeq& seq)
-				: get_attrib_ptr_i<CRTPSeq, Attrs, indx>(seq) ...
-			{}
-
-			// using get_attrib_i<indx>::operator() ...;
-			using get_attrib_i<indx>::AttribPointer ...;
-		};
-		*/
-	/*
-	template <class CRTPSeq, class ... Attribs, size_t ... indx>
-	class get_attrib_ptr_i<CRTPSeq,
-		compound<Attribs...>,
-		0,
-		true,
-		std::index_sequence<indx...>>
-		: public get_attrib_ptr_i<CRTPSeq, compound<Attribs...>, false>,
-		protected get_attrib_ptr_i<CRTPSeq, Attribs>...
-	{
-		template <size_t i>
-		using single_seq = get_attrib_ptr_i<CRTPSeq, std::tuple_element_t<i, std::tuple<Attribs...>>>;
-
-	public:
-		constexpr get_attrib_ptr_i(const CRTPSeq& seq)
-			: get_attrib_ptr_i<CRTPSeq, compound<Attribs...>, false>(seq),
-			get_attrib_ptr_i<CRTPSeq, Attribs>(seq)...
-		{}
-
-
-	};*/
-	
-
-    template <class CompoundSeq, bool = is_compound_seq_v<CompoundSeq>>
-    struct create_indx_seq
-    {
-        using type = decltype(std::make_index_sequence<std::tuple_size_v<CompoundSeq>>());
-    };
-
-    template <class BatchedSeq>
-    struct create_indx_seq<BatchedSeq, false>
-    {
-        using type = std::index_sequence<0>;
-    };
-
-    template <class Seq>
-    using create_indx_seq_t = typename create_indx_seq<Seq>::type;
-
-    /* Responsibilities:
-    - SubData
-    - Fetch Attribute
-    - Map Buffer Range
-    */
-    template <class SingleSeq, bool = is_compound_seq_v<SingleSeq>>//,
-        //class = create_indx_seq_t<SingleSeq>>
-    class Sequence : protected virtual Buffer_base
+    template <typename ... Attribs>
+    class SequenceCRTP
     {
         const std::ptrdiff_t &bytes_lbound_,
             &bytes_rbound_;
 
-        template <class T, bool = is_compound_seq_v<T>>
-        struct seq_attr_type
-        {
-            using type = T;
-        };
+    public:
 
-        template <class T>
-        struct seq_attr_type<T, false>
+        constexpr static size_t elem_size =
+            seq_elem_size<compound<Attribs...>>;
+
+        template <size_t indx>
+        constexpr static std::ptrdiff_t AttrOffsetBytes(tag_s<indx>)
         {
-            using type = variable_traits_type<T>;
-        };
+            return get_tuple_member_offset_v<indx, std::tuple<Attribs...>>;
+        }
+
+        constexpr static GLsizei Stride()
+        {
+            if constexpr (sizeof...(Attribs) > 1)
+                return (GLsizei)elem_size;
+            else
+                return 0;
+        }
+
+        constexpr size_t Allocated() const
+        {
+            return (bytes_rbound_ - bytes_lbound_)
+                / elem_size;
+        }
+
+        constexpr std::ptrdiff_t BufferOffsetBytes() const
+        {
+            return bytes_lbound_;
+        }
 
     protected:
-        Sequence(const std::ptrdiff_t &bytes_lbound,
+        constexpr SequenceCRTP(const std::ptrdiff_t &bytes_lbound,
             const std::ptrdiff_t &bytes_rbound)
             : bytes_lbound_(bytes_lbound),
             bytes_rbound_(bytes_rbound)
         {}
+    };
+
+    /* Responsibilities:
+    - AttribPtr
+    - SubData
+    - Map Buffer Range
+    */
+    template <typename ... Attribs>
+    class Sequence : public SequenceCRTP<Attribs...>,
+        glt::get_attrib_ptr<SequenceCRTP<Attribs...>, glt::compound<Attribs...>>
+    {
+        using get_attrib = glt::get_attrib_ptr<SequenceCRTP<Attribs...>, glt::compound<Attribs...>>;
+
+        const Buffer_base& buf_;
+
+    protected:
+        Sequence(const Buffer_base& buf,
+            const std::ptrdiff_t &bytes_lbound,
+            const std::ptrdiff_t &bytes_rbound)
+            : SequenceCRTP<Attribs...>(bytes_lbound, bytes_rbound),
+            get_attrib(static_cast<const SequenceCRTP<Attribs...>&>(*this)),
+            buf_(buf)
+        {}
 
     public:
 
-        using AttrT = typename seq_attr_type<SingleSeq>::type;
-        constexpr static size_t elem_size = seq_elem_size<AttrT>;
+        using get_attrib::AttribPointer;
+        using get_attrib::operator();
+        using get_attrib::operator glt::AttribPtr<std::tuple_element_t<0,
+            std::tuple<Attribs...>>>;
 
         // TODO: add template function with equivalence check
+        template <class AttrT, 
+            class = std::enable_if_t<is_tuple_equivalent_v<AttrT, std::tuple<Attribs...>>>>
         void SubData(AttrT *data, size_t sz, size_t inst_offset = 0)
         {
-            // TODO: add check if memory has been allocated
             assert(!IsMapped() && "Copying data to mapped buffer!");
             assert(IsBound() && "Copying data to non-bound buffer!");
             assert(Allocated() >= sz + inst_offset && "Data exceeds buffer's bounds!");
@@ -357,107 +350,80 @@ namespace glt
                 data);
         }
 
-        size_t Allocated() const
-        {
-            return (bytes_rbound_ - bytes_lbound_) /
-                elem_size;
-        }
-
-        GLsizei OffsetBytes() const
-        {
-            return bytes_lbound_;
-        }
-
-        // not accessible for compound specialization
-        constexpr AttribPtr<SingleSeq> operator()(size_t instOffset = 0) const
-        {
-            assert(Allocated() >= instOffset && "Pointer exceeds sequence's bounds!");
-            return AttribPtr<SingleSeq>(OffsetBytes() + sizeof(SingleSeq) * instOffset);
-        }
-
-        constexpr operator AttribPtr<SingleSeq>() const
-        {
-            return (*this)();
-        }
-
     };
 
-    template <size_t indx, class Attr, class ... AllAttr>
-    struct seq_attrib_pointer //: protected virtual Sequence<std::tuple<AllAttr...>, false>
+    template <class attr, bool = is_compound_seq_v<attr>>
+    struct unwrap_seq
     {
-
+        using sequence = Sequence<attr>;
     };
 
-    template <class ... Attr>//, size_t ... indx>
-    class Sequence<compound<Attr...>, true>//,
-        //std::index_sequence<indx...>> 
-        : protected Sequence<compound<Attr...>, false>
+    template <class ... attr>
+    struct unwrap_seq<compound<attr...>, true>
     {
-
-        using seq_base = Sequence<compound<Attr...>, false>;
-
-    protected:
-
-        Sequence(const std::ptrdiff_t &bytes_lbound,
-            const std::ptrdiff_t &bytes_rbound)
-            : seq_base(bytes_lbound, bytes_rbound)
-        {}
-
-    public:
-        using seq_base::Allocated;
-        using seq_base::OffsetBytes;
-
-        /*
-        constexpr AttribPtr<SingleSeq> operator()( size_t instOffset = 0) const
-        {
-            assert(Allocated() >= instOffset && "Pointer exceeds sequence's bounds!");
-            return AttribPtr<SingleSeq>(OffsetBytes() + sizeof(SingleSeq) * instOffset);
-        }*/
-
-
+        using sequence = Sequence<attr...>;
     };
 
+    template <typename T>
+    using unwrap_seq_t = typename unwrap_seq<T>::sequence;
 
 	// Batched buffer
-	template <class SingleSeq>
-	class BufferSingle : public Sequence<SingleSeq>
+	template <class ... attribs>
+	class Buffer : public Buffer_base, public unwrap_seq_t<attribs>...
 	{
-        std::array<std::ptrdiff_t, 2> offsets_{ 0 };
+        std::array<std::ptrdiff_t, sizeof...(attribs) + 1> offsets_{ 0 };
+
+        template <size_t indx>
+        constexpr void update_offset(std::ptrdiff_t seqSize)
+        {
+            if constexpr (!indx)
+                return;
+            else
+                offsets_[indx] += offsets_[indx - 1] + seqSize;
+        }
+
+        
 
 	public:
-        BufferSingle(HandleBuffer&& handle = Allocator::Allocate(BufferTarget()))
+        constexpr Buffer(HandleBuffer&& handle = Allocator::Allocate(BufferTarget()))
 			: Buffer_base(std::move(handle)),
-            Sequence<SingleSeq>(offsets_[0], offsets_[1])
+            unwrap_seq_t<attribs>(static_cast<const Buffer_base&>(*this), offsets_[0], offsets_[1])...
 		{}
 
-        BufferSingle(size_t inst, HandleBuffer&& handle = Allocator::Allocate(BufferTarget()))
+        /*
+        Buffer(size_t inst, HandleBuffer&& handle = Allocator::Allocate(BufferTarget()))
 			: Buffer_base(std::move(handle)),
             Sequence<SingleSeq>(offsets_[0], offsets_[1])
-		{}
+		{}*/
 
 		using Buffer_base::Bind;
 		using Buffer_base::IsBound;
 		using Buffer_base::UnBind;
 		using Buffer_base::IsMapped;
 
-        using Sequence<SingleSeq>::Allocated;
-        using Sequence<SingleSeq>::SubData;
+        // Sequence<SingleSeq>::Allocated;
+        // using Sequence<SingleSeq>::SubData;
 
         // constexpr static size_t elem_size = seq_elem_size<SingleSeq>::size;
 
-		void AllocateMemory(size_t instances, BufUsage usage)
+		void AllocateMemory(convert_to<size_t, attribs> ... instances, BufUsage usage, std::ptrdiff_t offset = 0)
 		{
 			assert(IsBound() && "Allocating memory for non-bound buffer!");
 
+            GLsizei totalSize = ((unwrap_seq_t<attribs>::elem_size * instances) + ...) + offset;
+
 			glBufferData((GLenum)Bound(), 
-                elem_size * instances,
+                totalSize,
 				nullptr,
 				(GLenum)usage);
 
-            offsets_[1] = elem_size * instances;
+            offsets_[0] = offset;
+
+            //(update_offset<indx + 1>(unwrap_seq_t<attribs>::elem_size * instances), ...);
 			currentUsage_ = usage;
 		}
 
+        /*
         operator const Sequence<SingleSeq>&() const
         {
             return static_cast<const Sequence<SingleSeq>&>(*this);
@@ -467,7 +433,7 @@ namespace glt
         {
             return static_cast<Sequence<SingleSeq>&>(*this);
         }
-
+        */
 	};
 
     /*

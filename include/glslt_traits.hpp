@@ -242,6 +242,7 @@ namespace glt
 		return res;
 	}
 
+    // TODO: rename!
 	template <size_t indx, class>
 	struct get_tuple_member_offset;
 

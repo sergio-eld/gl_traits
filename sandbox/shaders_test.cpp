@@ -77,7 +77,7 @@ int main(int argc, const char *argv[])
     static_assert(std::is_same_v<glt::AttribPtr<glm::vec3>::ConvType<aPos_vec3>,
         glt::AttribPtr<aPos_vec3>>);
 
-	glt::BufferSingle<glm::vec3> sbuf;
+	glt::Buffer<glm::vec3> sbuf;
 	sbuf.Bind(glt::BufferTarget::array);
     sbuf.AllocateMemory(36, glt::BufUsage::static_draw);
 
@@ -85,7 +85,7 @@ int main(int argc, const char *argv[])
     glt::Sequence<glm::vec3>& seqVec3 = sbuf;
     glt::AttribPtr<glm::vec3> attr = seqVec3;
 
-    glt::BufferSingle<glt::compound<glm::vec3, glm::vec2, float>> sbufCmp;
+    glt::Buffer<glt::compound<glm::vec3, glm::vec2, float>> sbufCmp;
    // sbufCmp.Bind(glt::BufferTarget::array);
     sbufCmp.AllocateMemory(36, glt::BufUsage::static_draw);
 
@@ -96,7 +96,7 @@ int main(int argc, const char *argv[])
 
 
     sizeof(glt::Buffer_base);
-    sizeof(glt::BufferSingle<glm::vec3>);
+    sizeof(glt::Buffer<glm::vec3>);
 
 	return 0;
 }
