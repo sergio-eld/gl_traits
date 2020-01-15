@@ -23,10 +23,10 @@ int main()
     static_assert(!glt::is_compound_seq_v<glt::glslt<glm::vec3, xyz>>);
     
     using Compound4 = glt::compound<float, char, glt::glslt<glm::vec3, xyz>, glt::glslt<glm::vec2, xyz>>;
-    static_assert(glt::compound_attr_count_v<Compound4> == 4);
-    static_assert(glt::compound_attr_count_v<Compound4> != 3);
-    static_assert(glt::compound_attr_count_v<glt::compound<float>> == 1);
-    static_assert(glt::compound_attr_count_v<glt::compound<>> == 0);
+    static_assert(glt::seq_elem_count<Compound4> == 4);
+    static_assert(glt::seq_elem_count<Compound4> != 3);
+    static_assert(glt::seq_elem_count<glt::compound<float>> == 1);
+    static_assert(glt::seq_elem_count<glt::compound<>> == 0);
 
 
     return 0;

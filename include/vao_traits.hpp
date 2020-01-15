@@ -92,7 +92,7 @@ namespace glt
         {
             VAO_attrib<indx, Attrib, false>::EnablePointer(tag_s<indx>());
         }
-        void AttributePointer(VertexAttrib<Attrib>&& attrib, bool normalize = false)
+        void AttributePointer(AttribPtr<Attrib>&& attrib, bool normalize = false)
         {
             VAO_attrib<indx, variable_traits_type<Attrib>>::AttributePointer(tag_s<indx>(),
                 std::move(attrib), normalize);
@@ -129,8 +129,8 @@ namespace glt
 
 
 		// What about glm::mat????
-		static_assert(!std::disjunction_v<is_compound_attr<Attribs>...>,
-			"Compound attributes are not allowed in VAO!");
+		//static_assert(!std::disjunction_v<is_compound_seq<Attribs>...>,
+		//	"Compound attributes are not allowed in VAO!");
 
         static_assert(all_names_unique<Attribs...>(),
             "All attributes in a VAO must have unique aliases!");

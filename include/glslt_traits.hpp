@@ -9,6 +9,24 @@
 
 namespace glt
 {
+	/////////////////////////////////////
+	// common traits
+	/////////////////////////////////////
+
+	template <typename>
+	struct tag_t {};
+
+	template <auto>
+	struct tag_v {};
+
+	template <size_t S>
+	struct tag_s {};
+
+	template <const char* c>
+	struct tag_c {};
+
+
+
 
 	constexpr bool compare_const_strings(const char *lhs, const char *rhs)
 	{
@@ -344,6 +362,8 @@ namespace glt
 	- check if all the glsl types in a set are unique (for named types)
 	- check if 2 sets of glsl types has zero common subset
 	*/
+	// TODO: add sequence_element_traits:
+	// - provide element size
 
     // 2 empty names are considered equal. Shader must not be provided with non-named variables
 	template <class ... Types>
@@ -390,6 +410,57 @@ namespace glt
 
     template <class Set1, class Set2>
     constexpr inline bool identical_sets_v = identical_sets<Set1, Set2>();
+
+	/* Alias for compound attributes. vAttribs can be named glslt types */
+	template <class ... vAttribs>
+	using compound = std::tuple<vAttribs...>;
+
+
+	template <class Attr>
+	struct sequence_traits
+	{
+		constexpr static size_t elem_count = 1;
+		constexpr static bool is_compound = false;
+		constexpr static size_t elem_size = sizeof(Attr);
+
+		using first_type = Attr;
+	};
+
+	template <class ... Attrs>
+	struct sequence_traits<compound<Attrs...>>
+	{
+		constexpr static size_t elem_count = sizeof...(Attrs);
+		constexpr static bool is_compound = elem_count > 1 ? true : false;
+		constexpr static size_t elem_size = 
+			class_size_from_tuple_v<std::tuple<Attrs...>>;
+
+		using first_type = std::tuple_element_t<0, std::tuple<Attrs...>>;
+
+	};
+
+	template<glm::length_t C, glm::length_t R, typename T, glm::qualifier Q>
+	struct sequence_traits<glm::mat<C, R, T, Q>>
+	{
+		constexpr static size_t elem_count = C;
+		constexpr static bool is_compound = true;
+		constexpr static size_t elem_size = sizeof(glm::vec<R, T, Q>);
+
+		using first_type = glm::vec<R, T, Q>;
+
+	};
+
+	template <class T>
+	constexpr inline bool is_compound_seq_v = sequence_traits<T>::is_compound;
+
+	template <class T>
+	constexpr inline size_t seq_elem_size = sequence_traits<T>::elem_size;
+
+	template <class T>
+	constexpr inline size_t seq_elem_count = sequence_traits<T>::elem_count;
+
+	template <class T>
+	using seq_first_type = typename sequence_traits<T>::first_type;
+
 
 	//////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////

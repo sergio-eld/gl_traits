@@ -2,7 +2,7 @@
 
 using namespace glt;
 
-template class MapStatus_<BufferTargetList>;
+//template class MapStatus_<BufferTargetList>;
 
 template <class>
 struct init_map;

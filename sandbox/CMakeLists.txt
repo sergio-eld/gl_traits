@@ -5,8 +5,8 @@ find_package(glfw3 REQUIRED)
 message(STATUS "glfw3 found: ${glfw3_FOUND}")
 
 # TODO: remove PlatformPath from here! Get path from command line input
-find_package(PlatformPath REQUIRED)
-message(STATUS "PlatformPath found: ${PlatformPath_FOUND}")
+#find_package(PlatformPath REQUIRED)
+#message(STATUS "PlatformPath found: ${PlatformPath_FOUND}")
 
 add_library(gl_sandbox
 	STATIC
@@ -39,9 +39,11 @@ set(TEST_CASES
 	
 	"shaders_test" # test compile various shaders
 	
+	"handles_tests"
+	"buffer_test"
+	
 	"map_uniform_funcs"
 	"buffer_fetch_attributes"
-	"handles_tests"
 	"BufferMap_tests"
 	"1.Batched_2_dif_VBO" 	# ok
 	"2.Batched_1_one_VBO"	# ok
@@ -59,7 +61,7 @@ foreach(USE_CASE ${TEST_CASES})
 target_link_libraries(${USE_CASE}
 	PRIVATE
 		gl_sandbox
-		PlatformPath
+#		PlatformPath
 	)
 endforeach()
 

@@ -84,23 +84,7 @@ namespace glt
 
 
 
-	template <auto>
-	struct tag_v
-	{};
 
-	template <size_t S>
-    struct tag_s {};
-
-	template <const char* c>
-	using tag_c = tag_v<c>;
-
-	template <size_t i, size_t subi>
-	struct tag_indx
-	{};
-
-	template <typename>
-	struct tag_t
-	{};
 
 	/* get maximum value within given sequence of T */
 	template <typename T, T ... vals>
@@ -127,39 +111,7 @@ namespace glt
     template <class ... Attribs>
     using AttrList = std::tuple<Attribs...>;
 
-	/* Alias for compound attributes. vAttribs can be named glslt types */
-	template <class ... vAttribs>
-	using compound = std::tuple<vAttribs...>;
-
-	template <class T>
-	struct is_compound_attr : std::bool_constant<false> {};
-
-    /* compound attribute with just 1 Atribute is not compound */
-	template <class ... T>
-	struct is_compound_attr<compound<T...>> : std::bool_constant<(sizeof...(T) > 1)> {};
-
-	// matrices are compound
-	template<glm::length_t C, glm::length_t R, typename T, glm::qualifier Q>
-	struct is_compound_attr<glm::mat<C, R, T, Q>> : std::bool_constant<true> {};
-
-	// TODO: add is_compound case for glslt?
-
-	template <class T>
-	constexpr inline bool is_compound_seq_v = is_compound_attr<T>();
-
-	/* Get number of attributes within the compound one. 
-	0 (and warning?) if attribute is not compound */
-	template <class Compound>
-	struct compound_attr_count : std::integral_constant<size_t, size_t(0)>
-	{
-		// warning not compound ?
-	};
-
-	template <class ... Attr>
-	struct compound_attr_count<compound<Attr...>> : std::integral_constant<size_t, sizeof...(Attr)> {};
-
-	template <class Compound>
-	constexpr inline size_t compound_attr_count_v =	compound_attr_count<Compound>();
+	
 
 	/* Get attribute's type by indx.
 	Typename parameter may be a:
