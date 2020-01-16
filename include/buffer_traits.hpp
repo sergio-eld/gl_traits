@@ -262,6 +262,21 @@ namespace glt
         using get_attrib_i<0>::operator AttribPtr<ith_type<0>>;
 	};
 
+	/* Template "API" class for Sequence:
+
+	constexpr static size_t elem_size;
+
+	template <size_t indx>
+	constexpr static std::ptrdiff_t AttrOffsetBytes(glt::tag_s<indx>);
+
+	constexpr static GLsizei Stride();
+	constexpr size_t Allocated() const;
+
+	constexpr std::ptrdiff_t BufferOffsetBytes() const;
+	constexpr operator glt::AttribPtr
+	constexpr glt::AttribPtr operator()
+	*/
+
     template <typename ... Attribs>
     class SequenceCRTP
     {
@@ -315,11 +330,13 @@ namespace glt
     class Sequence : public SequenceCRTP<Attribs...>,
         glt::get_attrib_ptr<SequenceCRTP<Attribs...>, glt::compound<Attribs...>>
     {
-        using get_attrib = glt::get_attrib_ptr<SequenceCRTP<Attribs...>, glt::compound<Attribs...>>;
+        using get_attrib = glt::get_attrib_ptr<SequenceCRTP<Attribs...>, 
+			glt::compound<Attribs...>>;
 
         const Buffer_base& buf_;
 
-    protected:
+    // protected: // compoistion won't work
+	public:
         Sequence(const Buffer_base& buf,
             const std::ptrdiff_t &bytes_lbound,
             const std::ptrdiff_t &bytes_rbound)
@@ -367,27 +384,140 @@ namespace glt
     template <typename T>
     using unwrap_seq_t = typename unwrap_seq<T>::sequence;
 
-	// Batched buffer
-	template <class ... attribs>
-	class Buffer : public Buffer_base, public unwrap_seq_t<attribs>...
+	// need to use this generic wrapper?
+	template <size_t indx, class T>
+	struct indexed_wrapper
 	{
-        std::array<std::ptrdiff_t, sizeof...(attribs) + 1> offsets_{ 0 };
+		T wrapped;
 
-        template <size_t indx>
-        constexpr void update_offset(std::ptrdiff_t seqSize)
-        {
-            if constexpr (!indx)
-                return;
-            else
-                offsets_[indx] += offsets_[indx - 1] + seqSize;
-        }
+		constexpr indexed_wrapper(T&& wrapped)
+			: wrapped(std::forward<T>(wrapped))
+		{}
 
-        
+		constexpr const T& GetIndx(tag_s<indx>) const
+		{
+			return wrapped;
+		}
+
+		T& GetIndx(tag_s<indx>)
+		{
+			return wrapped;
+		}
+	};
+
+	template <size_t indx, class Seq, bool first = !indx>
+	struct sequence_indexed
+	{
+		Seq seq;
+
+		constexpr sequence_indexed(Seq&& seq)
+			: seq(std::forward<Seq>(seq))
+		{}
+
+		constexpr const Seq& SeqN(tag_s<indx>) const
+		{
+			return seq;
+		}
+
+		Seq& SeqN(tag_s<indx>)
+		{
+			return seq;
+		}
+	};
+
+	template <class Seq>
+	struct sequence_indexed<0, Seq, true> :
+		public sequence_indexed<0, Seq, false>
+	{
+		using seq_base = sequence_indexed<0, Seq, false>;
+
+		constexpr sequence_indexed(Seq&& seq)
+			: seq_base(std::forward<Seq>(seq))
+		{}
+
+		using seq_base::SeqN;
+
+		constexpr const Seq& SeqN() const
+		{
+			return seq_base::SeqN(tag_s<0>());
+		}
+
+		Seq& SeqN()
+		{
+			return seq_base::SeqN(tag_s<0>());
+		}
+
+		constexpr operator const Seq&() const
+		{
+			return seq_base::SeqN(tag_s<0>());
+		}
+
+		operator Seq&()
+		{
+			return seq_base::SeqN(tag_s<0>());
+		}
+	};
+
+
+
+	/* Wrapper class to allow access to the Sequence by index within a 
+	Containing Buffer
+	*/
+	/*
+	template <size_t indx, class ... Attr>
+	struct indexed_wrapper<indx, Sequence<Attr...>> : public Sequence<Attr...>
+	{
+		constexpr const Sequence<Attr...>& Seq(tag_s<indx>) const
+		{
+			return static_cast<const Sequence<Attr...>&>(*this);
+		}
+	};*/
+
+	/*
+	template <class ... Attr>
+	struct indexed_wrapper<0, Sequence<Attr...>> : public Sequence<Attr...>
+	{
+		constexpr const Sequence<Attr...>& Seq() const
+		{
+			return static_cast<const Sequence<Attr...>&>(*this);
+		}
+	};*/
+
+	template <class Packed,
+		class = decltype(std::make_index_sequence<std::tuple_size_v<Packed>>())>
+		class BufferPacked;
+
+
+	// Batched buffer
+	template <class ... attribs, size_t ... indx>
+	class BufferPacked<compound<attribs...>, std::index_sequence<indx...>>
+		: public Buffer_base, public sequence_indexed<indx, unwrap_seq_t<attribs>>...
+	{
+		template <size_t i>
+		using nth_attrib = std::tuple_element_t<i, std::tuple<attribs...>>;
+
+		template <size_t i>
+		using seq_base = sequence_indexed<i, unwrap_seq_t<nth_attrib<i>>>;
+
+		constexpr static size_t seq_count = sizeof...(attribs);
+
+        std::array<std::ptrdiff_t, seq_count + 1> offsets_{ 0 };
+
+		template <size_t ... indx>
+		constexpr std::ptrdiff_t assign_offsets(convert_to<size_t, attribs> ... instances,
+			std::index_sequence<indx...>)
+		{
+			((offsets_[indx + 1] += offsets_[indx] +
+				unwrap_seq_t<attribs>::elem_size * instances), ...);
+			return offsets_[seq_count];
+		}
 
 	public:
-        constexpr Buffer(HandleBuffer&& handle = Allocator::Allocate(BufferTarget()))
+        constexpr BufferPacked(HandleBuffer&& handle = Allocator::Allocate(BufferTarget()))
 			: Buffer_base(std::move(handle)),
-            unwrap_seq_t<attribs>(static_cast<const Buffer_base&>(*this), offsets_[0], offsets_[1])...
+			//sequence_indexed<indx, unwrap_seq_t<attribs>>
+			seq_base<indx>(unwrap_seq_t<attribs>(static_cast<const Buffer_base&>(*this),
+				offsets_[indx], offsets_[indx + 1]))...
 		{}
 
         /*
@@ -404,37 +534,28 @@ namespace glt
         // Sequence<SingleSeq>::Allocated;
         // using Sequence<SingleSeq>::SubData;
 
-        // constexpr static size_t elem_size = seq_elem_size<SingleSeq>::size;
-
-		void AllocateMemory(convert_to<size_t, attribs> ... instances, BufUsage usage, std::ptrdiff_t offset = 0)
+		void AllocateMemory(convert_to<size_t, attribs> ...  instances,
+			BufUsage usage)
 		{
 			assert(IsBound() && "Allocating memory for non-bound buffer!");
 
-            GLsizei totalSize = ((unwrap_seq_t<attribs>::elem_size * instances) + ...) + offset;
+			ptrdiff_t totalSize = assign_offsets(instances..., 
+				std::make_index_sequence<seq_count>());
 
-			glBufferData((GLenum)Bound(), 
-                totalSize,
+			glBufferData((GLenum)Bound(),
+				(GLsizei)totalSize,
 				nullptr,
 				(GLenum)usage);
 
-            offsets_[0] = offset;
+			// TODO: debug check if data has been buffered
 
-            //(update_offset<indx + 1>(unwrap_seq_t<attribs>::elem_size * instances), ...);
 			currentUsage_ = usage;
 		}
 
-        /*
-        operator const Sequence<SingleSeq>&() const
-        {
-            return static_cast<const Sequence<SingleSeq>&>(*this);
-        }
-
-        operator Sequence<SingleSeq>&()
-        {
-            return static_cast<Sequence<SingleSeq>&>(*this);
-        }
-        */
 	};
+
+	template <class ... Sequences>
+	using Buffer = BufferPacked<compound<Sequences...>>;
 
     /*
 	// TODO 

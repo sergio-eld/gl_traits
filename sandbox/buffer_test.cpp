@@ -152,6 +152,11 @@ int main()
     static_assert(testCompound.elem_size == glt::class_size_from_tuple_v<std::tuple<glm::vec3, glm::vec2, float, glm::vec4>>);
 
 
+	glt::sequence_indexed<1, Compound>(Compound()).SeqN(glt::tag_s<1>());
+
+	constexpr glt::sequence_indexed<0, Compound> cmp_indx{ Compound() };
+	constexpr const Compound& cmp = cmp_indx;
+
     // TODO: static check all attributes are the same
     // - First attribute for Batched Sequence, buffer offset = 0, 
     // instances offset = 0;
@@ -219,6 +224,7 @@ int main()
         attr9c = Compound(10, 256).AttribPointer(glt::tag_s<3>(), 10);
 
 
+
     // run-time tests
 	SmartGLFW glfw{ 3, 3 };
 	SmartGLFWwindow window{ SCR_HEIGHT, SCR_WIDTH, "buffer test" };
@@ -226,25 +232,26 @@ int main()
 	glfw.LoadOpenGL();
 
 	int retMask = 0;
-	test_allocation(retMask);
+	test_SubData_MapRead(retMask);
 
 	return retMask;
 }
 
-int test_allocation(int & mask)
-{
-	glt::Buffer<glm::vec3> bVec3;
-	glt::Buffer<glt::compound<glm::vec3, glm::vec2, float>> bVecCmp;
-
-	return mask;
-}
 
 int test_SubData_MapRead(int & mask)
 {
 	glt::Buffer<glm::vec3> bVec3;
+	glt::Buffer<int> bElements;
+
+	sizeof(bVec3);
+
+	bVec3.Bind(glt::BufferTarget::array);
+	bElements.Bind(glt::BufferTarget::element_array);
 
 	std::vector<glm::vec3> positions = glm_cube_positions();
+
 	bVec3.AllocateMemory(positions.size(), glt::BufUsage::static_draw);
+	bElements.AllocateMemory(positions.size(), glt::BufUsage::static_draw);
 
 	return 0;
 }
