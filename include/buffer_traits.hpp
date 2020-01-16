@@ -5,7 +5,8 @@
 namespace glt
 {
 
-	// store instances info here?
+	// TODO: rename to Buffer_state class?
+    // TODO: remove Handle object to the buffer class?
 	class Buffer_base
 	{
 		// this may be optimized out in release?
@@ -30,9 +31,8 @@ namespace glt
 		BufferTarget target_ = BufferTarget::none;
 		BufUsage currentUsage_ = BufUsage::none;
 
-		// replace bool by map type (?)
-		bool mapped_ = false;
-
+        MapAccess mapAccess_ = MapAccess::none;
+        MapAccessBit mapAccessBit_ = MapAccessBit::none;
 
 		constexpr Buffer_base(HandleBuffer&& handle)
 			: handle_(std::move(handle))
@@ -45,21 +45,25 @@ namespace glt
 
 		constexpr Buffer_base(Buffer_base&& other)
 			: handle_(std::move(other.handle_)),
-			mapped_(other.mapped_)
+            mapAccess_(other.mapAccess_),
+            mapAccessBit_(other.mapAccessBit_)
 		{
 			if (other.Bound() != BufferTarget::none)
 				Bind(other.Bound());
-			other.mapped_ = false;
+            other.mapAccess_ = MapAccess::none;
+			other.mapAccessBit_ = MapAccessBit::none;
 		}
 
 		Buffer_base& operator=(Buffer_base&& other)
 		{
 			handle_ = std::move(other.handle_);
-			mapped_ = other.mapped_;
+            mapAccess_ = other.mapAccess_;
+            mapAccessBit_ = other.mapAccessBit_;
 
 			if (other.Bound() != BufferTarget::none)
 				Bind(other.Bound());
-			other.mapped_ = false;
+            other.mapAccess_ = MapAccess::none;
+            other.mapAccessBit_ = MapAccessBit::none;
 
 			return *this;
 		}
@@ -67,8 +71,12 @@ namespace glt
 
 		~Buffer_base()
 		{
-			if (Bound() != BufferTarget::none)
+			if (IsBound())
 				Register(Bound());
+
+            // does opengl auto unmap data?
+            if (IsMapped())
+                UnMap();
 		}
 	public:
 
@@ -98,11 +106,41 @@ namespace glt
 			Register(target_);
 		}
 
+        constexpr MapAccess MapAccess() const
+        {
+            return mapAccess_;
+        }
+
+        constexpr MapAccessBit MapAccessBit() const
+        {
+            return mapAccessBit_;
+        }
+
 		constexpr bool IsMapped() const
 		{
-			return mapped_;
+			return MapAccess() != MapAccess::none ||
+                MapAccessBit() != MapAccessBit::none;
 		}
 
+        constexpr void SetMapAccess(glt::MapAccess access)
+        {
+            mapAccess_ = access;
+        }
+
+        constexpr void SetMapAccessBit(glt::MapAccessBit access)
+        {
+            mapAccessBit_ = access;
+        }
+
+        void UnMap()
+        {
+            assert(IsBound() && "Unmapping buffer that is not bound!");
+            assert(IsMapped() && "Unmapping buffer that is not mapped!");
+
+            glUnmapBuffer((GLenum)Bound());
+            SetMapAccess(glt::MapAccess::none);
+            SetMapAccessBit(glt::MapAccessBit::none);
+        }
 	};
 
 
@@ -291,6 +329,7 @@ namespace glt
         template <size_t indx>
         constexpr static std::ptrdiff_t AttrOffsetBytes(tag_s<indx>)
         {
+            static_assert(indx < sizeof...(Attribs), "Attribute of index is out of range!");
             return get_tuple_member_offset_v<indx, std::tuple<Attribs...>>;
         }
 
@@ -321,6 +360,89 @@ namespace glt
         {}
     };
 
+    // template wrapper accessor for template iterators
+    template <typename ... attr>
+    class SeqIteratorOut
+    {
+        using cl_tuple = std::tuple<attr...>;
+
+        std::conditional_t<(sizeof...(attr) > 1),
+            glt::compound<attr...>,
+            std::tuple_element_t<0, cl_tuple>> *ptr_;
+    public:
+
+        constexpr static size_t elem_size = class_size_from_tuple_v<cl_tuple>;
+
+        using difference_type = std::ptrdiff_t;
+
+        // TODO: implement variadic template dummy type with struct-like memory layout (not tuple) 
+        using value_type = std::remove_pointer_t<decltype(ptr_)>; // for compound sequence is void =(( 
+        using pointer = value_type*;
+        using reference = value_type&;
+        using iterator_category = std::random_access_iterator_tag;
+
+        explicit SeqIteratorOut(pointer ptr = nullptr)
+            : ptr_(ptr)
+        {}
+
+        template <class T, class = std::enable_if_t<is_equivalent_v<T, cl_tuple>>>
+        explicit SeqIteratorOut(T *ptr = nullptr)
+            : SeqIteratorOut((pointer)ptr)
+        {}
+
+        SeqIteratorOut& operator++()
+        {
+            assert(*this);
+            std::next(ptr_);
+            return *this;
+        }
+
+        // does std::next use this?
+        SeqIteratorOut& operator+=(difference_type sz)
+        {
+            assert(*this);
+            // std::next(ptr_, sz);
+            return *this;
+        }
+
+        SeqIteratorOut operator++(int)
+        {
+            value_type *ptr = ptr_;
+            std::next(ptr_);
+            return SeqIteratorOut(ptr);
+        }
+
+        operator bool() const
+        {
+            return (bool)ptr_;
+        }
+
+        bool operator==(const SeqIteratorOut& other) const
+        {
+            return ptr_ == other.ptr_;
+        }
+
+        bool operator!=(const SeqIteratorOut& other) const
+        {
+            return !((*this) == other);
+        }
+
+        template <class T, class = std::enable_if_t<is_equivalent_v<T, cl_tuple>>>
+        T& operator*() 
+        {
+            assert(*this);
+            return *(T*)ptr_;
+        }
+
+        template <class T, class = std::enable_if_t<is_equivalent_v<T, cl_tuple>>>
+        const T& operator*() const
+        {
+            assert(*this);
+            return *(T*)ptr_;
+        }
+
+    };
+
     /* Responsibilities:
     - AttribPtr
     - SubData
@@ -333,11 +455,11 @@ namespace glt
         using get_attrib = glt::get_attrib_ptr<SequenceCRTP<Attribs...>, 
 			glt::compound<Attribs...>>;
 
-        const Buffer_base& buf_;
+        Buffer_base& buf_;
 
     // protected: // compoistion won't work
 	public:
-        Sequence(const Buffer_base& buf,
+        Sequence(Buffer_base& buf,
             const std::ptrdiff_t &bytes_lbound,
             const std::ptrdiff_t &bytes_rbound)
             : SequenceCRTP<Attribs...>(bytes_lbound, bytes_rbound),
@@ -352,19 +474,130 @@ namespace glt
         using get_attrib::operator glt::AttribPtr<std::tuple_element_t<0,
             std::tuple<Attribs...>>>;
 
-        // TODO: add template function with equivalence check
+        // TODO: add iterator class with equivalence check
+
         template <class AttrT, 
             class = std::enable_if_t<is_tuple_equivalent_v<AttrT, std::tuple<Attribs...>>>>
         void SubData(AttrT *data, size_t sz, size_t inst_offset = 0)
         {
-            assert(!IsMapped() && "Copying data to mapped buffer!");
-            assert(IsBound() && "Copying data to non-bound buffer!");
+            assert(!buf_.IsMapped() && "Copying data to mapped buffer!");
+            assert(buf_.IsBound() && "Copying data to non-bound buffer!");
             assert(Allocated() >= sz + inst_offset && "Data exceeds buffer's bounds!");
 
-            glBufferSubData((GLenum)Bound(),
-                elem_size * inst_offset,
-                elem_size * sz,
+            // THIS IS WRONG!
+            // TODO: get Sequence Byte offset!!!
+
+            glBufferSubData((GLenum)buf_.Bound(),
+                TotalOffsetBytes(inst_offset),
+                LengthBytes(sz),
                 data);
+        }
+
+        template <class AttrT,
+            class = std::enable_if_t<is_tuple_equivalent_v<AttrT, std::tuple<Attribs...>>>>
+            void MapRange(AttrT *&data, MapAccessBit access, size_t sz = std::numeric_limits<size_t>::max(), size_t inst_offset = 0)
+        {
+            assert(access != MapAccessBit::none && "MapAccessBit is none!");
+            sz = sz == std::numeric_limits<size_t>::max() ? Allocated() : sz;
+
+            assert(!buf_.IsMapped() && "Mapping data to mapped buffer!");
+            assert(buf_.IsBound() && "Mapping data to non-bound buffer!");
+            assert(Allocated() >= sz + inst_offset && "Map Range exceeds sequence's bounds!");
+
+            data = (AttrT*)glMapBufferRange((GLenum)buf_.Bound(),
+                TotalOffsetBytes(inst_offset),
+                LengthBytes(sz),
+                (GLbitfield)access);
+
+            assert(data && "Failed to map buffer range!");
+
+            buf_.SetMapAccessBit(access);
+        }
+
+        constexpr bool IsMapped() const
+        {
+            return buf_.IsMapped();
+        }
+
+        void UnMap()
+        {
+            return buf_.UnMap();
+        }
+
+        class MapGuard
+        {
+
+        public:
+            using iterator_out = SeqIteratorOut<Attribs...>;
+
+        private:
+     
+            friend class Sequence<Attribs...>;
+            Sequence<Attribs...>& seq_;
+
+            iterator_out start_,
+                end_;
+
+        protected:
+
+            // TODO: change to provide only seq
+            MapGuard(Sequence<Attribs...>& seq, MapAccessBit accessBit)
+                : seq_(seq)
+            {
+                // glt::compound<Attribs...> *start = (glt::compound<Attribs...>*)nullptr,
+                 //       end = (glt::compound<Attribs...>*)nullptr;
+
+              //  seq_.MapRange(start, accessBit, seq_.Allocated());
+                
+                //start_ = iterator_out{ start };
+                //end_ = iterator_out{ std::next(start, seq_.Allocated()) };
+            }
+
+        public:
+
+            MapGuard() = delete;
+            MapGuard(const MapGuard&) = delete;
+            MapGuard(MapGuard&&) = delete;
+            MapGuard& operator=(const MapGuard&) = delete;
+            MapGuard& operator=(MapGuard&&) = delete;
+
+
+            // TODO: const_iterator?
+            iterator_out begin()
+            {
+                return start_;
+            }
+
+            iterator_out end()
+            {
+                return end_;
+            }
+
+            ~MapGuard()
+            {
+                assert(seq_.IsMapped() && 
+                    "Sequence has been unmapped before guard's destruction!");
+                seq_.UnMap();
+            }
+        };
+
+        MapGuard Guard(MapAccessBit accessBit)
+        {
+            return MapGuard(*this, accessBit);
+        }
+
+
+    private:
+
+        constexpr GLintptr TotalOffsetBytes(size_t inst_offset) const
+        {
+            return (GLintptr)BufferOffsetBytes() +
+                (GLintptr)(elem_size * inst_offset);
+        }
+
+        constexpr static GLsizeiptr LengthBytes(size_t elems)
+        {
+            return elem_size * elems;
         }
 
     };
@@ -456,37 +689,13 @@ namespace glt
 		{
 			return seq_base::SeqN(tag_s<0>());
 		}
+
+
 	};
-
-
-
-	/* Wrapper class to allow access to the Sequence by index within a 
-	Containing Buffer
-	*/
-	/*
-	template <size_t indx, class ... Attr>
-	struct indexed_wrapper<indx, Sequence<Attr...>> : public Sequence<Attr...>
-	{
-		constexpr const Sequence<Attr...>& Seq(tag_s<indx>) const
-		{
-			return static_cast<const Sequence<Attr...>&>(*this);
-		}
-	};*/
-
-	/*
-	template <class ... Attr>
-	struct indexed_wrapper<0, Sequence<Attr...>> : public Sequence<Attr...>
-	{
-		constexpr const Sequence<Attr...>& Seq() const
-		{
-			return static_cast<const Sequence<Attr...>&>(*this);
-		}
-	};*/
 
 	template <class Packed,
 		class = decltype(std::make_index_sequence<std::tuple_size_v<Packed>>())>
 		class BufferPacked;
-
 
 	// Batched buffer
 	template <class ... attribs, size_t ... indx>
@@ -516,7 +725,7 @@ namespace glt
         constexpr BufferPacked(HandleBuffer&& handle = Allocator::Allocate(BufferTarget()))
 			: Buffer_base(std::move(handle)),
 			//sequence_indexed<indx, unwrap_seq_t<attribs>>
-			seq_base<indx>(unwrap_seq_t<attribs>(static_cast<const Buffer_base&>(*this),
+			seq_base<indx>(unwrap_seq_t<attribs>(*this,
 				offsets_[indx], offsets_[indx + 1]))...
 		{}
 
@@ -530,6 +739,8 @@ namespace glt
 		using Buffer_base::IsBound;
 		using Buffer_base::UnBind;
 		using Buffer_base::IsMapped;
+
+        using seq_base<indx>::SeqN ...;
 
         // Sequence<SingleSeq>::Allocated;
         // using Sequence<SingleSeq>::SubData;
@@ -552,6 +763,15 @@ namespace glt
 			currentUsage_ = usage;
 		}
 
+        // TODO:
+        // - MapData
+        // - SeqN
+        // - MapBufferRange from the first sequence
+        // - SubData function from the first sequence
+
+        // - AttribPointer function from the first sequence 
+        // - user-defined conversion to the first sequence
+        // - user-defined conversion to the first attribute of the first sequence
 	};
 
 	template <class ... Sequences>

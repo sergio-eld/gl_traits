@@ -182,6 +182,8 @@ namespace glt
 
 	enum class MapAccess : int
 	{
+        none = 0,
+
 		read_only = GL_READ_ONLY,
 		write_only = GL_WRITE_ONLY,
 		read_write = GL_READ_WRITE
@@ -189,6 +191,8 @@ namespace glt
 
 	enum class MapAccessBit : GLbitfield
 	{
+        none = 0,
+
 		read = GL_MAP_READ_BIT,
 		write = GL_MAP_WRITE_BIT,
 		persistent = GL_MAP_PERSISTENT_BIT,

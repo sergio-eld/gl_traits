@@ -121,7 +121,6 @@ public:
 
 };
 
-
 int main()
 {
     // compile-time tests
@@ -150,9 +149,6 @@ int main()
     static_assert(testCompound.BufferOffsetBytes() == 256);
     static_assert(testCompound.Stride() == glt::class_size_from_tuple_v<std::tuple<glm::vec3, glm::vec2, float, glm::vec4>>);
     static_assert(testCompound.elem_size == glt::class_size_from_tuple_v<std::tuple<glm::vec3, glm::vec2, float, glm::vec4>>);
-
-
-	glt::sequence_indexed<1, Compound>(Compound()).SeqN(glt::tag_s<1>());
 
 	constexpr glt::sequence_indexed<0, Compound> cmp_indx{ Compound() };
 	constexpr const Compound& cmp = cmp_indx;
@@ -231,6 +227,29 @@ int main()
 	glfw.MakeContextCurrent(window);
 	glfw.LoadOpenGL();
 
+    // TODO: optimize??
+    glt::Buffer<glm::vec3, glm::vec4, float, int, glm::vec3, glm::fvec4, glm::vec3, glm::ivec4> bVec3;
+    bVec3.Bind(glt::BufferTarget::array);
+
+    /* use this to generate asssembly
+
+    size_t inst = 0;
+    std::cin >> inst;
+
+    bVec3.AllocateMemory(inst, inst, inst, inst, inst, inst, inst, inst, glt::BufUsage::static_draw);
+    */
+
+    static_assert(glt::class_size_from_tuple_v<std::tuple<glm::vec3>> == sizeof(glm::vec3));
+    static_assert(sizeof(std::aligned_storage_t<sizeof(glm::vec3), 4>) == sizeof(glm::vec3));
+
+    static_assert(sizeof(glt::compound<glm::vec3>) == glt::class_size_from_tuple_v<std::tuple<glm::vec3>>);
+    static_assert(sizeof(glt::compound<glm::vec3, bool, glm::vec4>) ==
+        glt::class_size_from_tuple_v<std::tuple<glm::vec3, bool, glm::vec4>>);
+
+
+    static_assert(std::is_standard_layout_v<glt::compound<glm::vec3, bool, glm::vec3>>);
+    static_assert(std::is_standard_layout_v<glt::compound<glm::vec3, float, bool>>);
+
 	int retMask = 0;
 	test_SubData_MapRead(retMask);
 
@@ -253,5 +272,26 @@ int test_SubData_MapRead(int & mask)
 	bVec3.AllocateMemory(positions.size(), glt::BufUsage::static_draw);
 	bElements.AllocateMemory(positions.size(), glt::BufUsage::static_draw);
 
-	return 0;
+    glt::Sequence<glm::vec3>& seqVec3 = bVec3.SeqN();
+
+    seqVec3.SubData(positions.data(), positions.size());
+
+    seqVec3.Guard(glt::MapAccessBit::read);
+
+    glm::vec3 *mapped = nullptr;
+    seqVec3.MapRange(mapped, glt::MapAccessBit::read);
+
+    // works
+    for (const glm::vec3& p : positions)
+        if (p != *mapped++)
+        {
+            mask |= 16;
+            return mask;
+        }
+
+    // TODO: - check mapping compound sequences with equivalent types
+    // - check mapping ranges with offsets
+
+
+	return mask;
 }

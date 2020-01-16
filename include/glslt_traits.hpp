@@ -413,9 +413,22 @@ namespace glt
     constexpr inline bool identical_sets_v = identical_sets<Set1, Set2>();
 
 	/* Alias for compound attributes. vAttribs can be named glslt types */
-	template <class ... vAttribs>
-	using compound = std::tuple<vAttribs...>;
+	//template <class ... vAttribs>
+	//using compound = std::tuple<vAttribs...>;
 
+#pragma message("glt::compound has been reimplemented! Check dependencies!!!")
+    template <class ... T>
+    struct compound
+    {
+        compound(T&& ... t)
+        {}
+
+        std::aligned_storage_t<glt::class_size_from_tuple_v<std::tuple<T...>>, 4> storage;
+    };
+
+    template <class ... T>
+    struct std::tuple_size<compound<T...>> :
+        std::integral_constant<size_t, sizeof...(T)> {};
 
 	template <class Attr>
 	struct sequence_traits
