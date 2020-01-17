@@ -287,9 +287,6 @@ namespace glt
 		template <size_t i>
 		using get_attrib_i = get_attrib_ptr_i<CRTPSeq, ith_type<i>, i>;
 
-        //template <size_t i>
-        //using attrib_operator_i = get_attrib_i<i>::operator();
-
 	public:
 		constexpr get_attrib_ptr(const CRTPSeq& seq)
 			: get_attrib_ptr_i<CRTPSeq, Attr, indx>(seq) ...
@@ -324,13 +321,13 @@ namespace glt
     public:
 
         constexpr static size_t elem_size =
-            seq_elem_size<compound<Attribs...>>;
+            get_class_size_v<Attribs...>;
 
         template <size_t indx>
         constexpr static std::ptrdiff_t AttrOffsetBytes(tag_s<indx>)
         {
             static_assert(indx < sizeof...(Attribs), "Attribute of index is out of range!");
-            return get_tuple_member_offset_v<indx, std::tuple<Attribs...>>;
+            return get_member_offset_v<indx, Attribs...>;
         }
 
         constexpr static GLsizei Stride()
@@ -371,7 +368,7 @@ namespace glt
             std::tuple_element_t<0, cl_tuple>> *ptr_;
     public:
 
-        constexpr static size_t elem_size = class_size_from_tuple_v<cl_tuple>;
+        constexpr static size_t elem_size = get_class_size_v<attr...>;
 
         using difference_type = std::ptrdiff_t;
 
@@ -382,12 +379,12 @@ namespace glt
         using iterator_category = std::random_access_iterator_tag;
 
         explicit SeqIteratorOut(pointer ptr = nullptr)
-            : ptr_(ptr)
+           // : ptr_(ptr)
         {}
 
         template <class T, class = std::enable_if_t<is_equivalent_v<T, cl_tuple>>>
         explicit SeqIteratorOut(T *ptr = nullptr)
-            : SeqIteratorOut((pointer)ptr)
+           // : SeqIteratorOut(reinterpret_cast<pointer>(ptr))
         {}
 
         SeqIteratorOut& operator++()
@@ -474,44 +471,58 @@ namespace glt
         using get_attrib::operator glt::AttribPtr<std::tuple_element_t<0,
             std::tuple<Attribs...>>>;
 
+		void SubData(compound_t<Attribs...> *data, size_t sz, size_t inst_offset = 0)
+		{
+			assert(!buf_.IsMapped() && "Copying data to mapped buffer!");
+			assert(buf_.IsBound() && "Copying data to non-bound buffer!");
+			assert(Allocated() >= sz + inst_offset && "Data exceeds buffer's bounds!");
+
+			// THIS IS WRONG!
+			// TODO: get Sequence Byte offset!!!
+
+			glBufferSubData((GLenum)buf_.Bound(),
+				TotalOffsetBytes(inst_offset),
+				LengthBytes(sz),
+				data);
+		}
         // TODO: add iterator class with equivalence check
 
         template <class AttrT, 
-            class = std::enable_if_t<is_tuple_equivalent_v<AttrT, std::tuple<Attribs...>>>>
+            class = std::enable_if_t<is_equivalent_v<AttrT, compound<Attribs...>>>>
         void SubData(AttrT *data, size_t sz, size_t inst_offset = 0)
         {
-            assert(!buf_.IsMapped() && "Copying data to mapped buffer!");
-            assert(buf_.IsBound() && "Copying data to non-bound buffer!");
-            assert(Allocated() >= sz + inst_offset && "Data exceeds buffer's bounds!");
-
-            // THIS IS WRONG!
-            // TODO: get Sequence Byte offset!!!
-
-            glBufferSubData((GLenum)buf_.Bound(),
-                TotalOffsetBytes(inst_offset),
-                LengthBytes(sz),
-                data);
+			SubData(reinterpret_cast<compound_t<Attribs...>*>(data), sz, inst_offset);
         }
 
-        template <class AttrT,
-            class = std::enable_if_t<is_tuple_equivalent_v<AttrT, std::tuple<Attribs...>>>>
-            void MapRange(AttrT *&data, MapAccessBit access, size_t sz = std::numeric_limits<size_t>::max(), size_t inst_offset = 0)
+		void MapRange(compound_t<Attribs...> *&data, MapAccessBit access, 
+			size_t sz = std::numeric_limits<size_t>::max(), 
+			size_t inst_offset = 0)
+		{
+			assert(access != MapAccessBit::none && "MapAccessBit is none!");
+			sz = sz == std::numeric_limits<size_t>::max() ? Allocated() : sz;
+
+			assert(!buf_.IsMapped() && "Mapping data to mapped buffer!");
+			assert(buf_.IsBound() && "Mapping data to non-bound buffer!");
+			assert(Allocated() >= sz + inst_offset && "Map Range exceeds sequence's bounds!");
+
+			data = (compound_t<Attribs...>*)glMapBufferRange((GLenum)buf_.Bound(),
+				TotalOffsetBytes(inst_offset),
+				LengthBytes(sz),
+				(GLbitfield)access);
+
+			assert(data && "Failed to map buffer range!");
+
+			buf_.SetMapAccessBit(access);
+		}
+
+		template <class AttrT,
+			class = std::enable_if_t<is_equivalent_v<AttrT, compound<Attribs...>>>>
+            void MapRange(AttrT *&data, MapAccessBit access, 
+				size_t sz = std::numeric_limits<size_t>::max(),
+				size_t inst_offset = 0)
         {
-            assert(access != MapAccessBit::none && "MapAccessBit is none!");
-            sz = sz == std::numeric_limits<size_t>::max() ? Allocated() : sz;
-
-            assert(!buf_.IsMapped() && "Mapping data to mapped buffer!");
-            assert(buf_.IsBound() && "Mapping data to non-bound buffer!");
-            assert(Allocated() >= sz + inst_offset && "Map Range exceeds sequence's bounds!");
-
-            data = (AttrT*)glMapBufferRange((GLenum)buf_.Bound(),
-                TotalOffsetBytes(inst_offset),
-                LengthBytes(sz),
-                (GLbitfield)access);
-
-            assert(data && "Failed to map buffer range!");
-
-            buf_.SetMapAccessBit(access);
+			MapRange(reinterpret_cast<compound_t<Attribs...> *&>(data),
+				access, sz, inst_offset);
         }
 
         constexpr bool IsMapped() const
@@ -544,13 +555,13 @@ namespace glt
             MapGuard(Sequence<Attribs...>& seq, MapAccessBit accessBit)
                 : seq_(seq)
             {
-                // glt::compound<Attribs...> *start = (glt::compound<Attribs...>*)nullptr,
-                 //       end = (glt::compound<Attribs...>*)nullptr;
+				glt::compound<Attribs...> *start = nullptr,
+					*end = nullptr;
 
-              //  seq_.MapRange(start, accessBit, seq_.Allocated());
+//				seq_.MapRange(start, accessBit, seq_.Allocated());
                 
-                //start_ = iterator_out{ start };
-                //end_ = iterator_out{ std::next(start, seq_.Allocated()) };
+               // start_ = iterator_out(start);
+				//end_ = iterator_out(std::next(start, seq_.Allocated()));
             }
 
         public:

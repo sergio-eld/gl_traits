@@ -31,10 +31,10 @@ int main()
     static_assert(glt::is_tuple_v<glt::compound<>>);
     static_assert(!glt::is_tuple_v<Vertex>);
 
-    static_assert(glt::is_initializable_from_v<Vertex, float>);
-    static_assert(glt::is_initializable_from_v<Vertex, float, glm::vec4>);
-    static_assert(glt::is_initializable_from_v<Vertex, float, glm::vec4, glm::vec2>);
-    static_assert(!glt::is_initializable_from_v<Vertex, glm::vec4, glm::vec2>);
+    static_assert(glt::is_aggregate_initializable_v<Vertex, float>);
+    static_assert(glt::is_aggregate_initializable_v<Vertex, float, glm::vec4>);
+    static_assert(glt::is_aggregate_initializable_v<Vertex, float, glm::vec4, glm::vec2>);
+    static_assert(!glt::is_aggregate_initializable_v<Vertex, glm::vec4, glm::vec2>);
 
     static_assert(std::is_same_v<float, glt::nth_element_t<0, float, glm::vec3, glm::vec2, Vertex>>);
     static_assert(std::is_same_v<glm::vec3, glt::nth_element_t<1, float, glm::vec3, glm::vec2, Vertex>>);

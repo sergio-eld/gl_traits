@@ -176,53 +176,37 @@ namespace glt
 	// Equivalence traits
 	//////////////////////////////////////////////////////////
 
-	// TODO: refactor this
-
-	template <class T>
-	struct is_tuple : std::false_type {};
-
-	template <class ... T>
-	struct is_tuple<std::tuple<T...>> : std::true_type {};
-
-	template <class T>
-	constexpr inline bool is_tuple_v = is_tuple<T>();
-
-	template <class T, typename = std::void_t<>>
-	struct defines_tuple : std::false_type {};
-
-	template <class T>
-	struct defines_tuple<T, std::void_t<typename T::tuple>> : std::true_type {};
-
-	template <class ... T>
-	struct defines_tuple<std::tuple<T...>, std::void_t<std::tuple<T...>>> : std::true_type {};
-	
 	/*
 	Extension for std::is_constructible, but using aggregate initialization.
 	Get if a pod class T can be initialized from an std::tuple<Types...>
 	*/
 	template <class T, class Tuple, class = std::void_t<>>
-	struct is_initializable : std::false_type {};
+	struct is_aggregate_initializable_from_tuple : std::false_type {};
 
 	template <class T, class ... Types>
-	struct is_initializable < T,
+	struct is_aggregate_initializable_from_tuple < T,
 		std::tuple<Types...>,
 		std::void_t<decltype(T{ Types()... }) >>
 		: std::true_type
 	{};
 
-	/* Version for variadic input */
-	template <class T, class ... From>
-	using is_initializable_from = is_initializable<T, std::tuple<From...>>;
+	/*
+	Extension for std::is_constructible, but using aggregate initialization.
+	Get if a pod class T can be initialized from a variadic collection of Types
+	*/	template <class T, class ... From>
+	using is_aggregate_initializable = 
+		is_aggregate_initializable_from_tuple<T, std::tuple<From...>>;
 
 	template <class T, class ... From>
-	constexpr inline bool is_initializable_from_v =
-		is_initializable<T, std::tuple<From...>>::value;
+	constexpr inline bool is_aggregate_initializable_v =
+		is_aggregate_initializable<T, From...>::value;
 
 	/* get offset of member at index "indx", assuming standart memory alignment */
 	template <size_t indx, class ... T>
-	constexpr std::ptrdiff_t get_member_offset()
+	constexpr static std::ptrdiff_t get_member_offset()
 	{
-		static_assert(indx < sizeof...(T), "Index is out of range!");
+		static_assert(sizeof...(T), "Types have not been provided!");
+		static_assert(indx <= sizeof...(T), "Index is out of range!");
 
 		if constexpr (!indx)
 			return 0;
@@ -230,7 +214,7 @@ namespace glt
 		std::ptrdiff_t res = 0,
 			sizes[]{ sizeof(T)... };
 
-		for (size_t i = 1; i <= indx; ++i)
+		for (size_t i = 1; i < indx; ++i)
 		{
 			res += sizes[i - 1];
 
@@ -239,118 +223,57 @@ namespace glt
 				res += 4 - res % 4;
 		}
 
+		// if returning class size
+		if constexpr (indx == sizeof...(T))
+			res += sizes[indx - 1] % 4 ?
+			sizes[indx - 1] :
+			sizes[indx - 1] + 4 - sizes[indx - 1] % 4;
+
 		return res;
 	}
 
-    // TODO: rename!
-	template <size_t indx, class>
-	struct get_tuple_member_offset;
-
 	template <size_t indx, class ... T>
-	struct get_tuple_member_offset<indx, std::tuple<T...>>
-		: std::integral_constant<std::ptrdiff_t, get_member_offset<indx, T...>()> {};
+	constexpr inline std::ptrdiff_t get_member_offset_v =
+		std::integral_constant<std::ptrdiff_t, get_member_offset<indx, T...>()>::value;
+	
+	template <class ... T>
+	struct get_class_size :
+		std::integral_constant<size_t, get_member_offset_v<sizeof...(T)>> {};
+	
+	template <class ... T>
+	constexpr inline size_t get_class_size_v = get_class_size<T...>();
 
-	template <size_t indx, class Tuple>
-	constexpr inline std::ptrdiff_t get_tuple_member_offset_v =
-		get_tuple_member_offset<indx, Tuple>();
-
-	/*Get size of a class, assuming it has the same types and order of members as
-	a given tuple:
-	If template parameter is not an std::tuple, size of a class is returned
-	// TODO: restrict other classes than tuple, return 0 in another function*/
-	template <class Tuple>
-	constexpr size_t class_size_from_tuple()
-	{
-		if constexpr (!is_tuple_v<Tuple>)
-			// TODO: add warning?
-			return sizeof(Tuple);
-		else
-		{
-			constexpr size_t lastIndx = std::tuple_size_v<Tuple> -1;
-			using LastType = std::tuple_element_t<lastIndx, Tuple>;
-
-			constexpr size_t offset = get_tuple_member_offset_v<lastIndx, Tuple>,
-				res = offset + sizeof(LastType);
-
-			return (sizeof(LastType) % 4) ? res + 4 - sizeof(LastType) % 4 : res;
-		}
-
-	}
-
-	template <class Tuple>
-	constexpr inline size_t class_size_from_tuple_v =
-		class_size_from_tuple<Tuple>();
-
-	template <class T, class NotTuple>
-	struct is_tuple_equivalent : std::false_type
-	{
-		static_assert(!is_tuple_v<T>, "First argument must not be a tuple!");
-		// TODO: warning for 2nd class is not a tuple?
-	};
-
-	/* Get if class T (non-tuple) is equivalent to std::tuple<Args...>.
-	True if T is initializable from Args and size of T is equal
-	to the size of a potential class with identical alignment of Args members */
-	template <class T, class ... Args>
-	struct is_tuple_equivalent<T, std::tuple<Args...>>
-		: std::bool_constant<(class_size_from_tuple_v<std::tuple<Args...>> == sizeof(T)) &&
-		is_initializable_from_v<T, Args...>>
-	{
-		static_assert(!is_tuple_v<T>, "First argument must not be a tuple!");
-	};
-
-	template <class T, class Tuple>
-	constexpr inline bool is_tuple_equivalent_v = is_tuple_equivalent<T, Tuple>();
-
-	/*
-	Recover std::tuple from compound type or user-defined type.
-	For user-defined case need to provide InitFrom tuple, that contains
-	types to try aggregate initialization from.
-
-	If failed to recover false_type, type = std::tuple<Attr>
-
-	TODO: Rename?
+	/* Get if 2 POD classes R and L are equivalent, that is:
+	- they have the same type 
+	OR
+	- have the same size 
+	AND
+	- both are initializable from the given Feed and
 	*/
-	template <class Attr, class InitFrom = std::void_t<>>
-	struct recover_tuple : std::false_type
-	{
-		using type = std::tuple<Attr>;
-	};
-
-	template <class ... Attr>
-	struct recover_tuple<std::tuple<Attr...>> : std::true_type
-	{
-		using type = std::tuple<Attr...>;
-	};
-
-	// Checks if Attribute is equivalent to std::tuple<InitList...>
-	template <class Attr, class ... InitList>
-	struct recover_tuple<Attr, std::tuple<InitList...>>
-		: std::bool_constant<(class_size_from_tuple_v<std::tuple<InitList...>> == sizeof(Attr)) &&
-		is_initializable_from_v<Attr, InitList...>>
-	{
-		using type = std::conditional_t<(class_size_from_tuple_v<std::tuple<InitList...>> == sizeof(Attr)) &&
-			is_initializable_from_v<Attr, InitList...>,
-			std::tuple<InitList...>, Attr>;
-	};
-
-	template <class Attr, class InitFrom = std::void_t<>>
-	using recover_tuple_t = typename recover_tuple<Attr, InitFrom>::type;
-
-
-	/*-------------
-	Checking Attr and In types for equivalence:
-	Two classes are equivalent if their recovered tuples are the same.
-	-------------*/
-	template <class Attr, class In, class InitAttr = std::void_t<>>
+	template <class R, class L, typename ... Feed>
 	struct is_equivalent
-		: std::bool_constant<
-		std::is_same_v<recover_tuple_t<Attr, InitAttr>,
-		recover_tuple_t<In, recover_tuple_t<Attr, InitAttr>>>
-		> {};
+		: std::bool_constant<(std::is_same_v<R, L> ||
+			sizeof(R) == sizeof(L) &&
+			is_aggregate_initializable_v<R, Feed ...> &&
+			is_aggregate_initializable_v<L, Feed...>)> {};
 
-	template <class Attr, class In, class InitAttr = std::void_t<>>
-	constexpr inline bool is_equivalent_v = is_equivalent<Attr, In, InitAttr>::value;
+	template <class R, class L, typename ... Feed>
+	constexpr inline bool is_equivalent_v = is_equivalent<R, L, Feed...>::value;
+
+	// TODO: refactor this
+	
+	// remove ?
+	template <class T>
+	struct is_tuple : std::false_type {};
+
+	// remove ?
+	template <class ... T>
+	struct is_tuple<std::tuple<T...>> : std::true_type {};
+
+	// remove ?
+	template <class T>
+	constexpr inline bool is_tuple_v = is_tuple<T>();
+
 
 	//////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////
@@ -365,6 +288,39 @@ namespace glt
 	*/
 	// TODO: add sequence_element_traits:
 	// - provide element size
+
+#pragma message("glt::compound has been reimplemented! Check dependencies!!!")
+	template <class ... T>
+	struct compound
+	{
+		constexpr static size_t elems_count = sizeof...(T);
+
+		static_assert(elems_count, "No types have been provided to glt::compound!");
+
+		using first_type = std::tuple_element_t<0, std::tuple<T...>>;
+		using type = std::conditional_t<(elems_count > 1),
+			compound<T...>, first_type>;
+
+		compound(T&& ... t)
+		{}
+
+		std::aligned_storage_t<get_class_size_v<T...>, 4> storage;
+
+		// TODO: - equivalence based constructor
+		// - equivalence based user-defined converison
+
+	};
+
+	template <class ... T>
+	using compound_t = typename compound<T...>::type;
+
+	template <class R, typename ... FeedCompound>
+	struct is_equivalent<R, compound<FeedCompound...>> :
+		is_equivalent<R, compound<FeedCompound...>, FeedCompound...> {};
+
+	template <class ... T>
+	struct std::tuple_size<compound<T...>> :
+		std::integral_constant<size_t, sizeof...(T)> {};
 
     // 2 empty names are considered equal. Shader must not be provided with non-named variables
 	template <class ... Types>
@@ -412,24 +368,6 @@ namespace glt
     template <class Set1, class Set2>
     constexpr inline bool identical_sets_v = identical_sets<Set1, Set2>();
 
-	/* Alias for compound attributes. vAttribs can be named glslt types */
-	//template <class ... vAttribs>
-	//using compound = std::tuple<vAttribs...>;
-
-#pragma message("glt::compound has been reimplemented! Check dependencies!!!")
-    template <class ... T>
-    struct compound
-    {
-        compound(T&& ... t)
-        {}
-
-        std::aligned_storage_t<glt::class_size_from_tuple_v<std::tuple<T...>>, 4> storage;
-    };
-
-    template <class ... T>
-    struct std::tuple_size<compound<T...>> :
-        std::integral_constant<size_t, sizeof...(T)> {};
-
 	template <class Attr>
 	struct sequence_traits
 	{
@@ -444,9 +382,10 @@ namespace glt
 	struct sequence_traits<compound<Attrs...>>
 	{
 		constexpr static size_t elem_count = sizeof...(Attrs);
+#pragma message("Check logic for sequence_traits::is_compound")
 		constexpr static bool is_compound = elem_count > 1 ? true : false;
-		constexpr static size_t elem_size = 
-			class_size_from_tuple_v<std::tuple<Attrs...>>;
+		constexpr static size_t elem_size =
+			get_class_size_v<Attrs...>;
 
 		using first_type = std::tuple_element_t<0, std::tuple<Attrs...>>;
 

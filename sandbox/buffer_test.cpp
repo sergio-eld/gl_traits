@@ -58,12 +58,12 @@ class CRTPSeq
 public:
 
     constexpr static size_t elem_size =
-        glt::seq_elem_size<glt::compound<Attribs...>>;
+        glt::get_class_size_v<Attribs...>;
 
     template <size_t indx>
     constexpr static std::ptrdiff_t AttrOffsetBytes(glt::tag_s<indx>)
     {
-        return glt::get_tuple_member_offset_v<indx, std::tuple<Attribs...>>;
+        return glt::get_member_offset_v<indx, Attribs...>;
     }
 
     constexpr static GLsizei Stride()
@@ -121,8 +121,23 @@ public:
 
 };
 
+struct test
+{
+	glm::vec3 x;
+	bool b;
+	glm::vec4 r;
+};
+
+
 int main()
 {
+	 glt::get_member_offset_v<4, glm::vec3, bool, bool, glm::vec4>;
+
+	sizeof(test);
+	std::is_constructible<test, glm::vec3, bool, glm::vec4>::value;
+
+	glt::is_aggregate_initializable_v<test, glm::vec3, bool, glm::vec4>;
+
     // compile-time tests
     using Batched = DummySeq<glm::vec3>;
     using Compound = DummySeq<glm::vec3, glm::vec2, float, glm::vec4>;
@@ -140,15 +155,17 @@ int main()
 
     static_assert(testCompound.Allocated() == 10);
     static_assert(testCompound.AttrOffsetBytes(glt::tag_s<0>()) == 0);
-    static_assert(testCompound.AttrOffsetBytes(glt::tag_s<1>()) == sizeof(glm::vec3));
-    static_assert(testCompound.AttrOffsetBytes(glt::tag_s<2>()) == sizeof(glm::vec3) +
-        sizeof(glm::vec2));
-    static_assert(testCompound.AttrOffsetBytes(glt::tag_s<3>()) == sizeof(glm::vec3) +
-        sizeof(glm::vec2) + sizeof(float));
+    // static_assert(testCompound.AttrOffsetBytes(glt::tag_s<1>()) == sizeof(glm::vec3));
+    // static_assert(testCompound.AttrOffsetBytes(glt::tag_s<2>()) == sizeof(glm::vec3) +
+    //    sizeof(glm::vec2));
+    // static_assert(testCompound.AttrOffsetBytes(glt::tag_s<3>()) == sizeof(glm::vec3) +
+    //    sizeof(glm::vec2) + sizeof(float));
 
     static_assert(testCompound.BufferOffsetBytes() == 256);
-    static_assert(testCompound.Stride() == glt::class_size_from_tuple_v<std::tuple<glm::vec3, glm::vec2, float, glm::vec4>>);
-    static_assert(testCompound.elem_size == glt::class_size_from_tuple_v<std::tuple<glm::vec3, glm::vec2, float, glm::vec4>>);
+    static_assert(testCompound.Stride() == 
+		glt::get_class_size_v<glm::vec3, glm::vec2, float, glm::vec4>);
+    static_assert(testCompound.elem_size ==
+		glt::get_class_size_v<glm::vec3, glm::vec2, float, glm::vec4>);
 
 	constexpr glt::sequence_indexed<0, Compound> cmp_indx{ Compound() };
 	constexpr const Compound& cmp = cmp_indx;
@@ -239,12 +256,13 @@ int main()
     bVec3.AllocateMemory(inst, inst, inst, inst, inst, inst, inst, inst, glt::BufUsage::static_draw);
     */
 
-    static_assert(glt::class_size_from_tuple_v<std::tuple<glm::vec3>> == sizeof(glm::vec3));
+    static_assert(glt::get_class_size_v<glm::vec3> == sizeof(glm::vec3));
     static_assert(sizeof(std::aligned_storage_t<sizeof(glm::vec3), 4>) == sizeof(glm::vec3));
 
-    static_assert(sizeof(glt::compound<glm::vec3>) == glt::class_size_from_tuple_v<std::tuple<glm::vec3>>);
-    static_assert(sizeof(glt::compound<glm::vec3, bool, glm::vec4>) ==
-        glt::class_size_from_tuple_v<std::tuple<glm::vec3, bool, glm::vec4>>);
+
+    //static_assert(sizeof(glt::compound<glm::vec3>) == glt::class_size_from_tuple_v<std::tuple<glm::vec3>>);
+    //static_assert(sizeof(glt::compound<glm::vec3, bool, glm::vec4>) ==
+    //    glt::class_size_from_tuple_v<std::tuple<glm::vec3, bool, glm::vec4>>);
 
 
     static_assert(std::is_standard_layout_v<glt::compound<glm::vec3, bool, glm::vec3>>);
@@ -280,6 +298,8 @@ int test_SubData_MapRead(int & mask)
 
     glm::vec3 *mapped = nullptr;
     seqVec3.MapRange(mapped, glt::MapAccessBit::read);
+
+	glt::is_equivalent_v<glt::compound<glm::vec3>, std::tuple<glm::vec3>>;
 
     // works
     for (const glm::vec3& p : positions)

@@ -14,8 +14,8 @@ int main()
 	std::is_aggregate_v<vertex>;
 	std::is_constructible_v<vertex, glm::vec3()>;
 
-	is_initializable<vertex, std::tuple<glm::vec3, glm::vec2>>::value;
-	is_initializable_from_v<vertex, glm::vec3, glm::vec2>;
+	is_aggregate_initializable_from_tuple<vertex, std::tuple<glm::vec3, glm::vec2>>::value;
+	is_aggregate_initializable_v<vertex, glm::vec3, glm::vec2>;
 
 	SmartGLFW sglfw{ 4, 5 };
 
