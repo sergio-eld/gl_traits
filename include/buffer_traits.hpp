@@ -71,12 +71,13 @@ namespace glt
 
 		~Buffer_base()
 		{
-			if (IsBound())
-				Register(Bound());
-
             // does opengl auto unmap data?
             if (IsMapped())
                 UnMap();
+
+			if (IsBound())
+				Register(Bound());
+
 		}
 	public:
 
@@ -364,28 +365,26 @@ namespace glt
     {
         using cl_tuple = std::tuple<attr...>;
 
-        std::conditional_t<(sizeof...(attr) > 1),
-            glt::compound<attr...>,
-            std::tuple_element_t<0, cl_tuple>> *ptr_;
+        glt::compound_t<attr...> *ptr_;
+
     public:
 
         constexpr static size_t elem_size = get_class_size_v<attr...>;
 
         using difference_type = std::ptrdiff_t;
 
-        // TODO: implement variadic template dummy type with struct-like memory layout (not tuple) 
-        using value_type = std::remove_pointer_t<decltype(ptr_)>; // for compound sequence is void =(( 
+        using value_type = std::remove_pointer_t<decltype(ptr_)>;
         using pointer = value_type*;
         using reference = value_type&;
         using iterator_category = std::random_access_iterator_tag;
 
         explicit SeqIteratorOut(pointer ptr = nullptr)
-           // : ptr_(ptr)
+            : ptr_(ptr)
         {}
 
         template <class T, class = std::enable_if_t<is_equivalent_v<T, value_type>>>
         explicit SeqIteratorOut(T *ptr = nullptr)
-           // : SeqIteratorOut(reinterpret_cast<pointer>(ptr))
+            : SeqIteratorOut(reinterpret_cast<pointer>(ptr))
         {}
 
         SeqIteratorOut& operator++()

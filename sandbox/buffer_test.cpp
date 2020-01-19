@@ -66,6 +66,7 @@ public:
         return glt::get_member_offset_v<indx, Attribs...>;
     }
 
+    
     constexpr static GLsizei Stride()
     {
         if constexpr (sizeof...(Attribs) > 1)
@@ -73,13 +74,13 @@ public:
         else
             return 0;
     }
-
+    
     constexpr size_t Allocated() const
     {
         return (bytes_rbound_ - bytes_lbound_)
             / elem_size;
     }
-
+    
     constexpr std::ptrdiff_t BufferOffsetBytes() const
     {
         return bytes_lbound_;
@@ -129,18 +130,77 @@ struct test
 };
 
 
+template <class ... T>
+struct test2
+{
+    glt::compound_t<T...> val;
+
+    template <typename ... A>
+    test2(A&& ... arg)
+        : val(std::forward<A>(arg)...)
+    {}
+
+    test2(glt::compound_t<T...>&& r)
+        : val(std::forward<glt::compound_t<T...>>(r))
+    {}
+
+    template <class R, class = std::enable_if_t<glt::is_equivalent_v<R, T...>>>
+    operator const R&() const
+    {
+        return reinterpret_cast<const R&>(val);
+    }
+
+    /*    
+    // error - illegal indirection
+
+    template <class R, class = std::enable_if_t<glt::is_equivalent_v<R, T...>>>
+    R& operator*()
+    {
+        return reinterpret_cast<R&>(val);
+    }
+
+    template <class R, class = std::enable_if_t<glt::is_equivalent_v<R, T...>>>
+    const R& operator*() const
+    {
+        return reinterpret_cast<const R&>(val);
+    }*/
+};
+
+struct destr_test
+{
+    int a;
+
+    ~destr_test()
+    {
+        std::cout << "Destructor called with object value = "
+            << a << std::endl;
+    }
+};
+
 int main()
 {
-	 glt::get_member_offset_v<4, glm::vec3, bool, bool, glm::vec4>;
+    glm::vec3 v3{ 4, 8, 15 };
+    {
+        glt::compound<char, glm::vec3, char, destr_test>
+            cmp{ 'a', {4, 8, 15}, 'b', {16} };
+        v3 = cmp.Get(glt::tag_s<1>());
 
-	sizeof(test);
-	std::is_constructible<test, glm::vec3, bool, glm::vec4>::value;
+    }
 
-	glt::is_aggregate_initializable_v<test, glm::vec3, bool, glm::vec4>;
+    std::cout << v3.x << v3.y << v3.z << std::endl;
+
+
+    v3 = test2<glt::compound<glm::vec3>>(glm::vec3(16, 23, 42));// (3, 8, 15);
+    test2<glt::compound<glm::vec3>> ttest{};
+   // v3 = ttest;
 
     // compile-time tests
     using Batched = DummySeq<glm::vec3>;
     using Compound = DummySeq<glm::vec3, glm::vec2, float, glm::vec4>;
+
+
+
+
 
     constexpr Batched testBatched{ 10, 64 },
         batched{ 10, 0 };
@@ -155,11 +215,12 @@ int main()
 
     static_assert(testCompound.Allocated() == 10);
     static_assert(testCompound.AttrOffsetBytes(glt::tag_s<0>()) == 0);
-    // static_assert(testCompound.AttrOffsetBytes(glt::tag_s<1>()) == sizeof(glm::vec3));
-    // static_assert(testCompound.AttrOffsetBytes(glt::tag_s<2>()) == sizeof(glm::vec3) +
-    //    sizeof(glm::vec2));
-    // static_assert(testCompound.AttrOffsetBytes(glt::tag_s<3>()) == sizeof(glm::vec3) +
-    //    sizeof(glm::vec2) + sizeof(float));
+    static_assert(testCompound.AttrOffsetBytes(glt::tag_s<1>()) == sizeof(glm::vec3));
+    static_assert(testCompound.AttrOffsetBytes(glt::tag_s<2>()) == sizeof(glm::vec3) +
+        sizeof(glm::vec2));
+    static_assert(testCompound.AttrOffsetBytes(glt::tag_s<3>()) == sizeof(glm::vec3) +
+        sizeof(glm::vec2) + sizeof(float));
+
 
     static_assert(testCompound.BufferOffsetBytes() == 256);
     static_assert(testCompound.Stride() == 
@@ -235,7 +296,7 @@ int main()
 
     constexpr glt::AttribPtr<glm::vec4> attr9b = Compound(10, 256)(glt::tag_s<3>(), 10),
         attr9c = Compound(10, 256).AttribPointer(glt::tag_s<3>(), 10);
-
+        
 
 
     // run-time tests
@@ -244,11 +305,13 @@ int main()
 	glfw.MakeContextCurrent(window);
 	glfw.LoadOpenGL();
 
+    
+
+    /* use this to generate asssembly
+
     // TODO: optimize??
     glt::Buffer<glm::vec3, glm::vec4, float, int, glm::vec3, glm::fvec4, glm::vec3, glm::ivec4> bVec3;
     bVec3.Bind(glt::BufferTarget::array);
-
-    /* use this to generate asssembly
 
     size_t inst = 0;
     std::cin >> inst;
@@ -256,6 +319,7 @@ int main()
     bVec3.AllocateMemory(inst, inst, inst, inst, inst, inst, inst, inst, glt::BufUsage::static_draw);
     */
 
+    
     static_assert(glt::get_class_size_v<glm::vec3> == sizeof(glm::vec3));
     static_assert(sizeof(std::aligned_storage_t<sizeof(glm::vec3), 4>) == sizeof(glm::vec3));
 
@@ -268,15 +332,18 @@ int main()
     static_assert(std::is_standard_layout_v<glt::compound<glm::vec3, bool, glm::vec3>>);
     static_assert(std::is_standard_layout_v<glt::compound<glm::vec3, float, bool>>);
 
+
+
 	int retMask = 0;
 	test_SubData_MapRead(retMask);
-
+    
 	return retMask;
 }
 
 
 int test_SubData_MapRead(int & mask)
 {
+    
 	glt::Buffer<glm::vec3> bVec3;
 	glt::Buffer<int> bElements;
 
@@ -294,12 +361,9 @@ int test_SubData_MapRead(int & mask)
 
     seqVec3.SubData(positions.data(), positions.size());
 
-    seqVec3.Guard(glt::MapAccessBit::read);
-
+    // testing simple map access
     glm::vec3 *mapped = nullptr;
     seqVec3.MapRange(mapped, glt::MapAccessBit::read);
-
-	glt::is_equivalent_v<glt::compound<glm::vec3>, std::tuple<glm::vec3>>;
 
     // works
     for (const glm::vec3& p : positions)
@@ -309,9 +373,16 @@ int test_SubData_MapRead(int & mask)
             return mask;
         }
 
+
+    // seqVec3.Guard(glt::MapAccessBit::read);
+
+
+
+
+
     // TODO: - check mapping compound sequences with equivalent types
     // - check mapping ranges with offsets
 
-
+    
 	return mask;
 }
