@@ -135,6 +135,30 @@ std::vector<glm::vec3> glm_cube_positions()
 	};
 }
 
+std::vector<posVec3> posVec3_cube_positions()
+{
+    std::vector<glm::vec3> positions = glm_cube_positions();
+    std::vector<posVec3> out{ positions.size() };
+    for (size_t i = 0; i != positions.size(); ++i)
+        out[i].coord = positions[i];
+
+    return out;
+}
+
+std::vector<posXYZf> posXYZf_cube_positions()
+{
+    std::vector<glm::vec3> positions = glm_cube_positions();
+    std::vector<posXYZf> out{ positions.size() };
+    for (size_t i = 0; i != positions.size(); ++i)
+    {
+        out[i].x = positions[i].x;
+        out[i].y = positions[i].y;
+        out[i].z = positions[i].z;
+    }
+
+    return out;
+}
+
 std::vector<glm::vec2> glm_cube_texCoords()
 {
 	return std::vector<glm::vec2>{
@@ -183,7 +207,7 @@ std::vector<glm::vec2> glm_cube_texCoords()
 	};
 }
 
-std::vector<vertex> cube_vertexes()
+std::vector<vertex> cube_vertices()
 {
 	auto positions = glm_cube_positions();
 	auto texCoords = glm_cube_texCoords();

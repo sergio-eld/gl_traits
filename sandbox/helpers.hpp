@@ -70,7 +70,6 @@ public:
 };
 
 // compound user-defined type
-// TODO: add case for inversed parameters (first field - textures). Must not compile
 struct vertex
 {
 	glm::vec3 posCoords;
@@ -107,7 +106,43 @@ struct vertexR
 
 };
 
+struct posVec3
+{
+    glm::vec3 coord;
+
+    bool operator==(const posVec3& other) const
+    {
+        return coord == other.coord;
+    }
+
+    bool operator!=(const posVec3& other) const
+    {
+        return !(*this == other);
+    }
+};
+
+struct posXYZf
+{
+    float x,
+        y,
+        z;
+
+    bool operator==(const posXYZf& other) const
+    {
+        return std::tie(x, y, z) ==
+            std::tie(other.x, other.y, other.z);
+    }
+
+    bool operator!=(const posXYZf& other) const
+    {
+        return !(*this == other);
+    }
+};
+
 
 std::vector<glm::vec3> glm_cube_positions();
+std::vector<posVec3> posVec3_cube_positions();
+std::vector<posXYZf> posXYZf_cube_positions();
+
 std::vector<glm::vec2> glm_cube_texCoords();
-std::vector<vertex> cube_vertexes();
+std::vector<vertex> cube_vertices();
