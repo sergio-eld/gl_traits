@@ -20,7 +20,7 @@ int main()
 	Shader ourShader{ (path.generic_string() + "vshader.vs").c_str(),
 		(path.generic_string() + "fshader.fs").c_str() };
 
-	auto vertices = cube_vertexes();
+	auto vertices = cube_vertices();
 
 	glt::VAO<glm::vec3, glm::vec2> vao{};
 	vao.Bind();

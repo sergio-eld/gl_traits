@@ -72,6 +72,7 @@ int main()
 
     static_assert(glt::is_equivalent_v<Layout, Layout>);
     static_assert(!glt::is_equivalent_v<Layout, Layout1>);
+    static_assert(glt::is_equivalent_v<Layout, LayoutCompound>);
     static_assert(glt::is_equivalent_v<LayoutCompound, Layout>);
     static_assert(glt::is_equivalent_v<LayoutCompound, LayoutCompound>);  
     static_assert(glt::is_equivalent_v<Layout1, Layout2, char, glm::vec3, char>);

@@ -26,7 +26,7 @@ int main()
 
 	// texture coordinates from batched array, vertex coords - from compound second
 	auto texCoords = glm_cube_texCoords();	// for batched 1st array
-	auto vertices = cube_vertexes();		// for compound 2nd array
+	auto vertices = cube_vertices();		// for compound 2nd array
 	std::vector<vertexR> vertices2{ vertices.size() };
 	for (size_t i = 0; i != vertices.size(); ++i)
 	{

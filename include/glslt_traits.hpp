@@ -261,7 +261,8 @@ namespace glt
 	template <class R, class L, typename ... Feed>
 	constexpr inline bool is_equivalent_v = is_equivalent<R, L, Feed...>::value;
 
-	// TODO: refactor this
+    // TODO: add equivalence cases for glm::vec and glm::mat
+
 	
 	// remove ?
 	template <class T>
@@ -290,7 +291,6 @@ namespace glt
 	// TODO: add sequence_element_traits:
 	// - provide element size
 
-#pragma message("glt::compound has been reimplemented! Check dependencies!!!")
     template <class tuple, class = decltype(std::make_index_sequence<std::tuple_size_v<tuple>>())>
     class compound_packed;
 
@@ -318,7 +318,7 @@ namespace glt
         }
 
         template <size_t n, class = std::enable_if_t<(n < sizeof...(indx))>>
-            const nth_type<n>& Get(tag_s<n>) const
+            constexpr const nth_type<n>& Get(tag_s<n>) const
             {
                 return reinterpret_cast<nth_type<n>&>(*(std::next(&storage, get_member_offset_v<n, T...>)));
             }
@@ -328,12 +328,12 @@ namespace glt
         static_assert(elems_count, "No types have been provided to glt::compound!");
 
         // default constructor
-        compound_packed()
+        constexpr compound_packed()
         {
             ((Get(tag_s<indx>()) = nth_type<indx>()), ...);
         }
 
-        compound_packed(T&& ... t)
+        constexpr compound_packed(T&& ... t)
         {
             ((Get(tag_s<indx>()) = std::forward<T>(t)), ...);
         }
@@ -348,6 +348,8 @@ namespace glt
     template <class ... T>
     struct compound : compound_packed<std::tuple<T...>>
     {
+        static_assert(elems_count, "Empty typed compound is not allowed!");
+
         using compound_packed<std::tuple<T...>>::elems_count;
 
         template <size_t n>
@@ -361,9 +363,28 @@ namespace glt
             : compound_packed<std::tuple<T...>>(std::forward<T>(t)...)
         {}
 
-        compound() = default;
+        // TODO: check this
+        template <class R, class = std::enable_if_t<is_equivalent_v<R, compound<T...>>>>
+        constexpr compound(R&& t)
+        {
+            reinterpret_cast<R&>(*this) = std::forward<R>(t);
+        }
+
+        constexpr compound() = default;
 
         using compound_packed<std::tuple<T...>>::Get;
+
+        template <class R, class = std::enable_if_t<is_equivalent_v<R, compound<T...>>>>
+        constexpr operator R&()
+        {
+            return reinterpret_cast<R&>(*this);
+        }
+
+        template <class R, class = std::enable_if_t<is_equivalent_v<R, compound<T...>>>>
+        constexpr operator const R&() const
+        {
+            return reinterpret_cast<const R&>(*this);
+        }
 
     };
 

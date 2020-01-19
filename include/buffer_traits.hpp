@@ -365,7 +365,7 @@ namespace glt
     {
         using cl_tuple = std::tuple<attr...>;
 
-        glt::compound_t<attr...> *ptr_;
+        glt::compound<attr...> *ptr_;
 
     public:
 
@@ -373,7 +373,7 @@ namespace glt
 
         using difference_type = std::ptrdiff_t;
 
-        using value_type = std::remove_pointer_t<decltype(ptr_)>;
+        using value_type = glt::compound<attr...>;
         using pointer = value_type*;
         using reference = value_type&;
         using iterator_category = std::random_access_iterator_tag;
@@ -390,7 +390,8 @@ namespace glt
         SeqIteratorOut& operator++()
         {
             assert(*this);
-            std::next(ptr_);
+            //std::next(ptr_); // why this doesn't work???
+            ++ptr_;
             return *this;
         }
 
@@ -405,7 +406,8 @@ namespace glt
         SeqIteratorOut operator++(int)
         {
             value_type *ptr = ptr_;
-            std::next(ptr_);
+            //std::next(ptr_); // why this doesn't work???
+            ++ptr_;
             return SeqIteratorOut(ptr);
         }
 
@@ -424,18 +426,29 @@ namespace glt
             return !((*this) == other);
         }
 
-        template <class T, class = std::enable_if_t<is_equivalent_v<T, value_type>>>
-        T& operator*() 
+        reference operator*()
         {
             assert(*this);
-            return *(T*)ptr_;
+            return *ptr_;
         }
 
-        template <class T, class = std::enable_if_t<is_equivalent_v<T, value_type>>>
-        const T& operator*() const
+        const reference operator*() const
         {
             assert(*this);
-            return *(T*)ptr_;
+            return *ptr_;
+        }
+
+
+        template <class T, class = std::enable_if_t<is_equivalent_v<T, attr...>>>
+        T& operator*() 
+        {
+            return reinterpret_cast<T&>(**this)
+        }
+
+        template <class T, class = std::enable_if_t<is_equivalent_v<T, attr...>>>
+        const T& operator*() const
+        {
+            return reinterpret_cast<const T&>(**this)
         }
 
     };
@@ -555,13 +568,13 @@ namespace glt
             MapGuard(Sequence<Attribs...>& seq, MapAccessBit accessBit)
                 : seq_(seq)
             {
-				glt::compound<Attribs...> *start = nullptr,
+                glt::compound<Attribs...> *start = nullptr,
 					*end = nullptr;
 
-//				seq_.MapRange(start, accessBit, seq_.Allocated());
+                seq_.MapRange(start, accessBit, seq_.Allocated());
                 
-               // start_ = iterator_out(start);
-				//end_ = iterator_out(std::next(start, seq_.Allocated()));
+                start_ = iterator_out(start);
+				end_ = iterator_out(std::next(start, seq_.Allocated()));
             }
 
         public:
@@ -735,16 +748,11 @@ namespace glt
 	public:
         constexpr BufferPacked(HandleBuffer&& handle = Allocator::Allocate(BufferTarget()))
 			: Buffer_base(std::move(handle)),
-			//sequence_indexed<indx, unwrap_seq_t<attribs>>
 			seq_base<indx>(unwrap_seq_t<attribs>(*this,
 				offsets_[indx], offsets_[indx + 1]))...
 		{}
 
-        /*
-        Buffer(size_t inst, HandleBuffer&& handle = Allocator::Allocate(BufferTarget()))
-			: Buffer_base(std::move(handle)),
-            Sequence<SingleSeq>(offsets_[0], offsets_[1])
-		{}*/
+        // TODO: add allocating constructor
 
 		using Buffer_base::Bind;
 		using Buffer_base::IsBound;
@@ -769,7 +777,7 @@ namespace glt
 				nullptr,
 				(GLenum)usage);
 
-			// TODO: debug check if data has been buffered
+			// TODO: debug check for opengl errors
 
 			currentUsage_ = usage;
 		}

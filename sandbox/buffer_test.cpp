@@ -341,9 +341,11 @@ int main()
 }
 
 
+
 int test_SubData_MapRead(int & mask)
 {
     
+
 	glt::Buffer<glm::vec3> bVec3;
 	glt::Buffer<int> bElements;
 
@@ -361,6 +363,7 @@ int test_SubData_MapRead(int & mask)
 
     seqVec3.SubData(positions.data(), positions.size());
 
+    // test non-compound sequences
     // testing simple map access
     glm::vec3 *mapped = nullptr;
     seqVec3.MapRange(mapped, glt::MapAccessBit::read);
@@ -373,12 +376,64 @@ int test_SubData_MapRead(int & mask)
             return mask;
         }
 
+    seqVec3.UnMap();
 
-    // seqVec3.Guard(glt::MapAccessBit::read);
+    // Check map guard range loop with identical types
+    static_assert(std::is_convertible_v<glt::compound<glm::vec3>, glm::vec3>);
+    static_assert(std::is_convertible_v<glm::vec3, glt::compound<glm::vec3>>);
+
+    std::vector<glm::vec3>::const_iterator vec3Iter = positions.cbegin();
+    for (const glm::vec3& v : seqVec3.Guard(glt::MapAccessBit::read))
+        if (v != *vec3Iter++)
+        {
+            mask |= 16;
+            return mask;
+        }
+
+    // check map guard range loop with equivalent types
+    static_assert(std::is_convertible_v<glt::compound<glm::vec3>, posVec3>);
+    static_assert(std::is_convertible_v<posVec3, glt::compound<glm::vec3>>);
+
+    std::vector<posVec3> pos_struct_vec3 = posVec3_cube_positions();
+    std::vector<posVec3>::const_iterator pos_vec3_iter = 
+        pos_struct_vec3.cbegin();
+
+    for (const posVec3& v : seqVec3.Guard(glt::MapAccessBit::read))
+        if (v != *pos_vec3_iter++)
+        {
+            mask |= 16;
+            return mask;
+        }
+
+
+    // test compound sequences
+    static_assert(glt::is_equivalent_v<glt::compound<glm::vec3, glm::vec2>, vertex>);
+    static_assert(glt::is_equivalent_v<vertex, glt::compound<glm::vec3, glm::vec2>>);
+    static_assert(std::is_convertible_v<glt::compound<glm::vec3, glm::vec2>, vertex>); 
+    static_assert(std::is_convertible_v<vertex, glt::compound<glm::vec3, glm::vec2>>);
+
+    glt::Buffer<glt::compound<glm::vec3, glm::vec2>> vertBuf;
+    vertBuf.Bind(glt::BufferTarget::array);
+
+    std::vector<vertex> vertices = cube_vertices();
+
+    vertBuf.AllocateMemory(vertices.size(), glt::BufUsage::static_draw);
+    glt::Sequence<glm::vec3, glm::vec2>& vertSequence = vertBuf;
+    vertSequence.SubData(vertices.data(), vertices.size());
+
+    std::vector<vertex>::const_iterator vertIter = vertices.cbegin();
+
+    for (const vertex& v : vertSequence.Guard(glt::MapAccessBit::read))
+        if (v != *vertIter++)
+        {
+            mask |= 16;
+            return mask;
+        }
 
 
 
-
+    //for (const vertex& v : vertSequence.Guard(glt::MapAccessBit::read))
+    //    ;
 
     // TODO: - check mapping compound sequences with equivalent types
     // - check mapping ranges with offsets

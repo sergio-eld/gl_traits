@@ -64,7 +64,7 @@ int main()
 	{
 		using CmpdBuffer = BufferOld<compound<glm::vec3, glm::vec2>>;
 
-		std::vector<vertex> vertices = cube_vertexes();
+		std::vector<vertex> vertices = cube_vertices();
 
 		CmpdBuffer buffer{};
 		buffer.Bind(tag_v<BufferTarget::array>());
