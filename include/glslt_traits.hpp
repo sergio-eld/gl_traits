@@ -327,6 +327,12 @@ namespace glt
 
         static_assert(elems_count, "No types have been provided to glt::compound!");
 
+        // default constructor
+        compound_packed()
+        {
+            ((Get(tag_s<indx>()) = nth_type<n>()), ...);
+        }
+
         compound_packed(T&& ... t)
         {
             ((Get(tag_s<indx>()) = std::forward<T>(t)), ...);
@@ -359,34 +365,6 @@ namespace glt
 
     };
 
-
-    /*
-	template <class ... T>
-	class compound
-	{
-        std::aligned_storage_t<get_class_size_v<T...>, 4> storage;
-
-    public:
-		constexpr static size_t elems_count = sizeof...(T);
-
-		static_assert(elems_count, "No types have been provided to glt::compound!");
-
-        template <size_t n>
-        using nth_type = std::tuple_element_t<n, std::tuple<T...>>;
-		using first_type = nth_type<0>;
-		using type = std::conditional_t<(elems_count > 1),
-			compound<T...>, first_type>;
-
-		compound(T&& ... t)
-		{}
-
-
-
-
-		// TODO: - equivalence based constructor
-		// - equivalence based user-defined converison
-
-	};*/
 
 	template <class ... T>
 	using compound_t = typename compound<T...>::type;
