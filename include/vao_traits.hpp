@@ -4,33 +4,16 @@
 
 namespace glt
 {
-	class ActiveVAO
-	{
-		inline static GLuint vao_ = 0;
-
-	public:
-
-		static bool IsBound(const HandleVAO& handle)
-		{
-			return handle == vao_;
-		}
-
-		static void Bind(const HandleVAO& handle)
-		{
-			vao_ = handle_accessor(handle);
-			glBindVertexArray(vao_);
-		}
-
-		static void UnBind()
-		{
-			vao_ = 0;
-			glBindVertexArray(0);
-		}
-
-	};
 
     class VAO_base
     {
+        static VAO_base* active_vao_;
+
+        static void Register(VAO_base* vao = nullptr)
+        {
+            active_vao_ = vao;
+        }
+
     protected:
         HandleVAO handle_;
 
@@ -45,25 +28,68 @@ namespace glt
         {
             assert(false && "VAO_base default constructor called!");
         }
+
+        VAO_base(const VAO_base&) = delete;
+        VAO_base& operator=(const VAO_base&) = delete;
+
+        VAO_base(VAO_base&& other)
+            : handle_(std::move(other.handle_))
+        {
+            if (other.IsBound())
+                Register(this);
+        }
+
+        VAO_base& operator=(VAO_base&& other)
+        {
+            handle_ = std::move(other.handle_);
+
+            if (other.IsBound())
+                Register(this);
+
+            return *this;
+        }
+
+    public:
+        void Bind()
+        {
+            glBindVertexArray(handle_accessor(handle_));
+            Register(this);
+        }
+
+        bool IsBound() const
+        {
+            return this == active_vao_;
+        }
+
+        void UnBind()
+        {
+            assert(IsBound() && "Unbinding non-bound VAO!");
+            glBindVertexArray(0);
+            Register();
+        }
+
     };
 
 
     // has_name_v = false
     // Attrib is not compound!
     template <size_t indx, class Attrib, bool = has_name_v<Attrib>>
-    class VAO_attrib : protected virtual VAO_base
+    class VAO_attrib
     {
+        const VAO_base& rVao_;
+
     public:
 		
+        // TODO: track enabled pointers?
         void EnablePointer(tag_s<indx>) const
         {
-            assert(ActiveVAO::IsBound(handle_));
+            assert(rVao_.IsBound(handle_));
             glEnableVertexAttribArray((GLuint)indx);
         }
 
         void AttributePointer(tag_s<indx>, AttribPtr<Attrib>&& attrib, bool normalize = false)
         {
-            assert(ActiveVAO::IsBound(handle_) &&
+            assert(rVao_.IsBound() &&
                 "Setting Vertex Attribute for non-active VAO");
 
             glVertexAttribPointer((GLuint)indx,
@@ -75,31 +101,38 @@ namespace glt
         }
 
     protected:
-        VAO_attrib() = default;
+        VAO_attrib(const VAO_base& rVao)
+            : rVao_(rVao)
+        {}
     };
 
     // named attribute
     template <size_t indx, class Attrib>
-    class VAO_attrib<indx, Attrib, true> : protected virtual VAO_base,
+    class VAO_attrib<indx, Attrib, true> : // protected virtual VAO_base,
         public VAO_attrib<indx, variable_traits_type<Attrib>>
     {
+
+        using vao_attrib_nameless = VAO_attrib<indx, variable_traits_type<Attrib>>;
+
     public:
 		
-        using VAO_attrib<indx, variable_traits_type<Attrib>>::EnablePointer;
-        using VAO_attrib<indx, variable_traits_type<Attrib>>::AttributePointer;
+        using vao_attrib_nameless::EnablePointer;
+        using vao_attrib_nameless::AttributePointer;
 
         void EnablePointer(tag_t<Attrib>)
         {
-            VAO_attrib<indx, Attrib, false>::EnablePointer(tag_s<indx>());
+            vao_attrib_nameless::EnablePointer(tag_s<indx>());
         }
         void AttributePointer(AttribPtr<Attrib>&& attrib, bool normalize = false)
         {
-            VAO_attrib<indx, variable_traits_type<Attrib>>::AttributePointer(tag_s<indx>(),
+            vao_attrib_nameless::AttributePointer(tag_s<indx>(),
                 std::move(attrib), normalize);
         }
 
     protected:
-        VAO_attrib() = default;
+        VAO_attrib(const VAO_base& rVao)
+            : vao_attrib_nameless(rVao)
+        {}
     };
 
  
@@ -109,47 +142,32 @@ namespace glt
 	/*
 	Implements glVertexAttribPointer usage
 
-    // TODO: Attributes locationes may be undefined in source code. Meaning that 
-    attribute location can be changed dynamically, several attributes can point to the same location.
-    Need to store that information.
+    // TODO: Attributes locations may be undefined in source code. Meaning that 
+    attribute location can be changed dynamically  before linkage, several attributes can point to the same location.
+    Need to store that information?
+
     Need to distinct between VAO with statically defined (in-source) and undefined
-    attributes' locations.
+    attributes' locations?
+
     For dynamic definitions need to restrict different types for pointing to the same location
 
 	// TODO: exclude compound attributes, VAO is agnostic to how a buffer stores data
 	*/
 	template <class ... Attribs, size_t ... indx>
-	class VAO_packed<std::tuple<Attribs...>, std::index_sequence<indx...>> : VAO_attrib<indx, Attribs> ...
+	class VAO_packed<std::tuple<Attribs...>, std::index_sequence<indx...>> : public VAO_base,
+        VAO_attrib<indx, Attribs> ...
 	{
+
         template <size_t i>
         using VAO_attr = VAO_attrib<i, std::tuple_element_t<i, std::tuple<Attribs...>>>;
 
-        template <size_t i>
-        using VAO_attr_f = VAO_attrib<i, std::tuple_element_t<i, std::tuple<Attribs...>>, false>;
-
 
 		// What about glm::mat????
-		//static_assert(!std::disjunction_v<is_compound_seq<Attribs>...>,
-		//	"Compound attributes are not allowed in VAO!");
+//		static_assert(!std::disjunction_v<is_compound_seq<Attribs>, ...>,
+//			"Compound attributes are not allowed in VAO!");
 
         static_assert(all_names_unique<Attribs...>(),
             "All attributes in a VAO must have unique aliases!");
-		// HandleVAO handle_;
-
-		/*
-		glVertexAttributePointer(
-		0. GLuint index,
-		1. GLenum type,
-		2. GLboolean normalized,
-		3. GLsizei stride,
-		4. const void* offset
-		)
-
-		const GLvoid *offset - is the offset from the start of the buffer
-			object CURRENTLY bound.
-
-		What about Normalized parameter?????
-		*/
 
 		// for run-time wrapper function
 		template <size_t i>
@@ -158,13 +176,15 @@ namespace glt
 		template <size_t i>
 		constexpr static PtrEnable<i> enable_ptr = &VAO_packed::EnablePointer;
 
+        // dummy to typename to store function pointers
 		template <size_t i>
 		constexpr static PtrEnable<0> enable_ptr_0 =
 			reinterpret_cast<PtrEnable<0>>(enable_ptr<i>);
 
 	public:
         VAO_packed(HandleVAO&& handle = Allocator::Allocate(VAOTarget()))
-			: VAO_base(std::move(handle))
+			: VAO_base(std::move(handle)),
+            VAO_attr<indx>(*this)...
 		{}
 
         using VAO_attr<indx>::EnablePointer...;
@@ -179,17 +199,11 @@ namespace glt
 
 			(this->*enableTable[i])(tag_s<0>());
         }
-
-
-		void Bind() const
-		{
-			ActiveVAO::Bind(handle_);
-		}
-
-		void UnBind() const
-		{
-			ActiveVAO::UnBind();
-		}
+ 
+        void EnablePointers()
+        {
+            (EnablePointer(tag_s<indx>()), ...);
+        }
 
         // TODO: enable vertex attribute pointer
         // - by name
@@ -197,8 +211,7 @@ namespace glt
         // - enable all
 
     private:
-
-//        constexpr static DummyPtrEnablePointer enableTable[]{ (GetPtrEnablePointer(tag_s<indx>())) ...};
+   
 	};
 
     template <class ... Attribs>
