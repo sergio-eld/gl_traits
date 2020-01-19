@@ -211,37 +211,38 @@ namespace glt
 		if constexpr (!indx)
 			return 0;
 
-		std::ptrdiff_t res = 0,
-			sizes[]{ sizeof(T)... };
+        std::ptrdiff_t offsets[sizeof...(T) + 1]{0},
+            sizes[]{ sizeof(T)..., 0 };
 
-		for (size_t i = 1; i < indx; ++i)
+        // adjust offsets until current
+		for (size_t i = 1; i <= indx; ++i)
 		{
-			res += sizes[i - 1];
+            std::ptrdiff_t prevOffset = offsets[i - 1],
+                prevSize = sizes[i - 1],
+                curSize = sizes[i],
+                bites_left = ((prevSize + prevOffset) % 4) ? 
+                4 - (prevSize + prevOffset) % 4 :
+                0,
+                padding = bites_left < curSize ? bites_left : 0;
 
-			if ((res % 4) &&
-				sizes[i] > 4 - res % 4)
-				res += 4 - res % 4;
+            offsets[i] += prevOffset + prevSize + padding;
 		}
 
-		// if returning class size
-		if constexpr (indx == sizeof...(T))
-			res += sizes[indx - 1] % 4 ?
-			sizes[indx - 1] :
-			sizes[indx - 1] + 4 - sizes[indx - 1] % 4;
-
-		return res;
+		return offsets[indx];
 	}
 
 	template <size_t indx, class ... T>
 	constexpr inline std::ptrdiff_t get_member_offset_v =
 		std::integral_constant<std::ptrdiff_t, get_member_offset<indx, T...>()>::value;
-	
+
 	template <class ... T>
 	struct get_class_size :
-		std::integral_constant<size_t, get_member_offset_v<sizeof...(T)>> {};
+		std::integral_constant<size_t, get_member_offset_v<sizeof...(T), T...>> {};
 	
 	template <class ... T>
 	constexpr inline size_t get_class_size_v = get_class_size<T...>();
+
+
 
 	/* Get if 2 POD classes R and L are equivalent, that is:
 	- they have the same type 
@@ -314,9 +315,24 @@ namespace glt
 	template <class ... T>
 	using compound_t = typename compound<T...>::type;
 
+    template <size_t indx, class Compound>
+    struct get_compound_member_offset;
+
+    template <size_t indx, class ... Attr>
+    struct get_compound_member_offset<indx, compound<Attr...>> :
+        std::integral_constant<std::ptrdiff_t, get_member_offset_v<indx, Attr...>> {};
+
+    template <size_t indx, class Compound>
+    constexpr inline std::ptrdiff_t get_compound_member_offset_v =
+        get_compound_member_offset<indx, Compound>();
+
 	template <class R, typename ... FeedCompound>
 	struct is_equivalent<R, compound<FeedCompound...>> :
 		is_equivalent<R, compound<FeedCompound...>, FeedCompound...> {};
+
+    template <class L, typename ... FeedCompound>
+    struct is_equivalent<compound<FeedCompound...>, L> :
+        is_equivalent<compound<FeedCompound...>, L, FeedCompound...> {};
 
 	template <class ... T>
 	struct std::tuple_size<compound<T...>> :

@@ -261,6 +261,7 @@ namespace glt
             return (*this)(tag_s<0>(), instOffset);
         }
 
+        // need this?
         constexpr operator AttribPtr<Attr>() const
         {
             return (*this)(tag_s<0>());
@@ -311,7 +312,7 @@ namespace glt
 	constexpr operator glt::AttribPtr
 	constexpr glt::AttribPtr operator()
 	*/
-
+    
     template <typename ... Attribs>
     class SequenceCRTP
     {
@@ -382,7 +383,7 @@ namespace glt
            // : ptr_(ptr)
         {}
 
-        template <class T, class = std::enable_if_t<is_equivalent_v<T, cl_tuple>>>
+        template <class T, class = std::enable_if_t<is_equivalent_v<T, value_type>>>
         explicit SeqIteratorOut(T *ptr = nullptr)
            // : SeqIteratorOut(reinterpret_cast<pointer>(ptr))
         {}
@@ -424,14 +425,14 @@ namespace glt
             return !((*this) == other);
         }
 
-        template <class T, class = std::enable_if_t<is_equivalent_v<T, cl_tuple>>>
+        template <class T, class = std::enable_if_t<is_equivalent_v<T, value_type>>>
         T& operator*() 
         {
             assert(*this);
             return *(T*)ptr_;
         }
 
-        template <class T, class = std::enable_if_t<is_equivalent_v<T, cl_tuple>>>
+        template <class T, class = std::enable_if_t<is_equivalent_v<T, value_type>>>
         const T& operator*() const
         {
             assert(*this);
