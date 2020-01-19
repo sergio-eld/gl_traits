@@ -18,6 +18,7 @@ struct init_map<std::integer_sequence<BufferTarget, targets...>>
 
 std::map<BufferTarget, Buffer_base*> Buffer_base::targets_{ init_map<BufferTargetList>() };
 
+VAO_base* VAO_base::active_vao_ = nullptr;
 // 
 
 //const Handle<VAOTarget::vao> *glt_buffers::currentVAO_ = nullptr;
