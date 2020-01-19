@@ -419,6 +419,8 @@ namespace glt
 	template <class ... Types>
 	constexpr bool all_names_unique()
 	{
+#pragma message("glt::all_names_unique is not implemented!")
+        /* //This version will take an eternity to compile and eventually fail
         if constexpr ((bool)sizeof...(Types))
         {
             std::string_view strs[]{ variable_traits_name<Types> ... };
@@ -431,7 +433,9 @@ namespace glt
         }
         // empty set yields true
         else
-            return true;
+            return true;*/
+
+        return true;
 	}
 
     template <class Tuple>

@@ -680,6 +680,16 @@ namespace glt
 		{
 			return seq;
 		}
+
+        constexpr const Seq& operator()(tag_s<indx>) const
+        {
+            return SeqN(tag_s<indx>());
+        }
+
+        Seq& operator()(tag_s<indx>)
+        {
+            return SeqN(tag_s<indx>());
+        }
 	};
 
 	template <class Seq>
@@ -706,13 +716,13 @@ namespace glt
 
 		constexpr operator const Seq&() const
 		{
-			return seq_base::SeqN(tag_s<0>());
+            return SeqN();
 		}
 
 		operator Seq&()
 		{
-			return seq_base::SeqN(tag_s<0>());
-		}
+            return SeqN();
+        }
 
 
 	};
@@ -760,6 +770,7 @@ namespace glt
 		using Buffer_base::IsMapped;
 
         using seq_base<indx>::SeqN ...;
+        using seq_base<indx>::operator() ...;
 
         // Sequence<SingleSeq>::Allocated;
         // using Sequence<SingleSeq>::SubData;

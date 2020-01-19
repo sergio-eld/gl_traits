@@ -12,9 +12,13 @@ constexpr const char a[] = "StringA",
 a1[] = "StringA";
 
 
-int main()
+int main(int argc, char * argv[])
 {
-	std::cout << path.generic_string() << std::endl;
+    
+    fsys::path exePath{ argv[0] };
+
+	std::cout << exePath.generic_string() << std::endl;
+
 	SmartGLFW glfw{ 3, 3 };
 	SmartGLFWwindow window{ SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL" };
 
@@ -26,8 +30,8 @@ int main()
 
 	// build and compile our shader program
 	// ------------------------------------
-	Shader ourShader{ (path.generic_string() + "vshader.vs").c_str(),
-		(path.generic_string() + "fshader.fs").c_str() };
+	Shader ourShader{ (exePath.generic_string() + "vshader.vs").c_str(),
+		(exePath.generic_string() + "fshader.fs").c_str() };
 
 	auto posCoords = glm_cube_positions();
 	auto texCoords = glm_cube_texCoords();	// for batched 1st array
@@ -36,24 +40,29 @@ int main()
 	glt::VAO<glm::vec3, glm::vec2> vao{};
 	vao.Bind();
 
-	glt::BufferOld<glm::vec3> vboPos{};
-	vboPos.Bind(glt::tag_v<glt::BufferTarget::array>());
+	glt::Buffer<glm::vec3> vboPos{};
+    glt::Buffer<glm::vec2> vboTex{};
+
+	vboPos.Bind(glt::BufferTarget::array);
 	vboPos.AllocateMemory(posCoords.size(), glt::BufUsage::static_draw);
-	vboPos.BufferData(posCoords.data(), posCoords.size());
+ 
+    // TODO: use operator() here
+    glt::Sequence<glm::vec3>& sVec3 = vboPos;
+/*    sVec3.SubData(posCoords.data(), posCoords.size());
 
-	vao.AttributePointer(vboPos.Attribute(glt::tag_s<0>()), glt::tag_s<0>());
+    vao.AttributePointer(glt::tag_s<0>(), sVec3);
+   
+    vboTex.Bind(glt::BufferTarget::array);
+    vboTex.AllocateMemory(texCoords.size(), glt::BufUsage::static_draw);
+    vboTex.SeqN().SubData(texCoords.data(), texCoords.size());
 
-	glt::BufferOld<glm::vec2> vboTex{};
-	vboTex.Bind(glt::tag_v<glt::BufferTarget::array>());
-	vboTex.AllocateMemory(texCoords.size(), glt::BufUsage::static_draw);
-	vboTex.BufferData(texCoords.data(), texCoords.size());
+    vao.AttributePointer(glt::tag_s<1>(), vboTex.SeqN());
+    vboTex.UnBind();
 
-	vao.AttributePointer(vboTex.Attribute(glt::tag_s<0>()), glt::tag_s<1>());
+    // TODO: use EnablePointers()
+	vao.EnablePointer(0);
+	vao.EnablePointer(1);
 
-	vao.EnableVertexAttribPointer(0);
-	vao.EnableVertexAttribPointer(1);
-
-	vboTex.UnBind(glt::tag_v<glt::BufferTarget::array>());
 	
 	/////////////////////////////////////////////////////////////////////
 	// The rest part is identical to other use cases
@@ -64,8 +73,8 @@ int main()
 	// load and create textures 
 	unsigned int texture1, texture2;
 	{
-		Image tex1{ (path.generic_string() + "resources/textures/container.jpg") },
-			tex2{ (path.generic_string() + "resources/textures/awesomeface.png") };
+		Image tex1{ (exePath.generic_string() + "resources/textures/container.jpg") },
+			tex2{ (exePath.generic_string() + "resources/textures/awesomeface.png") };
 
 		assert(tex1.Data() && tex2.Data());
 
@@ -154,7 +163,7 @@ int main()
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
-
+    */
 	return 0;
 
 }

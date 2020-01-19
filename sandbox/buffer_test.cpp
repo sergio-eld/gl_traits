@@ -345,7 +345,6 @@ int main()
 int test_SubData_MapRead(int & mask)
 {
     
-
 	glt::Buffer<glm::vec3> bVec3;
 	glt::Buffer<int> bElements;
 
@@ -419,24 +418,21 @@ int test_SubData_MapRead(int & mask)
 
     vertBuf.AllocateMemory(vertices.size(), glt::BufUsage::static_draw);
     glt::Sequence<glm::vec3, glm::vec2>& vertSequence = vertBuf;
-    vertSequence.SubData(vertices.data(), vertices.size());
 
     std::vector<vertex>::const_iterator vertIter = vertices.cbegin();
 
+    for (vertex& v : vertSequence.Guard(glt::MapAccessBit::write))
+        v = *vertIter++;
+
+    //vertSequence.SubData(vertices.data(), vertices.size());
+
+    vertIter = vertices.cbegin();
     for (const vertex& v : vertSequence.Guard(glt::MapAccessBit::read))
         if (v != *vertIter++)
         {
             mask |= 16;
             return mask;
         }
-
-
-
-    //for (const vertex& v : vertSequence.Guard(glt::MapAccessBit::read))
-    //    ;
-
-    // TODO: - check mapping compound sequences with equivalent types
-    // - check mapping ranges with offsets
 
     
 	return mask;
