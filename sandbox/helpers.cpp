@@ -8,27 +8,12 @@
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
-const std::filesystem::path path{ GetFullPath("") };
-
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
 void processInput(GLFWwindow *window)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
-}
-
-std::string GetFullPath(const std::string & pathRelative)
-{
-	std::string full_exe_path;
-
-	char buffer[MAX_PATH];
-	auto dir = GetModuleFileName(NULL, buffer, MAX_PATH);
-	std::string::size_type pos = std::string(buffer).find_last_of("\\/");
-	full_exe_path = std::string(buffer, 0, pos + 1);
-
-
-	return full_exe_path + pathRelative;
 }
 
 SmartGLFW::SmartGLFW(int verMajor, int verMinor)

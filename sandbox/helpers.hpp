@@ -17,10 +17,6 @@ void processInput(GLFWwindow *window);
 extern const unsigned int SCR_WIDTH;
 extern const unsigned int SCR_HEIGHT;
 
-extern const std::filesystem::path path;
-
-
-std::string GetFullPath(const std::string& pathRelative);
 
 class SmartGLFW
 {
