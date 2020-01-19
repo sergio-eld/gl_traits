@@ -330,7 +330,7 @@ namespace glt
         // default constructor
         compound_packed()
         {
-            ((Get(tag_s<indx>()) = nth_type<n>()), ...);
+            ((Get(tag_s<indx>()) = nth_type<indx>()), ...);
         }
 
         compound_packed(T&& ... t)
@@ -360,6 +360,8 @@ namespace glt
         compound(T&& ... t)
             : compound_packed<std::tuple<T...>>(std::forward<T>(t)...)
         {}
+
+        compound() = default;
 
         using compound_packed<std::tuple<T...>>::Get;
 
