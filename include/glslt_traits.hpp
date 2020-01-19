@@ -291,26 +291,102 @@ namespace glt
 	// - provide element size
 
 #pragma message("glt::compound has been reimplemented! Check dependencies!!!")
+    template <class tuple, class = decltype(std::make_index_sequence<std::tuple_size_v<tuple>>())>
+    class compound_packed;
+
+    template <class ... T, size_t ... indx>
+    class compound_packed<std::tuple<T...>, std::index_sequence<indx...>>
+    {
+        template <class T>
+        struct destr_wrapper
+        {
+            T val;
+        };
+
+        std::aligned_storage_t<get_class_size_v<T...>, 4> storage;
+
+    public:
+        constexpr static size_t elems_count = sizeof...(T);
+
+        template <size_t n>
+        using nth_type = std::tuple_element_t<n, std::tuple<T...>>;
+
+        template <size_t n, class = std::enable_if_t<(n < sizeof...(indx))>>
+        nth_type<n>& Get(tag_s<n>)
+        {
+            return reinterpret_cast<nth_type<n>&>(*(std::next(&storage, get_member_offset_v<n, T...>)));
+        }
+
+        template <size_t n, class = std::enable_if_t<(n < sizeof...(indx))>>
+            const nth_type<n>& Get(tag_s<n>) const
+            {
+                return reinterpret_cast<nth_type<n>&>(*(std::next(&storage, get_member_offset_v<n, T...>)));
+            }
+
+    protected:
+
+        static_assert(elems_count, "No types have been provided to glt::compound!");
+
+        compound_packed(T&& ... t)
+        {
+            ((Get(tag_s<indx>()) = std::forward<T>(t)), ...);
+        }
+
+        ~compound_packed()
+        {
+            ((reinterpret_cast<destr_wrapper<nth_type<indx>>&>(Get(tag_s<indx>())).~destr_wrapper<nth_type<indx>>()), ...);
+        }
+
+    };
+
+    template <class ... T>
+    struct compound : compound_packed<std::tuple<T...>>
+    {
+        using compound_packed<std::tuple<T...>>::elems_count;
+
+        template <size_t n>
+        using nth_type = std::tuple_element_t<n, std::tuple<T...>>;
+        using first_type = nth_type<0>;
+
+        using type = std::conditional_t<(elems_count > 1),
+            compound<T...>, first_type>;
+
+        compound(T&& ... t)
+            : compound_packed<std::tuple<T...>>(std::forward<T>(t)...)
+        {}
+
+        using compound_packed<std::tuple<T...>>::Get;
+
+    };
+
+
+    /*
 	template <class ... T>
-	struct compound
+	class compound
 	{
+        std::aligned_storage_t<get_class_size_v<T...>, 4> storage;
+
+    public:
 		constexpr static size_t elems_count = sizeof...(T);
 
 		static_assert(elems_count, "No types have been provided to glt::compound!");
 
-		using first_type = std::tuple_element_t<0, std::tuple<T...>>;
+        template <size_t n>
+        using nth_type = std::tuple_element_t<n, std::tuple<T...>>;
+		using first_type = nth_type<0>;
 		using type = std::conditional_t<(elems_count > 1),
 			compound<T...>, first_type>;
 
 		compound(T&& ... t)
 		{}
 
-		std::aligned_storage_t<get_class_size_v<T...>, 4> storage;
+
+
 
 		// TODO: - equivalence based constructor
 		// - equivalence based user-defined converison
 
-	};
+	};*/
 
 	template <class ... T>
 	using compound_t = typename compound<T...>::type;
