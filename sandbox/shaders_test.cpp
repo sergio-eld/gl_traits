@@ -72,10 +72,6 @@ int main(int argc, const char *argv[])
 	constexpr  glt::AttribPtr<aPos_vec3> v31pos{ glt::AttribPtr<glm::vec3>() };
     */
 
-    static_assert(std::is_same_v<glt::AttribPtr<glm::vec3>::ConvType<glm::vec3>,
-        glt::AttribPtr<glm::vec3>>);
-    static_assert(std::is_same_v<glt::AttribPtr<glm::vec3>::ConvType<aPos_vec3>,
-        glt::AttribPtr<aPos_vec3>>);
 
 	glt::Buffer<glm::vec3> sbuf;
 	sbuf.Bind(glt::BufferTarget::array);
@@ -89,11 +85,8 @@ int main(int argc, const char *argv[])
    // sbufCmp.Bind(glt::BufferTarget::array);
     sbufCmp.AllocateMemory(36, glt::BufUsage::static_draw);
 
-    const glt::Sequence<glt::compound<glm::vec3, glm::vec2, float>>& cseqCmp = sbufCmp;
-    glt::Sequence<glt::compound<glm::vec3, glm::vec2, float>>& seqCmp = sbufCmp;
-
-
-
+    const glt::Sequence<glm::vec3, glm::vec2, float>& cseqCmp = sbufCmp;
+    glt::Sequence<glm::vec3, glm::vec2, float>& seqCmp = sbufCmp;
 
     sizeof(glt::Buffer_base);
     sizeof(glt::Buffer<glm::vec3>);
