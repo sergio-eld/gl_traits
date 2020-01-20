@@ -62,6 +62,7 @@ add_library(${PROJECT_NAME}
 		include/glslt_traits.hpp
 		include/type_converions.hpp
 		include/basic_types.hpp
+		include/equivalence.hpp
 		##############
 		
 		#${SHADER_SOURCE_PARSER_HEADER}
@@ -73,10 +74,7 @@ add_library(${PROJECT_NAME}
 		include/program_traits.hpp
 		
 		include/gl_traits.hpp
-		
-		include/traits.hpp
-		
-
+			
 		src/gl_traits.cpp
 	)
 	

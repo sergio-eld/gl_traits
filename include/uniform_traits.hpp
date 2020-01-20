@@ -284,7 +284,7 @@ namespace glt
 	{
 
 		template <size_t i>
-		using UnifBase = Uniform<nth_element_t<i, Attribs...>>;
+		using UnifBase = Uniform<std::tuple_element_t<i, std::tuple<Attribs...>>>;
 
 	public:
 

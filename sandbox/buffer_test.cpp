@@ -324,11 +324,6 @@ int main()
     static_assert(sizeof(std::aligned_storage_t<sizeof(glm::vec3), 4>) == sizeof(glm::vec3));
 
 
-    //static_assert(sizeof(glt::compound<glm::vec3>) == glt::class_size_from_tuple_v<std::tuple<glm::vec3>>);
-    //static_assert(sizeof(glt::compound<glm::vec3, bool, glm::vec4>) ==
-    //    glt::class_size_from_tuple_v<std::tuple<glm::vec3, bool, glm::vec4>>);
-
-
     static_assert(std::is_standard_layout_v<glt::compound<glm::vec3, bool, glm::vec3>>);
     static_assert(std::is_standard_layout_v<glt::compound<glm::vec3, float, bool>>);
 
@@ -359,6 +354,16 @@ int test_SubData_MapRead(int & mask)
 	bElements.AllocateMemory(positions.size(), glt::BufUsage::static_draw);
 
     glt::Sequence<glm::vec3>& seqVec3 = bVec3.SeqN();
+
+    // this works in buffer_test.cpp
+    static_assert(glt::is_aggregate_initializable_v<glt::compound<glm::vec3>, glm::vec3>);
+    static_assert(glt::is_aggregate_initializable_v<glm::vec3, glt::compound<glm::vec3>>);
+
+    // this does not work even in buffer_test.cpp
+    //static_assert(glt::is_aggregate_initializable_v<glt::compound<int>, int>);
+    //static_assert(glt::is_aggregate_initializable_v<int, glt::compound<int>>);
+
+    ///////////////////////////////
 
     seqVec3.SubData(positions.data(), positions.size());
 

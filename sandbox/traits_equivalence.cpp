@@ -29,7 +29,12 @@ struct Layout2
 
 int main()
 {
-    
+    /*
+    // this works in buffer_test.cpp, does not work here
+    static_assert(glt::is_aggregate_initializable_v<glt::compound<glm::vec3>, glm::vec3>);
+    static_assert(glt::is_aggregate_initializable_v<glm::vec3, glt::compound<glm::vec3>>);
+    */
+
     using LayoutCompound = glt::compound<char, char, float, glm::vec2, char, char, glm::vec3>;
     using LayoutCompound1 = glt::compound<char, glm::vec3, char>;
 
