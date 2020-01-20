@@ -1,5 +1,7 @@
 #pragma once
 
+#include "equivalence.hpp"
+
 #include "glm/glm.hpp"
 
 #include "enums.hpp"

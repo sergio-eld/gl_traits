@@ -1,5 +1,6 @@
 ﻿
-#include "basic_types.hpp"
+#include "equivalence.hpp" //"basic_types.hpp"
+#include "glm/glm.hpp"
 
 struct Layout
 {
@@ -29,12 +30,28 @@ struct Layout2
 
 int main()
 {
+
+    static_assert(glt::is_aggregate_initializable_v<glt::compound<int>, int>);
+    static_assert(glt::is_aggregate_initializable_v<glt::compound<glm::vec3>, glm::vec3>);
+    static_assert(glt::is_equivalent_v<int, glt::compound<int>>);
+    static_assert(glt::is_equivalent_v<glm::vec3, glt::compound<glm::vec3>>);
+    static_assert(glt::is_equivalent_v<glt::compound<int>, int>);
+    static_assert(glt::is_equivalent_v<glt::compound<glm::vec3>, glm::vec3>);
+    static_assert(glt::is_equivalent_v<glt::compound<int>, glt::compound<int>>);
+
     /*
     // this works in buffer_test.cpp, does not work here
     static_assert(glt::is_aggregate_initializable_v<glt::compound<glm::vec3>, glm::vec3>);
     static_assert(glt::is_aggregate_initializable_v<glm::vec3, glt::compound<glm::vec3>>);
     */
 
+    // this does not work even in buffer_test.cpp
+
+    //static_assert(glt::is_aggregate_initializable_v<glt::compound<int>, int>);
+    //static_assert(glt::is_aggregate_initializable_v<int, glt::compound<int>>);
+
+
+    /*
     using LayoutCompound = glt::compound<char, char, float, glm::vec2, char, char, glm::vec3>;
     using LayoutCompound1 = glt::compound<char, glm::vec3, char>;
 
@@ -82,6 +99,6 @@ int main()
     static_assert(glt::is_equivalent_v<LayoutCompound, LayoutCompound>);  
     static_assert(glt::is_equivalent_v<Layout1, Layout2, char, glm::vec3, char>);
     static_assert(!glt::is_equivalent_v<Layout, Layout2, char, glm::vec3, char>);
-    
+    */
     return 0;
 }

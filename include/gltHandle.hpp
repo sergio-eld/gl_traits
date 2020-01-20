@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 #include "glslt_traits.hpp"
-#include "traits.hpp"
 #include "enums.hpp"
 
 #include <map>
