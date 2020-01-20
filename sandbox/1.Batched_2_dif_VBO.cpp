@@ -14,9 +14,8 @@ a1[] = "StringA";
 
 int main(int argc, char * argv[])
 {
-    
+ 
     fsys::path exePath{ argv[0] };
-
 	std::cout << exePath.generic_string() << std::endl;
 
 	SmartGLFW glfw{ 3, 3 };
@@ -26,7 +25,6 @@ int main(int argc, char * argv[])
 	glfw.LoadOpenGL();
 
 	glEnable(GL_DEPTH_TEST);
-
 
 	// build and compile our shader program
 	// ------------------------------------
@@ -48,10 +46,10 @@ int main(int argc, char * argv[])
  
     // TODO: use operator() here
     glt::Sequence<glm::vec3>& sVec3 = vboPos;
-/*    sVec3.SubData(posCoords.data(), posCoords.size());
+    sVec3.SubData(posCoords.data(), posCoords.size());
 
     vao.AttributePointer(glt::tag_s<0>(), sVec3);
-   
+ 
     vboTex.Bind(glt::BufferTarget::array);
     vboTex.AllocateMemory(texCoords.size(), glt::BufUsage::static_draw);
     vboTex.SeqN().SubData(texCoords.data(), texCoords.size());
@@ -163,7 +161,7 @@ int main(int argc, char * argv[])
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
-    */
+   
 	return 0;
 
 }

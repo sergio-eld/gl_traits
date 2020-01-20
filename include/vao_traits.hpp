@@ -83,7 +83,7 @@ namespace glt
         // TODO: track enabled pointers?
         void EnablePointer(tag_s<indx>) const
         {
-            assert(rVao_.IsBound(handle_));
+            assert(rVao_.IsBound());
             glEnableVertexAttribArray((GLuint)indx);
         }
 
@@ -97,7 +97,7 @@ namespace glt
                 AttribPtr<Attrib>::glType,
                 normalize,
                 attrib.stride,
-                attrib.offset);
+                (void*)attrib.offset);
         }
 
     protected:
