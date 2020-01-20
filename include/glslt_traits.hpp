@@ -1,8 +1,6 @@
 #pragma once
 
-#include <tuple>
 #include <string_view>
-#include <type_traits>
 
 // for check for uniqueness
 #include <algorithm>
@@ -68,6 +66,7 @@ namespace glt
 	/////////////////////////////////////
 	// Layout qualifiers
 	////////////////////////////////////
+
 	template <int loc>
 	struct q_location
 	{
@@ -163,152 +162,11 @@ namespace glt
 	constexpr inline int variable_traits_location = variable_traits<T>::location;
 
 	//////////////////////////////////////////////////////////
-	// Equivalence traits
 	//////////////////////////////////////////////////////////
 
 	
 
-    // TODO: add equivalence cases for glm::vec and glm::mat
 
-	
-	// remove ?
-	template <class T>
-	struct is_tuple : std::false_type {};
-
-	// remove ?
-	template <class ... T>
-	struct is_tuple<std::tuple<T...>> : std::true_type {};
-
-	// remove ?
-	template <class T>
-	constexpr inline bool is_tuple_v = is_tuple<T>();
-
-
-	//////////////////////////////////////////////////////////
-	//////////////////////////////////////////////////////////
-
-	//////////////////////////////////////////////////////////
-	// Compound traits
-	//////////////////////////////////////////////////////////
-	/* In this section:
-	- introduce compound type (for buffers and storages)
-	- check if all the glsl types in a set are unique (for named types)
-	- check if 2 sets of glsl types has zero common subset
-	*/
-	// TODO: add sequence_element_traits:
-	// - provide element size
-
-    template <class tuple, class = decltype(std::make_index_sequence<std::tuple_size_v<tuple>>())>
-    class compound_packed;
-
-    template <class ... T, size_t ... indx>
-    class compound_packed<std::tuple<T...>, std::index_sequence<indx...>>
-    {
-        template <class T>
-        struct destr_wrapper
-        {
-            T val;
-        };
-
-        std::aligned_storage_t<get_class_size_v<T...>, 4> storage;
-
-    public:
-        constexpr static size_t elems_count = sizeof...(T);
-
-        template <size_t n>
-        using nth_type = std::tuple_element_t<n, std::tuple<T...>>;
-
-        template <size_t n, class = std::enable_if_t<(n < sizeof...(indx))>>
-        nth_type<n>& Get(tag_s<n>)
-        {
-            return reinterpret_cast<nth_type<n>&>(*(std::next(&storage, get_member_offset_v<n, T...>)));
-        }
-
-        template <size_t n, class = std::enable_if_t<(n < sizeof...(indx))>>
-            constexpr const nth_type<n>& Get(tag_s<n>) const
-            {
-                return reinterpret_cast<nth_type<n>&>(*(std::next(&storage, get_member_offset_v<n, T...>)));
-            }
-
-    protected:
-
-        static_assert(elems_count, "No types have been provided to glt::compound!");
-
-        // default constructor
-        constexpr compound_packed()
-        {
-            ((Get(tag_s<indx>()) = nth_type<indx>()), ...);
-        }
-
-        constexpr compound_packed(T&& ... t)
-        {
-            ((Get(tag_s<indx>()) = std::forward<T>(t)), ...);
-        }
-
-        ~compound_packed()
-        {
-            ((reinterpret_cast<destr_wrapper<nth_type<indx>>&>(Get(tag_s<indx>())).~destr_wrapper<nth_type<indx>>()), ...);
-        }
-
-    };
-
-    template <class ... T>
-    struct compound : compound_packed<std::tuple<T...>>
-    {
-        static_assert(elems_count, "Empty typed compound is not allowed!");
-
-        using compound_packed<std::tuple<T...>>::elems_count;
-
-        template <size_t n>
-        using nth_type = std::tuple_element_t<n, std::tuple<T...>>;
-        using first_type = nth_type<0>;
-
-        using type = std::conditional_t<(elems_count > 1),
-            compound<T...>, first_type>;
-
-        compound(T&& ... t)
-            : compound_packed<std::tuple<T...>>(std::forward<T>(t)...)
-        {}
-
-        // TODO: check this
-        template <class R, class = std::enable_if_t<is_equivalent_v<R, compound<T...>>>>
-        constexpr compound(R&& t)
-        {
-            reinterpret_cast<R&>(*this) = std::forward<R>(t);
-        }
-
-        constexpr compound() = default;
-
-        using compound_packed<std::tuple<T...>>::Get;
-
-        template <class R, class = std::enable_if_t<is_equivalent_v<R, compound<T...>>>>
-        constexpr operator R&()
-        {
-            return reinterpret_cast<R&>(*this);
-        }
-
-        template <class R, class = std::enable_if_t<is_equivalent_v<R, compound<T...>>>>
-        constexpr operator const R&() const
-        {
-            return reinterpret_cast<const R&>(*this);
-        }
-
-    };
-
-
-	template <class ... T>
-	using compound_t = typename compound<T...>::type;
-
-    template <size_t indx, class Compound>
-    struct get_compound_member_offset;
-
-    template <size_t indx, class ... Attr>
-    struct get_compound_member_offset<indx, compound<Attr...>> :
-        std::integral_constant<std::ptrdiff_t, get_member_offset_v<indx, Attr...>> {};
-
-    template <size_t indx, class Compound>
-    constexpr inline std::ptrdiff_t get_compound_member_offset_v =
-        get_compound_member_offset<indx, Compound>();
 
     /*
 	template <class R, typename ... FeedCompound>
@@ -319,9 +177,6 @@ namespace glt
     struct is_equivalent<compound<FeedCompound...>, L> :
         is_equivalent<compound<FeedCompound...>, L, FeedCompound...> {};*/
 
-	template <class ... T>
-	struct std::tuple_size<compound<T...>> :
-		std::integral_constant<size_t, sizeof...(T)> {};
 
     // 2 empty names are considered equal. Shader must not be provided with non-named variables
 	template <class ... Types>
