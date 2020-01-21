@@ -27,7 +27,7 @@ namespace glt
 	public:
 		seq_data_input(Buffer_base& buf,
 			const seq_layout_info<Attrs...>& layout)
-			buf_(buf),
+			: buf_(buf),
 			layout_(layout)
 		{}
 
@@ -48,7 +48,7 @@ namespace glt
 			size_t inst_offset = 0)
 		{
 			assert(access != MapAccessBit::none && "MapAccessBit is none!");
-			sz = sz == std::numeric_limits<size_t>::max() ? Allocated() : sz;
+			sz = (sz == std::numeric_limits<size_t>::max()) ? layout_.Allocated() : sz;
 
 			assert(!buf_.IsMapped() && "Mapping data to mapped buffer!");
 			assert(buf_.IsBound() && "Mapping data to non-bound buffer!");
@@ -64,6 +64,16 @@ namespace glt
 			buf_.SetMapAccessBit(access);
 		}
 
+        constexpr bool IsMapped() const
+        {
+            return buf_.IsMapped();
+        }
+
+        void UnMap()
+        {
+            buf_.UnMap();
+        }
+
 	private:
 
 		constexpr GLintptr TotalOffsetBytes(size_t inst_offset) const
@@ -77,101 +87,6 @@ namespace glt
 			return layout_.elem_size * elems;
 		}
 	};
-
-	// template wrapper accessor for template iterators
-	template <typename ... attr>
-	class SeqIteratorOut
-	{
-		using cl_tuple = std::tuple<attr...>;
-
-		glt::compound<attr...> *ptr_;
-
-	public:
-
-		constexpr static size_t elem_size = get_class_size_v<attr...>;
-
-		using difference_type = std::ptrdiff_t;
-
-		using value_type = glt::compound<attr...>;
-		using pointer = value_type * ;
-		using reference = value_type & ;
-		using iterator_category = std::random_access_iterator_tag;
-
-		explicit SeqIteratorOut(pointer ptr = nullptr)
-			: ptr_(ptr)
-		{}
-
-		template <class T, class = std::enable_if_t<is_equivalent_v<T, value_type>>>
-		explicit SeqIteratorOut(T *ptr = nullptr)
-			: SeqIteratorOut(reinterpret_cast<pointer>(ptr))
-		{}
-
-		SeqIteratorOut& operator++()
-		{
-			assert(*this);
-			//std::next(ptr_); // why this doesn't work???
-			++ptr_;
-			return *this;
-		}
-
-		// does std::next use this?
-		SeqIteratorOut& operator+=(difference_type sz)
-		{
-			assert(*this);
-			// std::next(ptr_, sz);
-			return *this;
-		}
-
-		SeqIteratorOut operator++(int)
-		{
-			value_type *ptr = ptr_;
-			//std::next(ptr_); // why this doesn't work???
-			++ptr_;
-			return SeqIteratorOut(ptr);
-		}
-
-		operator bool() const
-		{
-			return (bool)ptr_;
-		}
-
-		bool operator==(const SeqIteratorOut& other) const
-		{
-			return ptr_ == other.ptr_;
-		}
-
-		bool operator!=(const SeqIteratorOut& other) const
-		{
-			return !((*this) == other);
-		}
-
-		reference operator*()
-		{
-			assert(*this);
-			return *ptr_;
-		}
-
-		const reference operator*() const
-		{
-			assert(*this);
-			return *ptr_;
-		}
-
-
-		template <class T, class = std::enable_if_t<is_equivalent_v<T, attr...>>>
-		T& operator*()
-		{
-			return reinterpret_cast<T&>(**this)
-		}
-
-		template <class T, class = std::enable_if_t<is_equivalent_v<T, attr...>>>
-		const T& operator*() const
-		{
-			return reinterpret_cast<const T&>(**this)
-		}
-
-	};
-
 
 	template <class ... Attrs>
 	class Sequence : aggregate_attribs<compound<Attrs...>>
@@ -192,6 +107,9 @@ namespace glt
 
 		Sequence(const Sequence&) = delete;
 		Sequence& operator=(const Sequence&) = delete;
+
+        constexpr static size_t elem_size = 
+            seq_layout_info<Attrs...>::elem_size;
 
 		using aggr_attribs::AttribPointer;
 		using aggr_attribs::operator();
@@ -242,79 +160,163 @@ namespace glt
 
 		constexpr bool IsMapped() const
 		{
-			return buf_.IsMapped();
+			return dataInput_.IsMapped();
 		}
 
 		void UnMap()
 		{
-			return buf_.UnMap();
-		}
-
-		class MapGuard
-		{
-
-		public:
-			using iterator_out = SeqIteratorOut<Attribs...>;
-
-		private:
-
-			friend class Sequence<Attribs...>;
-			Sequence<Attribs...>& seq_;
-
-			iterator_out start_,
-				end_;
-
-		protected:
-
-			// TODO: change to provide only seq
-			MapGuard(Sequence<Attribs...>& seq, MapAccessBit accessBit)
-				: seq_(seq)
-			{
-				glt::compound<Attribs...> *start = nullptr,
-					*end = nullptr;
-
-				seq_.MapRange(start, accessBit, seq_.Allocated());
-
-				start_ = iterator_out(start);
-				end_ = iterator_out(std::next(start, seq_.Allocated()));
-			}
-
-		public:
-
-			MapGuard() = delete;
-			MapGuard(const MapGuard&) = delete;
-			MapGuard(MapGuard&&) = delete;
-			MapGuard& operator=(const MapGuard&) = delete;
-			MapGuard& operator=(MapGuard&&) = delete;
-
-
-			// TODO: const_iterator?
-			iterator_out begin()
-			{
-				return start_;
-			}
-
-			iterator_out end()
-			{
-				return end_;
-			}
-
-			~MapGuard()
-			{
-				assert(seq_.IsMapped() &&
-					"Sequence has been unmapped before guard's destruction!");
-				seq_.UnMap();
-			}
-		};
-
-		MapGuard Guard(MapAccessBit accessBit)
-		{
-			return MapGuard(*this, accessBit);
+			return dataInput_.UnMap();
 		}
 
 	};
 	
+    // template wrapper accessor for template iterators
+    template <typename ... attr>
+    class SeqIteratorOut
+    {
+        using cl_tuple = std::tuple<attr...>;
 
+        glt::compound<attr...> *ptr_;
+
+    public:
+
+        constexpr static size_t elem_size = get_class_size_v<attr...>;
+
+        using difference_type = std::ptrdiff_t;
+
+        using value_type = glt::compound<attr...>;
+        using pointer = value_type * ;
+        using reference = value_type & ;
+        using iterator_category = std::random_access_iterator_tag;
+
+        explicit SeqIteratorOut(pointer ptr = nullptr)
+            : ptr_(ptr)
+        {}
+
+        template <class T, class = std::enable_if_t<is_equivalent_v<T, value_type>>>
+        explicit SeqIteratorOut(T *ptr = nullptr)
+            : SeqIteratorOut(reinterpret_cast<pointer>(ptr))
+        {}
+
+        SeqIteratorOut& operator++()
+        {
+            assert(*this);
+            //std::next(ptr_); // why this doesn't work???
+            ++ptr_;
+            return *this;
+        }
+
+        // does std::next use this?
+        SeqIteratorOut& operator+=(difference_type sz)
+        {
+            assert(*this);
+            // std::next(ptr_, sz);
+            return *this;
+        }
+
+        SeqIteratorOut operator++(int)
+        {
+            value_type *ptr = ptr_;
+            //std::next(ptr_); // why this doesn't work???
+            ++ptr_;
+            return SeqIteratorOut(ptr);
+        }
+
+        operator bool() const
+        {
+            return (bool)ptr_;
+        }
+
+        bool operator==(const SeqIteratorOut& other) const
+        {
+            return ptr_ == other.ptr_;
+        }
+
+        bool operator!=(const SeqIteratorOut& other) const
+        {
+            return !((*this) == other);
+        }
+
+        reference operator*()
+        {
+            assert(*this);
+            return *ptr_;
+        }
+
+        const reference operator*() const
+        {
+            assert(*this);
+            return *ptr_;
+        }
+
+
+        template <class T, class = std::enable_if_t<is_equivalent_v<T, attr...>>>
+        T& operator*()
+        {
+            return reinterpret_cast<T&>(**this)
+        }
+
+        template <class T, class = std::enable_if_t<is_equivalent_v<T, attr...>>>
+        const T& operator*() const
+        {
+            return reinterpret_cast<const T&>(**this)
+        }
+
+    };
+
+    template <typename ... Attrs>
+    class MapGuard
+    {
+    public:
+        using iterator_out = SeqIteratorOut<Attrs...>;
+
+    private:
+
+        Sequence<Attrs...>& seq_;
+        iterator_out start_,
+            end_;
+
+    public:
+
+        MapGuard(Sequence<Attrs...>& seq, MapAccessBit accessBit)
+            : seq_(seq)
+        {
+            glt::compound_t<Attrs...> *start = nullptr,
+                *end = nullptr;
+
+            seq_.MapRange(start, accessBit, seq_.Allocated());
+
+            start_ = iterator_out(start);
+            end_ = iterator_out(std::next(start, seq_.Allocated()));
+        }
+
+    public:
+
+        MapGuard() = delete;
+        MapGuard(const MapGuard&) = delete;
+        MapGuard(MapGuard&&) = delete;
+        MapGuard& operator=(const MapGuard&) = delete;
+        MapGuard& operator=(MapGuard&&) = delete;
+
+
+        // TODO: const_iterator?
+        iterator_out begin()
+        {
+            return start_;
+        }
+
+        iterator_out end()
+        {
+            return end_;
+        }
+
+        ~MapGuard()
+        {
+            assert(seq_.IsMapped() &&
+                "Sequence has been unmapped before guard's destruction!");
+            seq_.UnMap();
+        }
+    };
 
 }
 

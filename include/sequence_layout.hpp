@@ -139,18 +139,18 @@ first - true if indx = 0.
 	template <class seq_layout, class Attr, size_t indx, bool first = !indx> // not first case
 	class get_attrib_ptr_i
 	{
-		const seq_layout& seq_;
+		const seq_layout& layout_;
 
 	public:
 
 		constexpr get_attrib_ptr_i(const seq_layout& seq)
-			: seq_(seq)
+			: layout_(seq)
 		{}
 
 		constexpr AttribPtr<Attr> AttribPointer(tag_s<indx>, size_t instOffset = 0) const
 		{
-			assert(seq_.Allocated() >= instOffset && "Pointer exceeds sequence's bounds!");
-			return AttribPtr<Attr>(seq_layout::AttrOffset(tag_s<indx>()) + seq_.BufferOffset() +
+			assert(layout_.Allocated() >= instOffset && "Pointer exceeds sequence's bounds!");
+			return AttribPtr<Attr>(seq_layout::AttrOffset(tag_s<indx>()) + layout_.BufferOffset() +
 				seq_layout::elem_size * instOffset, seq_layout::Stride());
 		}
 

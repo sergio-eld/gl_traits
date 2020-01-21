@@ -228,54 +228,5 @@ namespace glt
     template <class Set1, class Set2>
     constexpr inline bool identical_sets_v = identical_sets<Set1, Set2>();
 
-	template <class Attr>
-	struct sequence_traits
-	{
-		constexpr static size_t elem_count = 1;
-		constexpr static bool is_compound = false;
-		constexpr static size_t elem_size = sizeof(Attr);
-
-		using first_type = Attr;
-	};
-
-	template <class ... Attrs>
-	struct sequence_traits<compound<Attrs...>>
-	{
-		constexpr static size_t elem_count = sizeof...(Attrs);
-#pragma message("Check logic for sequence_traits::is_compound")
-		constexpr static bool is_compound = elem_count > 1 ? true : false;
-		constexpr static size_t elem_size =
-			get_class_size_v<Attrs...>;
-
-		using first_type = std::tuple_element_t<0, std::tuple<Attrs...>>;
-
-	};
-
-	template<glm::length_t C, glm::length_t R, typename T, glm::qualifier Q>
-	struct sequence_traits<glm::mat<C, R, T, Q>>
-	{
-		constexpr static size_t elem_count = C;
-		constexpr static bool is_compound = true;
-		constexpr static size_t elem_size = sizeof(glm::vec<R, T, Q>);
-
-		using first_type = glm::vec<R, T, Q>;
-
-	};
-
-	template <class T>
-	constexpr inline bool is_compound_seq_v = sequence_traits<T>::is_compound;
-
-	template <class T>
-	constexpr inline size_t seq_elem_size = sequence_traits<T>::elem_size;
-
-	template <class T>
-	constexpr inline size_t seq_elem_count = sequence_traits<T>::elem_count;
-
-	template <class T>
-	using seq_first_type = typename sequence_traits<T>::first_type;
-
-
-	//////////////////////////////////////////////////////////
-	//////////////////////////////////////////////////////////
 
 }

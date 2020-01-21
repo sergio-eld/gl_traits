@@ -18,7 +18,7 @@ namespace glt
     };
 
     template <typename T>
-    using wrap_attr_t = typename wrap_attr<T>::sequence;
+    using wrap_attr_t = typename wrap_attr<T>::type;
 
 	template <size_t indx, class AttrCompound, bool first = !indx>
 	struct sequence_indexed;
@@ -27,6 +27,8 @@ namespace glt
 	struct sequence_indexed<indx, compound<Attr...>, false>
 	{
 		Sequence<Attr...> seq;
+
+        constexpr static size_t elem_size = Sequence<Attr...>::elem_size;
 
 		constexpr sequence_indexed(Buffer_base& buf,
 			const std::ptrdiff_t &bytes_lbound,
@@ -53,13 +55,15 @@ namespace glt
         {
             return SeqN(tag_s<indx>());
         }
+
+
 	};
 
 	template <class ... Attr>
 	struct sequence_indexed<0, compound<Attr...>, true> :
 		public sequence_indexed<0, compound<Attr...>, false>
 	{
-		using seq_base = sequence_indexed<0, Seq, false>;
+		using seq_base = sequence_indexed<0, compound<Attr...>, false>;
 
 		constexpr sequence_indexed(Buffer_base& buf,
 			const std::ptrdiff_t &bytes_lbound,
@@ -68,33 +72,34 @@ namespace glt
 		{}
 
 		using seq_base::SeqN;
+        using seq_base::elem_size;
 
-		constexpr const Seq& SeqN() const
+		constexpr const Sequence<Attr...>& SeqN() const
 		{
 			return seq_base::SeqN(tag_s<0>());
 		}
 
-		Seq& SeqN()
+        Sequence<Attr...>& SeqN()
 		{
 			return seq_base::SeqN(tag_s<0>());
 		}
 
-		constexpr const Seq& operator()() const
+		constexpr const Sequence<Attr...>& operator()() const
 		{
 			return seq_base::SeqN(tag_s<0>());
 		}
 
-		Seq& operator()()
+        Sequence<Attr...>& operator()()
 		{
 			return seq_base::SeqN(tag_s<0>());
 		}
 
-		constexpr operator const Seq&() const
+		constexpr operator const Sequence<Attr...>&() const
 		{
             return SeqN();
 		}
 
-		operator Seq&()
+		operator Sequence<Attr...>&()
 		{
             return SeqN();
         }
@@ -107,35 +112,41 @@ namespace glt
 		struct aggregated_sequences;
 
 	template <class ... seq_attribs, size_t ... indx>
-	struct aggregated_sequences<compound<seq_attribs...>, std::index_sequence<indx...>> :
+	struct aggregated_sequences<std::tuple<seq_attribs...>, std::index_sequence<indx...>> :
 		public sequence_indexed<indx, wrap_attr_t<seq_attribs>> ...
 	{
-		template <size_t i>
-		using sequence_i =
-			sequence_indexed<i, wrap_attr_t<std::tuple_element_t<i, std::tuple<seq_attribs>>>>;
+        constexpr static size_t seq_count = sizeof...(seq_attribs);
 
-		constexpr static size_t seq_count = sizeof...(attribs);
+        std::array<std::ptrdiff_t, seq_count + 1> offsets_{ 0 };
 
-		std::array<std::ptrdiff_t, seq_count + 1> offsets_{ 0 };
+        template <size_t i>
+        using sequence_i =
+            sequence_indexed<i, wrap_attr_t<std::tuple_element_t<i, std::tuple<seq_attribs...>>>>;
 
-
-		constexpr std::ptrdiff_t assign_offsets(convert_to<size_t, attribs> ... instances)
-		{
-			((offsets_[indx + 1] += offsets_[indx] +
-				sequence_i<indx>::elem_size * instances), ...);
-			return offsets_[seq_count];
-		}
-
-		constexpr aggregated_sequences(Buffer_base& buf, 
-			const std::array<std::ptrdiff_t, seq_count + 1>& offsets)
-			: sequence_i<indx>(buf, offsets[indx], offsets[indx + 1]) ...
+        constexpr aggregated_sequences(Buffer_base& buf)
+			: sequence_i<indx>(buf, offsets_[indx], offsets_[indx + 1]) ...
 		{}
 
-		using sequence_i<indx>::SeqN...;
-		using sequence_i<indx>::operator()...;
+        constexpr std::ptrdiff_t assign_offsets(convert_to<size_t, seq_attribs> ... instances)
+        {
+            ((offsets_[indx + 1] += offsets_[indx] +
+                sequence_i<indx>::elem_size * instances), ...);
+            return offsets_[seq_count];
+        }
 
-		using sequence_i<0>::operator sequence_i<0>&;
-		using sequence_i<0>::operator const sequence_i<0>&;
+        constexpr aggregated_sequences(Buffer_base& buf,
+            const std::array<std::ptrdiff_t, seq_count + 1>& offsets)
+            : sequence_i<indx>(buf, offsets[indx], offsets[indx + 1]) ...
+        {}
+
+        aggregated_sequences(const aggregated_sequences&) = delete;
+        aggregated_sequences& operator=(const aggregated_sequences&) = delete;
+
+        using sequence_i<indx>::SeqN...;
+        using sequence_i<indx>::operator()...;
+
+//		using sequence_indexed<0, wrap_attr_t<seq_attribs>, true>::operator sequence_i<0>&;
+//		using sequence_indexed<0, wrap_attr_t<seq_attribs>, true>::operator const sequence_i<0>&;
 
 	};
 
@@ -145,20 +156,19 @@ namespace glt
 	class Buffer : public Buffer_base,
 		public aggregated_sequences<std::tuple<attribs...>> // TODO: remove public
 	{
+
 		using aggr_sequences = aggregated_sequences<std::tuple<attribs...>>;
 
 		using aggr_sequences::seq_count;
 
 
-		
-
 	public:
-        constexpr BufferPacked(HandleBuffer&& handle = Allocator::Allocate(BufferTarget()))
+        constexpr Buffer(HandleBuffer&& handle = Allocator::Allocate(BufferTarget()))
 			: Buffer_base(std::move(handle)),
-			seq_base<indx>(unwrap_seq_t<attribs>(*this,
-				offsets_[indx], offsets_[indx + 1]))...
+            aggr_sequences(static_cast<Buffer_base&>(*this))
 		{}
 
+        
         // TODO: add allocating constructor
 
 		using Buffer_base::Bind;
@@ -166,8 +176,8 @@ namespace glt
 		using Buffer_base::UnBind;
 		using Buffer_base::IsMapped;
 
-        using seq_base<indx>::SeqN ...;
-        using seq_base<indx>::operator() ...;
+        using aggr_sequences::SeqN ...;
+        using aggr_sequences::operator() ...;
 
         // Sequence<SingleSeq>::Allocated;
         // using Sequence<SingleSeq>::SubData;
@@ -177,8 +187,8 @@ namespace glt
 		{
 			assert(IsBound() && "Allocating memory for non-bound buffer!");
 
-			ptrdiff_t totalSize = assign_offsets(instances..., 
-				std::make_index_sequence<seq_count>());
+			ptrdiff_t totalSize =
+                aggr_sequences::assign_offsets(instances...);
 
 			glBufferData((GLenum)Bound(),
 				(GLsizei)totalSize,
@@ -189,7 +199,7 @@ namespace glt
 
 			currentUsage_ = usage;
 		}
-
+        
         // TODO:
         // - MapData
         // - SeqN
@@ -201,42 +211,5 @@ namespace glt
         // - user-defined conversion to the first attribute of the first sequence
 	};
 
-    /*
-	// TODO 
-	template <size_t indx, class SingleSeq>
-	class Buffer<sub_tag<indx, SingleSeq>> : virtual protected Buffer_base
-	{
-		static_assert(!is_compound_seq_v<SingleSeq> &&
-			"Compound sequences are not allowed!");
-
-		const std::ptrdiff_t &bytes_lbound_,
-			&bytes_rbound_;
-
-	protected:
-		Buffer(const std::ptrdiff_t &bytes_lbound,
-			const std::ptrdiff_t &bytes_rbound)
-			: bytes_lbound_(bytes_lbound),
-			bytes_rbound_(bytes_rbound)
-		{}
-
-	public:
-		using Buffer_base::Bound;
-		using Buffer_base::UnBind;
-		using Buffer_base::IsMapped;
-
-		
-
-		void SubData(variable_traits_type<SingleSeq> *data, size_t sz, size_t inst_offset = 0)
-		{
-			assert(IsBound() && "Copying data to non-bound buffer!");
-			assert(Allocated() >= sz + inst_offset && "Data exceeds buffer's bounds!");
-
-			glBufferSubData((GLenum)Bound(),
-				sizeof(variable_traits_type<SingleSeq>) * inst_offset,
-				sizeof(variable_traits_type<SingleSeq>) * sz,
-				data);
-		}
-	};
-    */
 
 }
