@@ -66,6 +66,8 @@ add_library(${PROJECT_NAME}
 		##############
 		
 		#${SHADER_SOURCE_PARSER_HEADER}
+		include/sequence_layout.hpp
+		include/Sequence.hpp
 
 		include/buffer_traits.hpp
 		include/shader_traits.hpp

@@ -40,6 +40,7 @@ set(TEST_CASES
 	"shaders_test" # test compile various shaders
 	
 	"handles_tests"
+	"sequence_test"
 	"buffer_test"
 	
 	"map_uniform_funcs"
