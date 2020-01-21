@@ -14,7 +14,6 @@ a1[] = "StringA";
 
 int main(int argc, char * argv[])
 {
- 
     fsys::path exePath{ argv[0] };
 	std::cout << exePath.generic_string() << std::endl;
 
@@ -28,12 +27,11 @@ int main(int argc, char * argv[])
 
 	// build and compile our shader program
 	// ------------------------------------
-	Shader ourShader{ (exePath.generic_string() + "vshader.vs").c_str(),
-		(exePath.generic_string() + "fshader.fs").c_str() };
+    Shader ourShader{ exePath.parent_path().append("vshader.vs").generic_string().c_str(),
+        exePath.parent_path().append("fshader.fs").generic_string().c_str() };
 
 	auto posCoords = glm_cube_positions();
 	auto texCoords = glm_cube_texCoords();	// for batched 1st array
-
 
 	glt::VAO<glm::vec3, glm::vec2> vao{};
 	vao.Bind();
@@ -44,17 +42,15 @@ int main(int argc, char * argv[])
 	vboPos.Bind(glt::BufferTarget::array);
 	vboPos.AllocateMemory(posCoords.size(), glt::BufUsage::static_draw);
  
-    // TODO: use operator() here
-    glt::Sequence<glm::vec3>& sVec3 = vboPos;
-    sVec3.SubData(posCoords.data(), posCoords.size());
+    vboPos().SubData(posCoords.data(), posCoords.size());
 
-    vao.AttributePointer(glt::tag_s<0>(), sVec3);
+    vao.AttributePointer(glt::tag_s<0>(), vboPos().AttribPointer());
  
     vboTex.Bind(glt::BufferTarget::array);
     vboTex.AllocateMemory(texCoords.size(), glt::BufUsage::static_draw);
-    vboTex.SeqN().SubData(texCoords.data(), texCoords.size());
+    vboTex().SubData(texCoords.data(), texCoords.size());
 
-    vao.AttributePointer(glt::tag_s<1>(), vboTex.SeqN());
+    vao.AttributePointer(glt::tag_s<1>(), vboTex().AttribPointer());
     vboTex.UnBind();
 
     // TODO: use EnablePointers()
@@ -71,8 +67,8 @@ int main(int argc, char * argv[])
 	// load and create textures 
 	unsigned int texture1, texture2;
 	{
-		Image tex1{ (exePath.generic_string() + "resources/textures/container.jpg") },
-			tex2{ (exePath.generic_string() + "resources/textures/awesomeface.png") };
+		Image tex1{ exePath.parent_path().append("resources/textures/container.jpg").generic_string() },
+			tex2{ exePath.parent_path().append("resources/textures/awesomeface.png").generic_string() };
 
 		assert(tex1.Data() && tex2.Data());
 
