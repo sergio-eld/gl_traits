@@ -150,4 +150,69 @@ namespace glt
 			SetMapAccessBit(glt::MapAccessBit::none);
 		}
 	};
+
+    class VAO_base
+    {
+        static VAO_base* active_vao_;
+
+        static void Register(VAO_base* vao = nullptr)
+        {
+            active_vao_ = vao;
+        }
+
+    protected:
+        HandleVAO handle_;
+
+        VAO_base(HandleVAO&& handle)
+            : handle_(std::move(handle))
+        {
+            assert(handle_ && "Invalid VAO handle!");
+        }
+
+        VAO_base()
+            : handle_(Allocator::Allocate(VAOTarget()))
+        {
+            assert(false && "VAO_base default constructor called!");
+        }
+
+        VAO_base(const VAO_base&) = delete;
+        VAO_base& operator=(const VAO_base&) = delete;
+
+        VAO_base(VAO_base&& other)
+            : handle_(std::move(other.handle_))
+        {
+            if (other.IsBound())
+                Register(this);
+        }
+
+        VAO_base& operator=(VAO_base&& other)
+        {
+            handle_ = std::move(other.handle_);
+
+            if (other.IsBound())
+                Register(this);
+
+            return *this;
+        }
+
+    public:
+        void Bind()
+        {
+            glBindVertexArray(handle_accessor(handle_));
+            Register(this);
+        }
+
+        bool IsBound() const
+        {
+            return this == active_vao_;
+        }
+
+        void UnBind()
+        {
+            assert(IsBound() && "Unbinding non-bound VAO!");
+            glBindVertexArray(0);
+            Register();
+        }
+
+    };
 }

@@ -46,6 +46,9 @@ set(TEST_CASES
 	"map_uniform_funcs"
 	"buffer_fetch_attributes"
 	"BufferMap_tests"
+	
+	"0.Raw_Batched_2_dif_VBO"
+	
 	"1.Batched_2_dif_VBO" 	# ok
 	"2.Batched_1_one_VBO"	# ok
 	"3.Compound_one_VBO"	# ok

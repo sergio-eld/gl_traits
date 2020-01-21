@@ -1,80 +1,14 @@
 #pragma once
 
-#include "buffer_traits.hpp"
+#include "sequence_layout.hpp"
 
 namespace glt
 {
 
-    class VAO_base
-    {
-        static VAO_base* active_vao_;
-
-        static void Register(VAO_base* vao = nullptr)
-        {
-            active_vao_ = vao;
-        }
-
-    protected:
-        HandleVAO handle_;
-
-        VAO_base(HandleVAO&& handle)
-            : handle_(std::move(handle))
-        {
-            assert(handle_ && "Invalid VAO handle!");
-        }
-
-        VAO_base()
-            : handle_(Allocator::Allocate(VAOTarget()))
-        {
-            assert(false && "VAO_base default constructor called!");
-        }
-
-        VAO_base(const VAO_base&) = delete;
-        VAO_base& operator=(const VAO_base&) = delete;
-
-        VAO_base(VAO_base&& other)
-            : handle_(std::move(other.handle_))
-        {
-            if (other.IsBound())
-                Register(this);
-        }
-
-        VAO_base& operator=(VAO_base&& other)
-        {
-            handle_ = std::move(other.handle_);
-
-            if (other.IsBound())
-                Register(this);
-
-            return *this;
-        }
-
-    public:
-        void Bind()
-        {
-            glBindVertexArray(handle_accessor(handle_));
-            Register(this);
-        }
-
-        bool IsBound() const
-        {
-            return this == active_vao_;
-        }
-
-        void UnBind()
-        {
-            assert(IsBound() && "Unbinding non-bound VAO!");
-            glBindVertexArray(0);
-            Register();
-        }
-
-    };
-
-
     // has_name_v = false
     // Attrib is not compound!
     template <size_t indx, class Attrib, bool = has_name_v<Attrib>>
-    class VAO_attrib
+    class vao_attrib_modify
     {
         const VAO_base& rVao_;
 
@@ -92,27 +26,28 @@ namespace glt
             assert(rVao_.IsBound() &&
                 "Setting Vertex Attribute for non-active VAO");
 
+            using unwrapped_type = variable_traits_type<Attrib>;
+
             glVertexAttribPointer((GLuint)indx,
-                AttribPtr<Attrib>::size,
-                AttribPtr<Attrib>::glType,
+                (GLint)sequence_traits<unwrapped_type>::elem_count,
+                (GLenum)c_to_gl_v<unwrapped_type>,
                 normalize,
-                attrib.stride,
+                (GLsizei)attrib.stride,
                 (void*)attrib.offset);
         }
 
     protected:
-        VAO_attrib(const VAO_base& rVao)
+        vao_attrib_modify(const VAO_base& rVao)
             : rVao_(rVao)
         {}
     };
 
     // named attribute
     template <size_t indx, class Attrib>
-    class VAO_attrib<indx, Attrib, true> : // protected virtual VAO_base,
-        public VAO_attrib<indx, variable_traits_type<Attrib>>
+    class vao_attrib_modify<indx, Attrib, true> : // protected virtual VAO_base,
+        public vao_attrib_modify<indx, variable_traits_type<Attrib>>
     {
-
-        using vao_attrib_nameless = VAO_attrib<indx, variable_traits_type<Attrib>>;
+        using vao_attrib_nameless = vao_attrib_modify<indx, variable_traits_type<Attrib>>;
 
     public:
 		
@@ -130,14 +65,62 @@ namespace glt
         }
 
     protected:
-        VAO_attrib(const VAO_base& rVao)
+        vao_attrib_modify(const VAO_base& rVao)
             : vao_attrib_nameless(rVao)
         {}
     };
 
  
     template <class AttribTuple, class = decltype(std::make_index_sequence<std::tuple_size_v<AttribTuple>>())>
-    class VAO_packed;
+    struct aggregated_vao_attribs;
+
+    template <class ... Attribs, size_t ... indx>
+    class aggregated_vao_attribs<std::tuple<Attribs...>, std::index_sequence<indx...>> :
+        public vao_attrib_modify<indx, Attribs> ...
+    {
+        static_assert(all_names_unique<Attribs...>(),
+            "All attributes in a VAO must have unique aliases!");
+
+        template <size_t i>
+        using vao_attrib_i =
+            vao_attrib_modify<i, std::tuple_element_t<i, std::tuple<Attribs...>>>;
+
+        // for run-time wrapper function
+        template <size_t i>
+        using PtrEnable = void(aggregated_vao_attribs::*)(tag_s<i>) const;
+
+        template <size_t i>
+        constexpr static PtrEnable<i> enable_ptr = &aggregated_vao_attribs::EnablePointer;
+
+        // dummy to typename to store function pointers
+        template <size_t i>
+        constexpr static PtrEnable<0> enable_ptr_0 =
+            reinterpret_cast<PtrEnable<0>>(enable_ptr<i>);
+
+    public:
+
+        aggregated_vao_attribs(const VAO_base& vao)
+            : vao_attrib_i<indx>(vao)...
+        {}
+
+        using vao_attrib_i<indx>::EnablePointer...;
+        using vao_attrib_i<indx>::AttributePointer...;
+
+        // run-time pointer activation
+        void EnablePointer(size_t i)
+        {
+            constexpr static PtrEnable<0> enableTable[]{
+                enable_ptr_0<indx>...
+            };
+
+            (this->*enableTable[i])(tag_s<0>());
+        }
+
+        void EnablePointers()
+        {
+            (EnablePointer(tag_s<indx>()), ...);
+        }
+    };
 
 	/*
 	Implements glVertexAttribPointer usage
@@ -153,68 +136,28 @@ namespace glt
 
 	// TODO: exclude compound attributes, VAO is agnostic to how a buffer stores data
 	*/
-	template <class ... Attribs, size_t ... indx>
-	class VAO_packed<std::tuple<Attribs...>, std::index_sequence<indx...>> : public VAO_base,
-        VAO_attrib<indx, Attribs> ...
+
+	template <class ... Attribs>
+	class VAO : public VAO_base, 
+        public aggregated_vao_attribs<std::tuple<Attribs...>>
 	{
-
-        template <size_t i>
-        using VAO_attr = VAO_attrib<i, std::tuple_element_t<i, std::tuple<Attribs...>>>;
-
+        using aggr_attribs = aggregated_vao_attribs<std::tuple<Attribs...>>;
 
 		// What about glm::mat????
 //		static_assert(!std::disjunction_v<is_compound_seq<Attribs>, ...>,
 //			"Compound attributes are not allowed in VAO!");
 
-        static_assert(all_names_unique<Attribs...>(),
-            "All attributes in a VAO must have unique aliases!");
-
-		// for run-time wrapper function
-		template <size_t i>
-		using PtrEnable = void(VAO_packed::*)(tag_s<i>) const;
-
-		template <size_t i>
-		constexpr static PtrEnable<i> enable_ptr = &VAO_packed::EnablePointer;
-
-        // dummy to typename to store function pointers
-		template <size_t i>
-		constexpr static PtrEnable<0> enable_ptr_0 =
-			reinterpret_cast<PtrEnable<0>>(enable_ptr<i>);
-
 	public:
-        VAO_packed(HandleVAO&& handle = Allocator::Allocate(VAOTarget()))
+        VAO(HandleVAO&& handle = Allocator::Allocate(VAOTarget()))
 			: VAO_base(std::move(handle)),
-            VAO_attr<indx>(*this)...
+            aggr_attribs(static_cast<const VAO_base&>(*this))
 		{}
 
-        using VAO_attr<indx>::EnablePointer...;
-        using VAO_attr<indx>::AttributePointer...;
-		
-        // run-time pointer activation
-        void EnablePointer(size_t i)
-        {
-			constexpr static PtrEnable<0> enableTable[]{
-				enable_ptr_0<indx>...
-			};
-
-			(this->*enableTable[i])(tag_s<0>());
-        }
- 
-        void EnablePointers()
-        {
-            (EnablePointer(tag_s<indx>()), ...);
-        }
-
-        // TODO: enable vertex attribute pointer
-        // - by name
-        // - by index
-        // - enable all
-
-    private:
-   
+        using aggr_attribs::EnablePointer;
+        using aggr_attribs::EnablePointers;
+        using aggr_attribs::AttributePointer;
+		   
 	};
 
-    template <class ... Attribs>
-    using VAO = VAO_packed<std::tuple<Attribs...>>;
 
 }

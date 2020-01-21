@@ -11,11 +11,6 @@ namespace glt
 	// common traits
 	/////////////////////////////////////
 
-	
-
-
-
-
 	constexpr bool compare_const_strings(const char *lhs, const char *rhs)
 	{
 		while (*lhs || *rhs)
