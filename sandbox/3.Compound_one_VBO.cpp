@@ -4,12 +4,12 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
-
-int main()
+int main(int argc, char * argv[])
 {
+	fsys::path exePath{ argv[0] };
+	std::cout << exePath.generic_string() << std::endl;
 
-	std::cout << path.generic_string() << std::endl;
-	SmartGLFW glfw{ 4, 5 };
+	SmartGLFW glfw{ 3, 3 };
 	SmartGLFWwindow window{ SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL" };
 
 	glfw.MakeContextCurrent(window);
@@ -17,30 +17,44 @@ int main()
 
 	// build and compile our shader program
 	// ------------------------------------
-	Shader ourShader{ (path.generic_string() + "vshader.vs").c_str(),
-		(path.generic_string() + "fshader.fs").c_str() };
-
-	auto vertices = cube_vertices();
+	Shader ourShader{ exePath.parent_path().append("vshader.vs").generic_string().c_str(),
+		exePath.parent_path().append("fshader.fs").generic_string().c_str() };
 
 	glt::VAO<glm::vec3, glm::vec2> vao{};
 	vao.Bind();
 
-	glt::BufferOld<glt::compound<glm::vec3, glm::vec2>> vbo{};
-	vbo.Bind(glt::tag_v<glt::BufferTarget::array>());
-	vbo.AllocateMemory(vertices.size(), glt::BufUsage::static_draw);
+	glt::Buffer<glt::compound<glm::vec3, glm::vec2>> vboVert{};
 
-	vbo.BufferData(vertices.data(), vertices.size());
+	vboVert.Bind(glt::BufferTarget::array);
+	vao.AttributePointer(glt::tag_s<0>(), vboVert().AttribPointer());
+	vao.AttributePointer(glt::tag_s<1>(), vboVert().AttribPointer(glt::tag_s<1>()));
 
-	// position attribute
-	vao.AttributePointer(vbo.Attribute(glt::tag_indx<0, 0>()), glt::tag_s<0>());
+	std::vector<vertex> vertices = cube_vertices();
 
-	// texture coord attribute
-	vao.AttributePointer(vbo.Attribute(glt::tag_indx<0, 1>()), glt::tag_s<1>());
+	vboVert.AllocateMemory(vertices.size(), glt::BufUsage::static_draw);
 
-	vao.EnableVertexAttribPointer(0);
-	vao.EnableVertexAttribPointer(1);
+	for (vertex& v : glt::MapGuard(vboVert(), glt::MapAccessBit::write))
+	{
+		static std::vector<vertex>::const_iterator vIter = vertices.cbegin();
 
-	vbo.UnBind(glt::tag_v<glt::BufferTarget::array>());
+		v = *vIter++;
+	}
+
+	for (const vertex& v : glt::MapGuard(vboVert(), glt::MapAccessBit::read))
+	{
+		static std::vector<vertex>::const_iterator vIter = vertices.cbegin();
+
+		assert(v == *vIter && "Failed to load vertex data to buffer!");
+		++vIter;
+	}
+
+	//vboVert().SubData(vertices.data(), vertices.size());
+
+	vboVert.UnBind();
+
+	// TODO: use EnablePointers()
+	vao.EnablePointer(0);
+	vao.EnablePointer(1);
 
 
 	/////////////////////////////////////////////////////////////////////
@@ -52,8 +66,8 @@ int main()
 	// load and create textures 
 	unsigned int texture1, texture2;
 	{
-		Image tex1{ (path.generic_string() + "resources/textures/container.jpg") },
-			tex2{ (path.generic_string() + "resources/textures/awesomeface.png") };
+		Image tex1{ exePath.parent_path().append("resources/textures/container.jpg").generic_string() },
+			tex2{ exePath.parent_path().append("resources/textures/awesomeface.png").generic_string() };
 
 		assert(tex1.Data() && tex2.Data());
 
@@ -92,6 +106,14 @@ int main()
 	ourShader.setInt("texture1", 0);
 	ourShader.setInt("texture2", 1);
 
+	// retrieve the matrix uniform locations
+	unsigned int modelLoc = glGetUniformLocation(ourShader.ID, "model");
+	unsigned int viewLoc = glGetUniformLocation(ourShader.ID, "view");
+
+	// create transformations
+	glm::mat4 model = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+	glm::mat4 view = glm::mat4(1.0f);
+	glm::mat4 projection = glm::mat4(1.0f);
 
 	// render loop
 	// -----------
@@ -115,16 +137,10 @@ int main()
 		// activate shader
 		ourShader.use();
 
-		// create transformations
-		glm::mat4 model = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-		glm::mat4 view = glm::mat4(1.0f);
-		glm::mat4 projection = glm::mat4(1.0f);
-		model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f));
-		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+		model = glm::rotate(glm::mat4(1.0f), (float)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f));
+		view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0f));
 		projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-		// retrieve the matrix uniform locations
-		unsigned int modelLoc = glGetUniformLocation(ourShader.ID, "model");
-		unsigned int viewLoc = glGetUniformLocation(ourShader.ID, "view");
+
 		// pass them to the shaders (3 different ways)
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
@@ -132,7 +148,8 @@ int main()
 		ourShader.setMat4("projection", projection);
 
 		// render box
-		//glBindVertexArray(vao);
+		//vao.Bind();
+		// glBindVertexArray(vao);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 

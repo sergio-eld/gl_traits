@@ -54,7 +54,6 @@ int main(int argc, char * argv[])
 
         glBufferData(GL_ARRAY_BUFFER, positions.size() * sizeof(glm::vec3), 
             nullptr, GL_STATIC_DRAW);
-
         glBufferSubData(GL_ARRAY_BUFFER, 0, positions.size() * sizeof(glm::vec3),
             positions.data());
 
@@ -66,7 +65,6 @@ int main(int argc, char * argv[])
 
         glBufferData(GL_ARRAY_BUFFER, tex_coords.size() * sizeof(glm::vec2),
             nullptr, GL_STATIC_DRAW);
-
         glBufferSubData(GL_ARRAY_BUFFER, 0, tex_coords.size() * sizeof(glm::vec2),
             tex_coords.data());
 
@@ -76,6 +74,7 @@ int main(int argc, char * argv[])
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
 
+	
     // load and create textures 
     unsigned int texture1, texture2;
     {
@@ -114,7 +113,7 @@ int main(int argc, char * argv[])
             0, GL_RGBA, GL_UNSIGNED_BYTE, tex2.Data());
         glGenerateMipmap(GL_TEXTURE_2D);
     }
-
+	
     ourShader.use();
     ourShader.setInt("texture1", 0);
     ourShader.setInt("texture2", 1);
@@ -137,6 +136,7 @@ int main(int argc, char * argv[])
         // -----
         processInput(window);
 
+		
         // render
         // ------
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -160,7 +160,7 @@ int main(int argc, char * argv[])
         ourShader.setMat4("projection", projection);
 
         glDrawArrays(GL_TRIANGLES, 0, 36);
-
+	
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);

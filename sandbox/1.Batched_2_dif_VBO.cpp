@@ -4,14 +4,6 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
-#include "glt_Common.h"
-#include "glt_CommonValidate.h"
-
-
-constexpr const char a[] = "StringA",
-a1[] = "StringA";
-
-
 int main(int argc, char * argv[])
 {
     fsys::path exePath{ argv[0] };
@@ -22,8 +14,6 @@ int main(int argc, char * argv[])
 
 	glfw.MakeContextCurrent(window);
 	glfw.LoadOpenGL();
-
-	glEnable(GL_DEPTH_TEST);
 
 	// build and compile our shader program
 	// ------------------------------------
@@ -40,17 +30,18 @@ int main(int argc, char * argv[])
     glt::Buffer<glm::vec2> vboTex{};
 
 	vboPos.Bind(glt::BufferTarget::array);
+	vao.AttributePointer(glt::tag_s<0>(), vboPos().AttribPointer());
+
 	vboPos.AllocateMemory(posCoords.size(), glt::BufUsage::static_draw);
- 
     vboPos().SubData(posCoords.data(), posCoords.size());
 
-    vao.AttributePointer(glt::tag_s<0>(), vboPos().AttribPointer());
  
     vboTex.Bind(glt::BufferTarget::array);
+	vao.AttributePointer(glt::tag_s<1>(), vboTex().AttribPointer());
+
     vboTex.AllocateMemory(texCoords.size(), glt::BufUsage::static_draw);
     vboTex().SubData(texCoords.data(), texCoords.size());
 
-    vao.AttributePointer(glt::tag_s<1>(), vboTex().AttribPointer());
     vboTex.UnBind();
 
     // TODO: use EnablePointers()
@@ -107,6 +98,9 @@ int main(int argc, char * argv[])
 	ourShader.setInt("texture1", 0);
 	ourShader.setInt("texture2", 1);
 
+	// retrieve the matrix uniform locations
+	unsigned int modelLoc = glGetUniformLocation(ourShader.ID, "model");
+	unsigned int viewLoc = glGetUniformLocation(ourShader.ID, "view");
 
 	// render loop
 	// -----------
@@ -137,9 +131,7 @@ int main(int argc, char * argv[])
 		model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f));
 		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
 		projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-		// retrieve the matrix uniform locations
-		unsigned int modelLoc = glGetUniformLocation(ourShader.ID, "model");
-		unsigned int viewLoc = glGetUniformLocation(ourShader.ID, "view");
+
 		// pass them to the shaders (3 different ways)
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
@@ -147,7 +139,7 @@ int main(int argc, char * argv[])
 		ourShader.setMat4("projection", projection);
 
 		// render box
-		vao.Bind();
+		//vao.Bind();
 		// glBindVertexArray(vao);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 

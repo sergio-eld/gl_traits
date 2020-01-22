@@ -4,60 +4,67 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
-
-int main()
+int main(int argc, char * argv[])
 {
-    
-	std::cout << path.generic_string() << std::endl;
+	fsys::path exePath{ argv[0] };
+	std::cout << exePath.generic_string() << std::endl;
+
 	SmartGLFW glfw{ 3, 3 };
 	SmartGLFWwindow window{ SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL" };
 
 	glfw.MakeContextCurrent(window);
 	glfw.LoadOpenGL();
 
-	glEnable(GL_DEPTH_TEST);
-
-
 	// build and compile our shader program
 	// ------------------------------------
-	Shader ourShader{ (path.generic_string() + "vshader.vs").c_str(),
-		(path.generic_string() + "fshader.fs").c_str() };
-
-	// texture coordinates from batched array, vertex coords - from compound second
-	auto texCoords = glm_cube_texCoords();	// for batched 1st array
-	auto vertices = cube_vertices();		// for compound 2nd array
-	std::vector<vertexR> vertices2{ vertices.size() };
-	for (size_t i = 0; i != vertices.size(); ++i)
-	{
-		vertices2[i].posCoords = vertices[i].posCoords;
-		vertices2[i].textureCoords = vertices[i].textureCoords;
-	}
-
-	// first array is garbage
-	// compound = vertex with members in reversed order
-	glt::BufferOld<glm::vec2, glt::compound<glm::vec2, glm::vec3>> vbo{};
-
-
-	vbo.Bind(glt::BufferTarget::array);
-
-	vbo.AllocateMemory(texCoords.size(), vertices2.size(), glt::BufUsage::static_draw);
-	vbo.BufferData<1>(vertices2.data(), vertices2.size());
-
-	vbo.BufferData<0>(texCoords.data(), texCoords.size());
+	Shader ourShader{ exePath.parent_path().append("vshader.vs").generic_string().c_str(),
+		exePath.parent_path().append("fshader.fs").generic_string().c_str() };
 
 	glt::VAO<glm::vec3, glm::vec2> vao{};
 	vao.Bind();
-	// bind vertex coords
-	vao.AttributePointer(vbo.Attribute(glt::tag_indx<1, 1>()), glt::tag_s<0>()); 
 
-	// bind texture coords
-	// vao.AttributePointer(vbo.Attribute(glt::tag_indx<1, 0>()), glt::tag_s<1>());
+	std::vector<glm::vec3> positions = glm_cube_positions();
+	std::vector<glm::vec2> tex_coords = glm_cube_texCoords();
 
-	// second case 	// bind texture coords
-	vao.AttributePointer(vbo.Attribute(glt::tag_s<0>()), glt::tag_s<1>());
+	glt::Buffer<glm::vec2, glt::compound<float, glm::vec3, int>> vboVert{};
+	vboVert.Bind(glt::BufferTarget::array);
 
-	vao.EnableVertexAttribPointer(0);
-	vao.EnableVertexAttribPointer(1);
+	vboVert.AllocateMemory(tex_coords.size(), positions.size(),
+		glt::BufUsage::static_draw);
+
+	vao.AttributePointer(glt::tag_s<0>(), 
+		vboVert(glt::tag_s<1>()).AttribPointer(glt::tag_s<1>()));
+	vao.AttributePointer(glt::tag_s<1>(), vboVert().AttribPointer());
+	
+	vboVert().SubData(tex_coords.data(), tex_coords.size());
+
+	struct dummy
+	{
+		float f;
+		glm::vec3 xyz;
+		int i;
+	};
+
+	for (dummy& d : glt::MapGuard(vboVert(glt::tag_s<1>()), glt::MapAccessBit::write))
+	{
+		static std::vector<glm::vec3>::const_iterator posIter = positions.cbegin();
+		d = dummy{ float(), *posIter++, int() };
+	}
+
+	for (const dummy& d : glt::MapGuard(vboVert(glt::tag_s<1>()), glt::MapAccessBit::read))
+	{
+		static std::vector<glm::vec3>::const_iterator posIter = positions.cbegin();
+		assert(d.xyz == *posIter && "Failed to load position coords!");
+		++posIter;
+	}
+
+	//vboVert().SubData(vertices.data(), vertices.size());
+
+	vboVert.UnBind();
+
+	// TODO: use EnablePointers()
+	vao.EnablePointers();
+
 
 	/////////////////////////////////////////////////////////////////////
 	// The rest part is identical to other use cases
@@ -68,8 +75,8 @@ int main()
 	// load and create textures 
 	unsigned int texture1, texture2;
 	{
-		Image tex1{ (path.generic_string() + "resources/textures/container.jpg") },
-			tex2{ (path.generic_string() + "resources/textures/awesomeface.png") };
+		Image tex1{ exePath.parent_path().append("resources/textures/container.jpg").generic_string() },
+			tex2{ exePath.parent_path().append("resources/textures/awesomeface.png").generic_string() };
 
 		assert(tex1.Data() && tex2.Data());
 
@@ -108,6 +115,14 @@ int main()
 	ourShader.setInt("texture1", 0);
 	ourShader.setInt("texture2", 1);
 
+	// retrieve the matrix uniform locations
+	unsigned int modelLoc = glGetUniformLocation(ourShader.ID, "model");
+	unsigned int viewLoc = glGetUniformLocation(ourShader.ID, "view");
+
+	// create transformations
+	glm::mat4 model = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+	glm::mat4 view = glm::mat4(1.0f);
+	glm::mat4 projection = glm::mat4(1.0f);
 
 	// render loop
 	// -----------
@@ -131,16 +146,10 @@ int main()
 		// activate shader
 		ourShader.use();
 
-		// create transformations
-		glm::mat4 model = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-		glm::mat4 view = glm::mat4(1.0f);
-		glm::mat4 projection = glm::mat4(1.0f);
-		model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f));
-		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+		model = glm::rotate(glm::mat4(1.0f), (float)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f));
+		view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0f));
 		projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-		// retrieve the matrix uniform locations
-		unsigned int modelLoc = glGetUniformLocation(ourShader.ID, "model");
-		unsigned int viewLoc = glGetUniformLocation(ourShader.ID, "view");
+
 		// pass them to the shaders (3 different ways)
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
@@ -148,7 +157,7 @@ int main()
 		ourShader.setMat4("projection", projection);
 
 		// render box
-		vao.Bind();
+		//vao.Bind();
 		// glBindVertexArray(vao);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
@@ -158,7 +167,7 @@ int main()
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
-	
+
 	return 0;
 
 }
