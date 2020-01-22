@@ -7,6 +7,17 @@
 namespace glt
 {
 	
+	template<glm::length_t R, typename T, glm::qualifier Q>
+	struct sequence_traits<glm::vec<R, T, Q>>
+	{
+		constexpr static size_t elem_count = R;
+		constexpr static bool is_compound = false;
+		constexpr static size_t elem_size = sizeof(T);
+
+		using first_type = T;
+
+	};
+
 	template<glm::length_t C, glm::length_t R, typename T, glm::qualifier Q>
 	struct sequence_traits<glm::mat<C, R, T, Q>>
 	{
@@ -142,19 +153,19 @@ namespace glt
 		}
 
 		template <class AttrT,
-			class = std::enable_if_t<is_equivalent_v<AttrT, compound<Attribs...>>>>
+			class = std::enable_if_t<is_equivalent_v<AttrT, compound<Attrs...>>>>
 			void SubData(AttrT *data, size_t sz, size_t inst_offset = 0)
 		{
-			SubData(reinterpret_cast<compound_t<Attribs...>*>(data), sz, inst_offset);
+			SubData(reinterpret_cast<compound_t<Attrs...>*>(data), sz, inst_offset);
 		}
 
 		template <class AttrT,
-			class = std::enable_if_t<is_equivalent_v<AttrT, compound<Attribs...>>>>
+			class = std::enable_if_t<is_equivalent_v<AttrT, compound<Attrs...>>>>
 			void MapRange(AttrT *&data, MapAccessBit access,
 				size_t sz = std::numeric_limits<size_t>::max(),
 				size_t inst_offset = 0)
 		{
-			MapRange(reinterpret_cast<compound_t<Attribs...> *&>(data),
+			MapRange(reinterpret_cast<compound_t<Attrs...> *&>(data),
 				access, sz, inst_offset);
 		}
 
