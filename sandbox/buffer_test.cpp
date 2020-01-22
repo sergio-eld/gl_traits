@@ -32,13 +32,13 @@ int main()
     /* use this to generate asssembly
 
     // TODO: optimize??
-    glt::Buffer<glm::vec3, glm::vec4, float, int, glm::vec3, glm::fvec4, glm::vec3, glm::ivec4> bVec3;
-    bVec3.Bind(glt::BufferTarget::array);
+    glt::Buffer<glm::vec3, glm::vec4, float, int, glm::vec3, glm::fvec4, glm::vec3, glm::ivec4> batchedBuf;
+    batchedBuf.Bind(glt::BufferTarget::array);
 
     size_t inst = 0;
     std::cin >> inst;
 
-    bVec3.AllocateMemory(inst, inst, inst, inst, inst, inst, inst, inst, glt::BufUsage::static_draw);
+    batchedBuf.AllocateMemory(inst, inst, inst, inst, inst, inst, inst, inst, glt::BufUsage::static_draw);
     */
 
 	int retMask = 0;
@@ -51,48 +51,51 @@ int main()
 
 int test_SubData_MapRead(int & mask)
 {
-    
-	glt::Buffer<glm::vec3> bVec3;
+	glt::Buffer<glm::vec3, float, glm::vec2> batchedBuf;
 	glt::Buffer<int> bElements;
 
     
-	sizeof(bVec3);
+	sizeof(batchedBuf);
 
-	bVec3.Bind(glt::BufferTarget::array);
+	batchedBuf.Bind(glt::BufferTarget::array);
 	bElements.Bind(glt::BufferTarget::element_array);
 
 	std::vector<glm::vec3> positions = glm_cube_positions();
+	std::vector<glm::vec2> tex_coords = glm_cube_texCoords();
 
-	bVec3.AllocateMemory(positions.size(), glt::BufUsage::static_draw);
+	batchedBuf.AllocateMemory(positions.size(), 283, tex_coords.size(),
+		glt::BufUsage::static_draw);
 	bElements.AllocateMemory(positions.size(), glt::BufUsage::static_draw);
 
-    glt::Sequence<glm::vec3>& seqVec3 = bVec3();
+    batchedBuf().SubData(positions.data(), positions.size());
+	batchedBuf(glt::tag_s<2>()).SubData(tex_coords.data(), 
+		tex_coords.size());
 
+    // test batched sequences
 
-    seqVec3.SubData(positions.data(), positions.size());
+	for (const glm::vec3& v : glt::MapGuard(batchedBuf(), glt::MapAccessBit::read))
+	{
+		static std::vector<glm::vec3>::const_iterator vec3Iter = 
+			positions.cbegin();
+		if (v != *vec3Iter++)
+		{
+			mask |= 16;
+			return mask;
+		}
+	}
 
-    // test non-compound sequences
-    // testing simple map access
-    glm::vec3 *mapped = nullptr;
-    seqVec3.MapRange(mapped, glt::MapAccessBit::read);
-
-    // works
-    for (const glm::vec3& p : positions)
-        if (p != *mapped++)
-        {
-            mask |= 16;
-            return mask;
-        }
-
-    seqVec3.UnMap();
-
-    std::vector<glm::vec3>::const_iterator vec3Iter = positions.cbegin();
-    for (const glm::vec3& v : glt::MapGuard(seqVec3, glt::MapAccessBit::read))
-        if (v != *vec3Iter++)
-        {
-            mask |= 16;
-            return mask;
-        }
+	for (const glm::vec2& t : glt::MapGuard(batchedBuf(glt::tag_s<2>()),
+		glt::MapAccessBit::read))
+	{
+		static std::vector<glm::vec2>::const_iterator vec2Iter =
+			tex_coords.cbegin();
+		if (t != *vec2Iter++)
+		{
+			mask |= 16;
+			return mask;
+		}
+	}
+        
 
     // check map guard range loop with equivalent types
 
@@ -100,7 +103,7 @@ int test_SubData_MapRead(int & mask)
     std::vector<posVec3>::const_iterator pos_vec3_iter = 
         pos_struct_vec3.cbegin();
 
-    for (const posVec3& v : glt::MapGuard(seqVec3, glt::MapAccessBit::read))
+    for (const posVec3& v : glt::MapGuard(batchedBuf(), glt::MapAccessBit::read))
         if (v != *pos_vec3_iter++)
         {
             mask |= 16;
