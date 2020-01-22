@@ -28,6 +28,14 @@ namespace glt
 
             using unwrapped_type = variable_traits_type<Attrib>;
 
+			// for debug
+			auto params = std::make_tuple(indx,
+				sequence_traits<unwrapped_type>::elem_count,
+				c_to_gl_v<unwrapped_type>,
+				normalize,
+				attrib.stride,
+				attrib.offset);
+
             glVertexAttribPointer((GLuint)indx,
                 (GLint)sequence_traits<unwrapped_type>::elem_count,
                 (GLenum)c_to_gl_v<unwrapped_type>,
