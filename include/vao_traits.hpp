@@ -10,7 +10,7 @@ namespace glt
     template <size_t indx, class Attrib, bool = has_name_v<Attrib>>
     class vao_attrib_modify
     {
-        const VAO_base& rVao_;
+        const vao_base& rVao_;
 
     public:
 		
@@ -45,14 +45,14 @@ namespace glt
         }
 
     protected:
-        vao_attrib_modify(const VAO_base& rVao)
+        vao_attrib_modify(const vao_base& rVao)
             : rVao_(rVao)
         {}
     };
 
     // named attribute
     template <size_t indx, class Attrib>
-    class vao_attrib_modify<indx, Attrib, true> : // protected virtual VAO_base,
+    class vao_attrib_modify<indx, Attrib, true> : // protected virtual vao_base,
         public vao_attrib_modify<indx, variable_traits_type<Attrib>>
     {
         using vao_attrib_nameless = vao_attrib_modify<indx, variable_traits_type<Attrib>>;
@@ -73,7 +73,7 @@ namespace glt
         }
 
     protected:
-        vao_attrib_modify(const VAO_base& rVao)
+        vao_attrib_modify(const vao_base& rVao)
             : vao_attrib_nameless(rVao)
         {}
     };
@@ -107,7 +107,7 @@ namespace glt
 
     public:
 
-        aggregated_vao_attribs(const VAO_base& vao)
+        aggregated_vao_attribs(const vao_base& vao)
             : vao_attrib_i<indx>(vao)...
         {}
 
@@ -146,7 +146,7 @@ namespace glt
 	*/
 
 	template <class ... Attribs>
-	class VAO : public VAO_base, 
+	class VAO : public vao_base, 
         public aggregated_vao_attribs<std::tuple<Attribs...>>
 	{
         using aggr_attribs = aggregated_vao_attribs<std::tuple<Attribs...>>;
@@ -157,8 +157,8 @@ namespace glt
 
 	public:
         VAO(HandleVAO&& handle = Allocator::Allocate(VAOTarget()))
-			: VAO_base(std::move(handle)),
-            aggr_attribs(static_cast<const VAO_base&>(*this))
+			: vao_base(std::move(handle)),
+            aggr_attribs(static_cast<const vao_base&>(*this))
 		{}
 
         using aggr_attribs::EnablePointer;
