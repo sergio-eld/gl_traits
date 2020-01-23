@@ -34,6 +34,8 @@ namespace glt
 	template <class T, const char * glslName>
 	struct glslt
 	{
+		T glt_value;
+
 		static_assert((bool)glslName,
 			"glsl Name must not be nullptr! Use fundamental or glm types instead");
 		constexpr static const char * glt_name() { return glslName; }
@@ -108,6 +110,21 @@ namespace glt
 	template <class T>
 	constexpr inline bool is_glm_mat_v = is_glm_mat<T>();
 
+	// default qualifier
+	template <class T>
+	struct glm_qualifier : std::integral_constant<glm::qualifier, glm::packed_highp> {};
+
+	template <glm::length_t L, typename T, glm::qualifier Q>
+	struct glm_qualifier<glm::vec<L, T, Q>> : 
+		std::integral_constant<glm::qualifier, Q> {};
+
+	template <class T, glm::length_t C, glm::length_t R, glm::qualifier Q>
+	struct glm_qualifier<glm::mat<C, R, T, Q>> :
+		std::integral_constant<glm::qualifier, Q> {};
+
+	template <class T>
+	constexpr static glm::qualifier glm_qualifier_v = glm_qualifier<T>();
+
 	template <class T>
 	struct is_glm : std::bool_constant<is_glm_mat_v<T> || is_glm_vec_v<T>> {};
 
@@ -155,6 +172,16 @@ namespace glt
 
 	template <class T>
 	constexpr inline int variable_traits_location = variable_traits<T>::location;
+
+	template <class GLSLT, class T>
+	GLSLT & glsl_cast(T& val)
+	{
+		static_assert(std::is_same_v<T, variable_traits_type<GLSLT>>,
+			"Invalid glsl cast: Types mismatch!");
+
+		return reinterpret_cast<GLSLT&>(val);
+	}
+
 
 	//////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////
