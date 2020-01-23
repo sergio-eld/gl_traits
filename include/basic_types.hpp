@@ -384,28 +384,30 @@ namespace glt
 	class uniform_base
 	{
 	protected:
-
-		const program_base& prog_;
+        const program_base& prog_;
 		GLint location_ = -1;
 
 		// by default
 		uniform_base(const program_base& prog, const char* name)
 			: prog_(prog),
-			location_(prog_.Linked() ? GetLocation(name) : -1)
+            location_(prog.Linked() ? GetLocation_(prog, name) : -1)
 		{}
 
-		GLint GetLocation(const char* name)
+        void GetLocation(const char* name)
+        {
+            location_ = GetLocation_(prog_, name);
+        }
+
+    private:
+
+		static GLint GetLocation_(const program_base& prog, const char* name)
 		{
-			assert(prog_.Linked() &&
+			assert(prog.Linked() &&
 				"Attempt to get Uniform location of a non-linked program");
-			GLint ret = glGetUniformLocation(handle_accessor(prog_.Handle()), name);
+			GLint ret = glGetUniformLocation(handle_accessor(prog.Handle()), name);
 			assert(ret != -1 && "Failed to get Unifrom location");
 			return ret;
 		}
-
-	private:
-
-
 
 	};
 

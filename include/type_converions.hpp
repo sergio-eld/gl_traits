@@ -192,14 +192,14 @@ namespace glt
 
 
 	/* Convert one type to another. Used when expanding parameter pack.
-Example: set n = sizeof...(T) arguments in a Foo<T..>::bar;
-template <class ... T>
-class Foo
-{
-	void bar(convert_to<bool, T> ... arg) // to invoke, n bool args is needed.
-	{}
-};
-*/
+    Example: set n = sizeof...(T) arguments in a Foo<T..>::bar;
+    template <class ... T>
+    class Foo
+    {
+	    void bar(convert_to<bool, T> ... arg) // to invoke, n bool args is needed.
+	    {}
+    };
+    */
 	template <typename To, typename From>
 	using convert_to = To;
 
@@ -218,16 +218,16 @@ class Foo
 		using type = void(*)(GLint, convert_v_to<T, indx>...);
 	};
 
-	template <glm::length_t L, typename T>
-	struct p_gl_uniform<glm::vec<L, T>>
+	template <glm::length_t L, typename T, glm::qualifier Q>
+	struct p_gl_uniform<glm::vec<L, T, Q>>
 	{
-		using type = void(*)(GLint, GLsizei, const glm::vec<L, T>&);
+		using type = void(*)(GLint, GLsizei, const glm::vec<L, T, Q>&);
 	};
 
-	template <glm::length_t C, glm::length_t R, typename T>
-	struct p_gl_uniform<glm::mat<C, R, T>>
+	template <glm::length_t C, glm::length_t R, typename T, glm::qualifier Q>
+	struct p_gl_uniform<glm::mat<C, R, T, Q>>
 	{
-		using type = void(*)(GLint, GLsizei, GLboolean, const glm::mat<C, R, T>&);
+		using type = void(*)(GLint, GLsizei, GLboolean, const glm::mat<C, R, T, Q>&);
 	};
 
 	template <class T, size_t sz = 1>

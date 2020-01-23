@@ -20,7 +20,9 @@ namespace glt
 
 	public:
 
-#pragma message("Default constructor for glr::Program is not implemented!")
+        using uniform_collection<GLSL...>::Uniform;
+        using uniform_collection<GLSL...>::GetLocations;
+
 		// default
 		Program(HandleProg&& handle = Allocator::Allocate(ProgramTarget()))
 			: program_base(std::move(handle)),
@@ -37,14 +39,15 @@ namespace glt
 			: Program(std::move(handle))
 		{
 			Link(vShader, fShader, otherShaders...);
+            GetLocations();
 		}
 
-		void Use() const
+		void Use()
 		{
 			program_base::Use();
 		}
 
-		void UnUse() const
+		void UnUse()
 		{
 			program_base::UnUse();
 		}
@@ -67,7 +70,7 @@ namespace glt
 
 		template <ShaderTarget ... targets>
 		bool Link_(const VertexShader& vShader, const FragmentShader& fShader,
-			const Shader<targets>& ... otherShaders) const
+			const Shader<targets>& ... otherShaders)
 		{
 			assert(program_base::Handle() && "Program::Invalid handle!");
 

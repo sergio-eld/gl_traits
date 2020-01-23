@@ -45,6 +45,8 @@ namespace glt
 			: uniform_base(prog, name)
 		{}
 
+        using uniform_base::GetLocation;
+
 	public:
 
 		constexpr static size_t elems_count = sizeof...(indx);
@@ -62,7 +64,7 @@ namespace glt
 			p_gl_uniform_t<T, elems_count> pglUniformT =
 				get_p_gl_uniform<c_type, elems_count>();
 
-			(*pglUniformT)(handle_, vals...);
+            (*pglUniformT)(location_, val...);
 		}
 
 		void Set(const glm_type& val)
@@ -73,14 +75,17 @@ namespace glt
 			p_gl_uniform_t<glm_type> pglUniformT =
 				get_p_gl_uniform<glm_type>();
 
-			(*pglUniformT)(handle_, elems_count, &val);
+            // count = 1 ??
+			(*pglUniformT)(location_, 1, &val);
 		}
 
 		void Get(ret_type &ret) const
 		{
-			void(*ptr)(GLint, GLint, ret_type*) = *pp_gl_get_uniform_map<ret_type>();
+            using FuncGet = void(*)(GLint, GLint, ret_type&);
+            FuncGet ptr = reinterpret_cast<FuncGet>(*pp_gl_get_uniform_map<c_type>());
 
-			(*ptr)(handle_accessor(prog_), location_, &ret);
+            (*ptr)(handle_accessor(prog_.Handle()), location_, ret);
+
 		}
 
 		ret_type Get() const
@@ -104,6 +109,8 @@ namespace glt
 		Uniform(const program_base& prog, const char* name)
 			: uniform_base(prog, name)
 		{}
+        
+        using uniform_base::GetLocation;
 
 	public:
 
@@ -119,16 +126,18 @@ namespace glt
 				"Attempting to set uniform for non-active program!");
 
 			p_gl_uniform_t<glm_type> pglUniformT =
-				get_p_gl_uniform<glm_type>();
+				get_p_gl_uniform<glm_type, 1>();
 
-			(*pglUniformT)(handle_, elems_count, transpose, &val);
+            // count = 1 ??
+			(*pglUniformT)(location_, 1, transpose, val);
 		}
 
 		void Get(ret_type &ret) const
 		{
-			void(*ptr)(GLint, GLint, ret_type*) = *pp_gl_get_uniform_map<ret_type>();
+            using FuncGet = void(*)(GLint, GLint, ret_type&);
+            FuncGet ptr = reinterpret_cast<FuncGet>(*pp_gl_get_uniform_map<c_type>());
 
-			(*ptr)(handle_accessor(prog_), location_, &ret);
+			(*ptr)(handle_accessor(prog_.Handle()), location_, ret);
 		}
 
 		ret_type Get() const
@@ -153,19 +162,24 @@ namespace glt
 			: unif_type(prog, variable_traits_name<GLSL>)
 		{}
 
+        void GetLocation()
+        {
+            unif_type::GetLocation(variable_traits_name<GLSL>);
+        }
+
 	public:
 
-		unif_type& Uniform(tag_t<unif_type>)
+		unif_type& Uniform(tag_t<GLSL>)
 		{
 			return *this;
 		}
 
-		const unif_type& Uniform(tag_t<unif_type>) const
+		const unif_type& Uniform(tag_t<GLSL>) const
 		{
 			return *this;
 		}
 
-		void Set(GLSL& val)
+		void Set(const GLSL& val)
 		{
 			unif_type::Set(val.glt_value);
 		}
@@ -192,15 +206,19 @@ namespace glt
 			: uniform_i<indx>(prog)...
 		{}
 
+        void GetLocations()
+        {
+            (uniform_i<indx>::GetLocation(), ...);
+        }
+
+
 	public:
-
-		void GetLocations()
-		{
-
-		}
 
 		using uniform_i<indx>::Uniform...;
 		using uniform_i<indx>::Set...;
+
+
+
 
 	};
 
