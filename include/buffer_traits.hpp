@@ -30,7 +30,7 @@ namespace glt
 
         constexpr static size_t elem_size = Sequence<Attr...>::elem_size;
 
-		constexpr sequence_indexed(Buffer_base& buf,
+		constexpr sequence_indexed(buffer_base& buf,
 			const std::ptrdiff_t &bytes_lbound,
 			const std::ptrdiff_t &bytes_rbound)
 			: seq(buf, bytes_lbound, bytes_rbound)
@@ -65,7 +65,7 @@ namespace glt
 	{
 		using seq_base = sequence_indexed<0, compound<Attr...>, false>;
 
-		constexpr sequence_indexed(Buffer_base& buf,
+		constexpr sequence_indexed(buffer_base& buf,
 			const std::ptrdiff_t &bytes_lbound,
 			const std::ptrdiff_t &bytes_rbound)
 			: seq_base(buf, bytes_lbound, bytes_rbound)
@@ -123,7 +123,7 @@ namespace glt
         using sequence_i =
             sequence_indexed<i, wrap_attr_t<std::tuple_element_t<i, std::tuple<seq_attribs...>>>>;
 
-        constexpr aggregated_sequences(Buffer_base& buf)
+        constexpr aggregated_sequences(buffer_base& buf)
 			: sequence_i<indx>(buf, offsets_[indx], offsets_[indx + 1]) ...
 		{}
 
@@ -134,7 +134,7 @@ namespace glt
             return offsets_[seq_count];
         }
 
-        constexpr aggregated_sequences(Buffer_base& buf,
+        constexpr aggregated_sequences(buffer_base& buf,
             const std::array<std::ptrdiff_t, seq_count + 1>& offsets)
             : sequence_i<indx>(buf, offsets[indx], offsets[indx + 1]) ...
         {}
@@ -153,7 +153,7 @@ namespace glt
 
 	// Batched buffer
 	template <class ... attribs>
-	class Buffer : public Buffer_base,
+	class Buffer : public buffer_base,
 		public aggregated_sequences<std::tuple<attribs...>> // TODO: remove public
 	{
 
@@ -164,17 +164,17 @@ namespace glt
 
 	public:
         constexpr Buffer(HandleBuffer&& handle = Allocator::Allocate(BufferTarget()))
-			: Buffer_base(std::move(handle)),
-            aggr_sequences(static_cast<Buffer_base&>(*this))
+			: buffer_base(std::move(handle)),
+            aggr_sequences(static_cast<buffer_base&>(*this))
 		{}
 
         
         // TODO: add allocating constructor
 
-		using Buffer_base::Bind;
-		using Buffer_base::IsBound;
-		using Buffer_base::UnBind;
-		using Buffer_base::IsMapped;
+		using buffer_base::Bind;
+		using buffer_base::IsBound;
+		using buffer_base::UnBind;
+		using buffer_base::IsMapped;
 
         using aggr_sequences::SeqN ...;
         using aggr_sequences::operator() ...;
