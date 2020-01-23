@@ -130,7 +130,8 @@ void IHeaderGenerator::WriteCommonHeaderHead(std::basic_ostream<char>& file)
 	assert(file.good());
 	file << "#pragma once\n\n#include \"gl_traits.hpp\"\n\n"
 		"#define GLSLT_TYPE(NAME, VAR_NAME2, TYPE) struct NAME\\\n"
-		"{constexpr static const char* glt_name(){ return #VAR_NAME2;}\\\n"
+		"{TYPE glt_value;\\\n"
+		"constexpr static const char* glt_name(){ return #VAR_NAME2;}\\\n"
 		"using glt_type = TYPE;};\n\n";
 	// TODO: write generation time, user, files and\or license, etc.
 }
