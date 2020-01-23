@@ -61,9 +61,10 @@ int main(int argc, const char *argv[])
 	vs.Bind();
     vs.EnablePointer(1);
 
+	/*
 	static_assert(glt::AttribPtr<glm::vec3>::size == glt::AttribPtr<aPos_vec3>::size);
 	static_assert(glt::AttribPtr<glm::vec3>::glType == glt::AttribPtr<aPos_vec3>::glType);
-
+	*/
     /*
 	constexpr glt::AttribPtr<glm::vec3> v3{};
 	constexpr glt::AttribPtr<aPos_vec3> v3pos{};
@@ -79,7 +80,7 @@ int main(int argc, const char *argv[])
 
     const glt::Sequence<glm::vec3>& cseqVec3 = sbuf;
     glt::Sequence<glm::vec3>& seqVec3 = sbuf;
-    glt::AttribPtr<glm::vec3> attr = seqVec3;
+    glt::AttribPtr<glm::vec3> attr = seqVec3();
 
     glt::Buffer<glt::compound<glm::vec3, glm::vec2, float>> sbufCmp;
    // sbufCmp.Bind(glt::BufferTarget::array);
@@ -88,7 +89,7 @@ int main(int argc, const char *argv[])
     const glt::Sequence<glm::vec3, glm::vec2, float>& cseqCmp = sbufCmp;
     glt::Sequence<glm::vec3, glm::vec2, float>& seqCmp = sbufCmp;
 
-    sizeof(glt::Buffer_base);
+    sizeof(glt::buffer_base);
     sizeof(glt::Buffer<glm::vec3>);
 
 	return 0;

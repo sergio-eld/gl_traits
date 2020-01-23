@@ -10,15 +10,16 @@ struct init_map;
 template <BufferTarget ... targets>
 struct init_map<std::integer_sequence<BufferTarget, targets...>>
 {
-    operator std::map<BufferTarget, Buffer_base*>() const
+    operator std::map<BufferTarget, buffer_base*>() const
     {
         return { {targets, nullptr}... };
     }
 };
 
-std::map<BufferTarget, Buffer_base*> Buffer_base::targets_{ init_map<BufferTargetList>() };
+std::map<BufferTarget, buffer_base*> buffer_base::targets_{ init_map<BufferTargetList>() };
 
-VAO_base* VAO_base::active_vao_ = nullptr;
+vao_base* vao_base::active_vao_ = nullptr;
+program_base *program_base::active_prog_ = nullptr;
 // 
 
 //const Handle<VAOTarget::vao> *glt_buffers::currentVAO_ = nullptr;

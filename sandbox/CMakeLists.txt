@@ -30,30 +30,22 @@ target_include_directories(gl_sandbox
 # VBO cases
 
 set(TEST_CASES
-	"traits_common"
-	"traits_attribute_compound"
-	"traits_attribute_nth_attribute"
 	"traits_equivalence"
-	
-	"uniforms_test" # TODO: implement for just unifroms. Update and Query values
-	
+		
 	"shaders_test" # test compile various shaders
+	
+	"program_uniforms_test" # test program and uniforms
 	
 	"handles_tests"
 	"sequence_test"
 	"buffer_test"
-	
-	"map_uniform_funcs"
-	"buffer_fetch_attributes"
-	"BufferMap_tests"
-	
+		
 	"0.Raw_Batched_2_dif_VBO"
 	
 	"1.Batched_2_dif_VBO" 	# ok
 	"2.Batched_1_one_VBO"	# ok
 	"3.Compound_one_VBO"	# ok
 	"4.Batch_Comp_one_VBO"	# ok
-	"5.Batch_Comp_two_VBO"	# ok
 		
 )
 

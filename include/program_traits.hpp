@@ -1,109 +1,66 @@
 #pragma once
 
+#include "basic_types.hpp"
+
 #include "shader_traits.hpp"
 #include "uniform_traits.hpp"
 #include "vao_traits.hpp"
 
+
 namespace glt
 {
-	// Checks and sets an active Shader Program
-	class ActiveProgram
+
+	template <class vao_t, class unif_collection, class ...>
+	class Program;
+
+	template <class ... Attr, class ... GLSL>
+	class Program<VAO<Attr...>, uniform_collection<GLSL...>> : public program_base,
+		public uniform_collection<GLSL...>
 	{
-		inline static GLuint raw_handle_ = 0;
 
 	public:
 
-		static bool IsActive(const HandleProg& handle)
-		{
-			return handle == raw_handle_;
-		}
-
-		static void Use(const HandleProg& handle)
-		{
-			glUseProgram(handle_accessor(handle));
-			raw_handle_ = handle_accessor(handle);
-		}
-
-		static void Reset()
-		{
-			glUseProgram(0);
-			raw_handle_ = 0;
-		}
-
-	};
-
-	//template <class VAOdescr, class UniformCollect, class ...>
-	//class Program;
-
-	//template <class ... Attribs, class UniformCollect>
-	class Program//<VAO<Attribs...>, UniformCollect>
-	{
-		HandleProg handle_;
-
-		bool linked_ = false;
-		// VAO<Attribs> vao_;
-
-	public:
+#pragma message("Default constructor for glr::Program is not implemented!")
 		// default
 		Program(HandleProg&& handle = Allocator::Allocate(ProgramTarget()))
-			: handle_(std::move(handle))
-		{
-			assert(handle_.IsValid() && "Program::Invalid handle!");
-		}
+			: program_base(std::move(handle)),
+			uniform_collection<GLSL...>(static_cast<const program_base&>(*this))
+		{}
 
 		Program(const Program&) = delete;
 		Program& operator=(const Program&) = delete;
 
-		// TODO: fix. will not compile with additional shaders
+		// TODO: have to provide handle manually >:{
 		template <ShaderTarget ... targets>
-		Program(const VertexShader& vShader, const FragmentShader& fShader,
-			const Shader<targets>& ... otherShaders,
-			HandleProg&& handle = AllocatorSpecific<ProgramTarget>::Allocate())
-			: handle_(std::move(handle)),
-			linked_(Link_(vShader, fShader, otherShaders...))
+		Program(HandleProg&& handle, const VertexShader& vShader, const FragmentShader& fShader,
+			const Shader<targets>& ... otherShaders)
+			: Program(std::move(handle))
 		{
-			assert(IsValid() && "Program::Failed to link program!");
-		}
-
-		const HandleProg& GetHandle() const
-		{
-			return handle_;
-		}
-
-		bool IsActive() const
-		{
-			return ActiveProgram::IsActive(handle_);
+			Link(vShader, fShader, otherShaders...);
 		}
 
 		void Use() const
 		{
-			ActiveProgram::Use(handle_);
+			program_base::Use();
 		}
 
 		void UnUse() const
 		{
-			if (!IsActive())
-				throw std::exception("Program::Deactivating"
-					" a program wich is not currently active!");
-			ActiveProgram::Reset();
+			program_base::UnUse();
 		}
 
-		bool IsValid() const
+		operator bool() const
 		{
-			return linked_;
-		}
-
-		bool operator!() const
-		{
-			return !IsValid();
+			return static_cast<const program_base&>(*this) &&
+				IsActive();
 		}
 
 		template <ShaderTarget ... targets>
 		bool Link(const VertexShader& vShader, const FragmentShader& fShader,
 			const Shader<targets>& ... otherShaders)
 		{
-			linked_ = Link_(vShader, fShader, otherShaders...);
-			return IsValid();
+			SetLinkStatus(Link_(vShader, fShader, otherShaders...));
+			return Linked();
 		}
 
 	private:
@@ -112,22 +69,24 @@ namespace glt
 		bool Link_(const VertexShader& vShader, const FragmentShader& fShader,
 			const Shader<targets>& ... otherShaders) const
 		{
-			assert(handle_.IsValid() && "Program::Invalid handle!");
+			assert(program_base::Handle() && "Program::Invalid handle!");
 
-			glAttachShader(handle_accessor(handle_),
+			glAttachShader(handle_accessor(program_base::Handle()),
 				handle_accessor(vShader.GetHandle()));
 
-			glAttachShader(handle_accessor(handle_),
+			glAttachShader(handle_accessor(program_base::Handle()),
 				handle_accessor(fShader.GetHandle()));
 
 			if constexpr (sizeof...(targets))
-				(glAttachShader(handle_accessor(handle_),
+				(glAttachShader(handle_accessor(program_base::Handle()),
 					handle_accessor(otherShaders.GetHandle())), ...);
 
-			glLinkProgram(handle_accessor(handle_));
+			glLinkProgram(handle_accessor(program_base::Handle()));
 
 			GLint res = false;
-			glGetProgramiv(handle_accessor(handle_), GL_LINK_STATUS, &res);
+			glGetProgramiv(handle_accessor(program_base::Handle()), GL_LINK_STATUS, &res);
+			assert(res && "Failed to link program!");
+
 			return (bool)res;
 		}
 
