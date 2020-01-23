@@ -7,36 +7,14 @@
 namespace glt
 {
 	
-	template<glm::length_t R, typename T, glm::qualifier Q>
-	struct sequence_traits<glm::vec<R, T, Q>>
-	{
-		constexpr static size_t elem_count = R;
-		constexpr static bool is_compound = false;
-		constexpr static size_t elem_size = sizeof(T);
-
-		using first_type = T;
-
-	};
-
-	template<glm::length_t C, glm::length_t R, typename T, glm::qualifier Q>
-	struct sequence_traits<glm::mat<C, R, T, Q>>
-	{
-		constexpr static size_t elem_count = C;
-		constexpr static bool is_compound = true;
-		constexpr static size_t elem_size = sizeof(glm::vec<R, T, Q>);
-
-		using first_type = glm::vec<R, T, Q>;
-
-	};
-
 	template <class ... Attrs>
 	class seq_data_input
 	{
-		Buffer_base& buf_;
+		buffer_base& buf_;
 		const seq_layout_info<Attrs...>& layout_;
 	
 	public:
-		seq_data_input(Buffer_base& buf,
+		seq_data_input(buffer_base& buf,
 			const seq_layout_info<Attrs...>& layout)
 			: buf_(buf),
 			layout_(layout)
@@ -108,7 +86,7 @@ namespace glt
 		using aggr_attribs = aggregate_attribs<compound<Attrs...>>;
 
 	public:
-		Sequence(Buffer_base& buf,
+		Sequence(buffer_base& buf,
 			const std::ptrdiff_t &bytes_lbound,
 			const std::ptrdiff_t &bytes_rbound)
 			: aggr_attribs(layout_),

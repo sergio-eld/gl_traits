@@ -1,5 +1,16 @@
 #pragma once
 
+/*
+TODO: rename *classname*_base to *classname*_state (?)
+
+Since glGet() is considered to be slow, the solution might be to store the state.
+However, querying state might use 2 implementation, depending on configuration:
+1. Using stored state;
+2. Using glGet;
+
+TODO: add configuration-driven implementation either using a MACRO of if constexpr.
+*/
+
 #include "equivalence.hpp"
 
 #include "glm/glm.hpp"
@@ -12,17 +23,73 @@
 
 namespace glt
 {
-	// TODO: rename to Buffer_state class?
+	template <class Attr>
+	struct sequence_traits
+	{
+		constexpr static size_t elem_count = 1;
+		constexpr static bool is_compound = false;
+		constexpr static size_t elem_size = sizeof(Attr);
+
+		using first_type = Attr;
+	};
+
+	template <class ... Attrs>
+	struct sequence_traits<compound<Attrs...>>
+	{
+		constexpr static size_t elem_count = sizeof...(Attrs);
+		constexpr static bool is_compound = elem_count > 1 ? true : false;
+		constexpr static size_t elem_size =
+			get_class_size_v<Attrs...>;
+
+		using first_type = std::tuple_element_t<0, std::tuple<Attrs...>>;
+
+	};
+
+	template<glm::length_t R, typename T, glm::qualifier Q>
+	struct sequence_traits<glm::vec<R, T, Q>>
+	{
+		constexpr static size_t elem_count = R;
+		constexpr static bool is_compound = false;
+		constexpr static size_t elem_size = sizeof(T);
+
+		using first_type = T;
+
+	};
+
+	template<glm::length_t C, glm::length_t R, typename T, glm::qualifier Q>
+	struct sequence_traits<glm::mat<C, R, T, Q>>
+	{
+		constexpr static size_t elem_count = C;
+		constexpr static bool is_compound = true;
+		constexpr static size_t elem_size = sizeof(glm::vec<R, T, Q>);
+
+		using first_type = glm::vec<R, T, Q>;
+
+	};
+
+	template <class T>
+	constexpr inline bool is_compound_seq_v = sequence_traits<T>::is_compound;
+
+	template <class T>
+	constexpr inline size_t seq_elem_size = sequence_traits<T>::elem_size;
+
+	template <class T>
+	constexpr inline size_t seq_elem_count = sequence_traits<T>::elem_count;
+
+	template <class T>
+	using seq_first_type = typename sequence_traits<T>::first_type;
+
+	// TODO: rename to buffer_state class?
 	// TODO: remove Handle object to the buffer class?
-	class Buffer_base
+	class buffer_base
 	{
 		// this may be optimized out in release?
-		static std::map<BufferTarget, Buffer_base*> targets_;
+		static std::map<BufferTarget, buffer_base*> targets_;
 
 		// will unregister previous buffer and register new ptr
-		static void Register(BufferTarget target, Buffer_base* ptr = nullptr)
+		static void Register(BufferTarget target, buffer_base* ptr = nullptr)
 		{
-			Buffer_base *&current = targets_[target];
+			buffer_base *&current = targets_[target];
 			if (current)
 				current->target_ = BufferTarget::none;
 
@@ -41,16 +108,16 @@ namespace glt
 		MapAccess mapAccess_ = MapAccess::none;
 		MapAccessBit mapAccessBit_ = MapAccessBit::none;
 
-		constexpr Buffer_base(HandleBuffer&& handle)
+		constexpr buffer_base(HandleBuffer&& handle)
 			: handle_(std::move(handle))
 		{
 			assert(handle_ && "Invalid Handle!");
 		}
 
-		Buffer_base(const Buffer_base&) = delete;
-		Buffer_base& operator=(const Buffer_base& other) = delete;
+		buffer_base(const buffer_base&) = delete;
+		buffer_base& operator=(const buffer_base& other) = delete;
 
-		constexpr Buffer_base(Buffer_base&& other)
+		constexpr buffer_base(buffer_base&& other)
 			: handle_(std::move(other.handle_)),
 			mapAccess_(other.mapAccess_),
 			mapAccessBit_(other.mapAccessBit_)
@@ -61,7 +128,7 @@ namespace glt
 			other.mapAccessBit_ = MapAccessBit::none;
 		}
 
-		Buffer_base& operator=(Buffer_base&& other)
+		buffer_base& operator=(buffer_base&& other)
 		{
 			handle_ = std::move(other.handle_);
 			mapAccess_ = other.mapAccess_;
@@ -76,7 +143,7 @@ namespace glt
 		}
 
 
-		~Buffer_base()
+		~buffer_base()
 		{
 			// does opengl auto unmap data?
 			if (IsMapped())
@@ -151,41 +218,40 @@ namespace glt
 		}
 	};
 
-    class VAO_base
+    class vao_base
     {
-        static VAO_base* active_vao_;
+        static vao_base* active_vao_;
 
-        static void Register(VAO_base* vao = nullptr)
-        {
-            active_vao_ = vao;
-        }
+
 
     protected:
+
+		// TODO: move handle to private
         HandleVAO handle_;
 
-        VAO_base(HandleVAO&& handle)
+        vao_base(HandleVAO&& handle)
             : handle_(std::move(handle))
         {
             assert(handle_ && "Invalid VAO handle!");
         }
 
-        VAO_base()
+        vao_base()
             : handle_(Allocator::Allocate(VAOTarget()))
         {
-            assert(false && "VAO_base default constructor called!");
+            assert(false && "vao_base default constructor called!");
         }
 
-        VAO_base(const VAO_base&) = delete;
-        VAO_base& operator=(const VAO_base&) = delete;
+        vao_base(const vao_base&) = delete;
+        vao_base& operator=(const vao_base&) = delete;
 
-        VAO_base(VAO_base&& other)
+        vao_base(vao_base&& other)
             : handle_(std::move(other.handle_))
         {
             if (other.IsBound())
                 Register(this);
         }
 
-        VAO_base& operator=(VAO_base&& other)
+        vao_base& operator=(vao_base&& other)
         {
             handle_ = std::move(other.handle_);
 
@@ -214,5 +280,135 @@ namespace glt
             Register();
         }
 
+	private:
+
+		static void Register(vao_base* vao = nullptr)
+		{
+			active_vao_ = vao;
+		}
+
     };
+
+	class program_base
+	{
+
+		static program_base *active_prog_;
+
+		HandleProg handle_;
+		bool linked_ = false;
+
+	protected:
+
+		program_base(HandleProg&& handle)
+			: handle_(std::move(handle))
+		{
+			assert(*this && "Invalid handle!");
+		}
+
+		program_base(const program_base&) = delete;
+		program_base& operator=(const program_base&) = delete;
+
+		program_base(program_base&& other)
+			: handle_(std::move(other.handle_)),
+			linked_(other.linked_)
+		{
+			if (other.IsActive())
+				Register(this);
+
+			other.linked_ = false;
+		}
+
+		program_base& operator=(program_base&& other)
+		{
+			handle_ = std::move(other.handle_);
+			linked_ = other.linked_;
+
+			if (other.IsActive())
+				Register(this);
+
+			other.linked_ = false;
+
+			return *this;
+		}
+
+		operator bool() const
+		{
+			return handle_;
+		}
+
+		void SetLinkStatus(bool linked)
+		{
+			linked_ = linked;
+		}
+
+		void Use()
+		{
+			assert(*this && "Attemplt to use invalid program!");
+			glUseProgram(handle_accessor(handle_));
+			Register(this);
+		}
+
+		void UnUse()
+		{
+			assert(IsActive() && "Attempt to unuse non-active program!");
+			glUseProgram(0);
+			Register();
+		}
+
+	private:
+
+		static void Register(program_base *prog = nullptr)
+		{
+			active_prog_ = prog;
+		}
+
+	public:
+
+		bool IsActive() const
+		{
+			return this == active_prog_;
+		}
+
+		bool Linked() const
+		{
+			return linked_;
+		}
+
+		const HandleProg& Handle() const
+		{
+			return handle_;
+		}		
+
+	};
+
+	class uniform_base
+	{
+	protected:
+
+		const program_base& prog_;
+		GLint location_ = -1;
+
+		// by default
+		uniform_base(const program_base& prog, const char* name)
+			: prog_(prog),
+			location_(prog_.Linked() ? GetLocation(name) : -1)
+		{}
+
+		GLint GetLocation(const char* name)
+		{
+			assert(prog_.Linked() &&
+				"Attempt to get Uniform location of a non-linked program");
+			GLint ret = glGetUniformLocation(handle_accessor(prog_.Handle()), name);
+			assert(ret != -1 && "Failed to get Unifrom location");
+			return ret;
+		}
+
+	private:
+
+
+
+	};
+
+
+
 }

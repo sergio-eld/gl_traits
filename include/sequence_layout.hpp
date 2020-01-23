@@ -5,40 +5,6 @@
 
 namespace glt
 {
-	template <class Attr>
-	struct sequence_traits
-	{
-		constexpr static size_t elem_count = 1;
-		constexpr static bool is_compound = false;
-		constexpr static size_t elem_size = sizeof(Attr);
-
-		using first_type = Attr;
-	};
-
-	template <class ... Attrs>
-	struct sequence_traits<compound<Attrs...>>
-	{
-		constexpr static size_t elem_count = sizeof...(Attrs);
-		constexpr static bool is_compound = elem_count > 1 ? true : false;
-		constexpr static size_t elem_size =
-			get_class_size_v<Attrs...>;
-
-		using first_type = std::tuple_element_t<0, std::tuple<Attrs...>>;
-
-	};
-
-	template <class T>
-	constexpr inline bool is_compound_seq_v = sequence_traits<T>::is_compound;
-
-	template <class T>
-	constexpr inline size_t seq_elem_size = sequence_traits<T>::elem_size;
-
-	template <class T>
-	constexpr inline size_t seq_elem_count = sequence_traits<T>::elem_count;
-
-	template <class T>
-	using seq_first_type = typename sequence_traits<T>::first_type;
-
 	// seq layout info - rename?
 	template <typename ... Attribs>
 	class seq_layout_info
