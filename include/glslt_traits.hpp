@@ -182,6 +182,15 @@ namespace glt
 		return reinterpret_cast<GLSLT&>(val);
 	}
 
+    template <class GLSLT, class T>
+    const GLSLT & glsl_cast(const T& val)
+    {
+        static_assert(std::is_same_v<T, variable_traits_type<GLSLT>>,
+            "Invalid glsl cast: Types mismatch!");
+
+        return reinterpret_cast<const GLSLT&>(val);
+    }
+
 
 	//////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////
