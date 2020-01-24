@@ -19,10 +19,10 @@ execute_process(COMMAND ${CMAKE_COMMAND} -G ${CMAKE_GENERATOR}
 					-DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/glt_parser
 				)
 				
-execute_process(COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config Debug -- /nologo /verbosity:minimal)
+#execute_process(COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config Debug -- /nologo /verbosity:minimal)
 execute_process(COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config Release -- /nologo /verbosity:minimal)
-execute_process(COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config RelWithDebInfo -- /nologo /verbosity:minimal)
-execute_process(COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config MinSizeRel -- /nologo /verbosity:minimal)
+#execute_process(COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config RelWithDebInfo -- /nologo /verbosity:minimal)
+#execute_process(COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config MinSizeRel -- /nologo /verbosity:minimal)
 
 set(glt_parser_DIR ${PROJECT_BINARY_DIR}/glt_parser/lib/cmake/glt_parser)
 find_package(glt_parser REQUIRED)
@@ -37,10 +37,10 @@ add_custom_target(build_glt_parser
 					-A x64 
 					-DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/glt_parser
 				
-	COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config Debug -- /nologo /verbosity:minimal
+	#COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config Debug -- /nologo /verbosity:minimal
 	COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config Release -- /nologo /verbosity:minimal
-	COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config RelWithDebInfo -- /nologo /verbosity:minimal
-	COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config MinSizeRel -- /nologo /verbosity:minimal
+	#COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config RelWithDebInfo -- /nologo /verbosity:minimal
+	#COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config MinSizeRel -- /nologo /verbosity:minimal
 )
 
 # TODO: check if glad was generated with EXPORT
@@ -87,7 +87,7 @@ target_link_libraries(${PROJECT_NAME}
 		glad::glad
 		
 		#${SHADER_SOURCE_PARSER}
-		ParseAlgorithmPublic
+		#ParseAlgorithmPublic
 	PRIVATE
 		${OPENGL_LIBRARIES}
 	)
@@ -98,7 +98,7 @@ target_include_directories(${PROJECT_NAME}
 		$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
 		
 		$<BUILD_INTERFACE:${SHADER_SOURCE_PARSER_FOLDER}> # this is a workaround. 
-		$<BUILD_INTERFACE:${SHADER_SOURCE_STUPID_INCLUDE_FOLDER}> # even more stupid workaround!
+		#$<BUILD_INTERFACE:${SHADER_SOURCE_STUPID_INCLUDE_FOLDER}> # even more stupid workaround!
 	PRIVATE
 		$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
 	)

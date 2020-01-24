@@ -55,7 +55,7 @@ namespace glt
 		BufferTarget::uniform>;
 
 
-	enum class glBufferBinding : int
+	enum class glBufferBinding : GLenum
 	{
 		array_buffer_binding = GL_ARRAY_BUFFER_BINDING,
 		atomic_buffer_binding = GL_ATOMIC_COUNTER_BUFFER_BINDING,
@@ -74,22 +74,24 @@ namespace glt
 	enum class FrameBufferTarget : int;
 
 	// texture targets // remove underscore
-	enum class TextureTarget : int
+	enum class TextureTarget : GLenum
 	{
 		//for glBindTexture
 		texture_1d = GL_TEXTURE_1D,							//+
-		texture_2d = GL_TEXTURE_2D,							//+
-		texture_3d = GL_TEXTURE_3D,							//+
 		texture_1d_array = GL_TEXTURE_1D_ARRAY,				//+
+		texture_2d = GL_TEXTURE_2D,							//+
 		texture_2d_array = GL_TEXTURE_2D_ARRAY,				//+
+		texture_2d_multisample = GL_TEXTURE_2D_MULTISAMPLE,				//+
+		texture_2d_multisample_array = GL_TEXTURE_2D_MULTISAMPLE_ARRAY,	//+
+		texture_3d = GL_TEXTURE_3D,							//+
+
 		texture_rectangle = GL_TEXTURE_RECTANGLE,			//+	
 		texture_cube_map = GL_TEXTURE_CUBE_MAP,				//?
 		texture_cube_map_array = GL_TEXTURE_CUBE_MAP_ARRAY,	//??
 		texture = GL_TEXTURE_BUFFER,					//??
-		texture_2d_multisample = GL_TEXTURE_2D_MULTISAMPLE,				//+
-		texture_2d_multisample_array = GL_TEXTURE_2D_MULTISAMPLE_ARRAY,	//+
 
 
+		// separate those below into another enum?
 		proxy_texture_1d = GL_PROXY_TEXTURE_1D,  //glTexImage1D
 
 		proxy_texture_2d = GL_PROXY_TEXTURE_2D, //glTexImage2D

@@ -5,6 +5,8 @@
 #include <iostream>
 #include <vector>
 
+namespace fsys = std::filesystem;
+
 #define GL_TRAITS_STATIC
 #include "gl_traits.hpp"
 
