@@ -1,9 +1,9 @@
-﻿language: cpp
+﻿dist: trusty
+
+language: cpp
 os:
     - Windows
-    
-dist: trusty
-    
+        
 compiler:
     - clang
     - gcc
