@@ -40,11 +40,24 @@ class SmartGLFWwindow
 {
 	GLFWwindow* window_;
 
+    unsigned int width_,
+        height_;
+
 public:
 	SmartGLFWwindow(unsigned int width, unsigned int height,
 		const std::string& title);
 
 	operator GLFWwindow*() const;
+
+    unsigned int Width() const
+    {
+        return width_;
+    }
+
+    unsigned int Height() const
+    {
+        return height_;
+    }
 
 	static void FrameBufferSizeCallback(GLFWwindow* window, int width, int height);
 

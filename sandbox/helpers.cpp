@@ -50,7 +50,9 @@ SmartGLFW::~SmartGLFW()
 }
 
 SmartGLFWwindow::SmartGLFWwindow(unsigned int width, unsigned int height, const std::string & title)
-	: window_(glfwCreateWindow(width, height, title.data(), nullptr, nullptr))
+	: window_(glfwCreateWindow(width, height, title.data(), nullptr, nullptr)),
+    width_(width),
+    height_(height)
 {
 	assert(window_ && "Window is nullptr! Check if GLFW is initialized");
 	glfwSetFramebufferSizeCallback(window_, &SmartGLFWwindow::FrameBufferSizeCallback);
@@ -64,6 +66,10 @@ SmartGLFWwindow::operator GLFWwindow*() const
 
 void SmartGLFWwindow::FrameBufferSizeCallback(GLFWwindow * window, int width, int height)
 {
+    // this is illegal (shush)
+    reinterpret_cast<SmartGLFWwindow*>(window)->width_ = width;
+    reinterpret_cast<SmartGLFWwindow*>(window)->height_ = height;
+
 	glViewport(0, 0, width, height);
 }
 
