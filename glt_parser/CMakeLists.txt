@@ -161,10 +161,7 @@ set(ARGUMENTS
 --vert \".vshader .vs\" \
 --frag \".fshader .fs\" \
 --geom \".gshader .gs\" \
---comp \".cshader .cs\" 
-
-#-e \".vs .fs .gs\" \
-#-w warnings"
+--comp \".cshader .cs\""
 	) 
 	
 set_target_properties(${PROJECT_NAME}
@@ -232,10 +229,10 @@ install(TARGETS
 		${PROJECT_NAME}
 		ParseAlgorithmPublic
 	CONFIGURATIONS
-		Debug
-		RelWithDebInfo
+		#Debug
+		#RelWithDebInfo
 		Release
-		MinSizeRel
+		#MinSizeRel
 	EXPORT 
 		${targets_export_name}
 	RUNTIME

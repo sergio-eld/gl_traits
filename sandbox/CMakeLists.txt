@@ -39,6 +39,7 @@ set(TEST_CASES
 	"handles_tests"
 	"sequence_test"
 	"buffer_test"
+	"textures_test"
 		
 	"0.Raw_Batched_2_dif_VBO"
 	
@@ -46,6 +47,8 @@ set(TEST_CASES
 	"2.Batched_1_one_VBO"	# ok
 	"3.Compound_one_VBO"	# ok
 	"4.Batch_Comp_one_VBO"	# ok
+	
+	"5.Render_texture_bg"
 		
 )
 
@@ -60,6 +63,7 @@ target_link_libraries(${USE_CASE}
 #		PlatformPath
 	)
 endforeach()
+
 
 add_custom_command(TARGET gl_sandbox POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E  copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/shaders 

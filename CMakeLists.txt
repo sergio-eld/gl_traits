@@ -19,16 +19,7 @@ execute_process(COMMAND ${CMAKE_COMMAND} -G ${CMAKE_GENERATOR}
 					-DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/glt_parser
 				)
 				
-#execute_process(COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config Debug -- /nologo /verbosity:minimal)
 execute_process(COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config Release -- /nologo /verbosity:minimal)
-#execute_process(COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config RelWithDebInfo -- /nologo /verbosity:minimal)
-#execute_process(COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config MinSizeRel -- /nologo /verbosity:minimal)
-
-set(glt_parser_DIR ${PROJECT_BINARY_DIR}/glt_parser/lib/cmake/glt_parser)
-find_package(glt_parser REQUIRED)
-
-message(STATUS "glt parser found at ${gl_traits_FOUND}")
-message(STATUS "ParserAlgorithmPublic found at ${ParseAlgorithmPublic_FOUND}")
 
 add_custom_target(build_glt_parser
 	COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/glt_parser
@@ -37,11 +28,14 @@ add_custom_target(build_glt_parser
 					-A x64 
 					-DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/glt_parser
 				
-	#COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config Debug -- /nologo /verbosity:minimal
 	COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config Release -- /nologo /verbosity:minimal
-	#COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config RelWithDebInfo -- /nologo /verbosity:minimal
-	#COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/glt_parser/build --target install  --config MinSizeRel -- /nologo /verbosity:minimal
 )
+
+set(glt_parser_DIR ${PROJECT_BINARY_DIR}/glt_parser/lib/cmake/glt_parser)
+find_package(glt_parser REQUIRED)
+
+message(STATUS "glt parser found at ${gl_traits_FOUND}")
+message(STATUS "ParserAlgorithmPublic found at ${ParseAlgorithmPublic_FOUND}")
 
 # TODO: check if glad was generated with EXPORT
 find_package(glad REQUIRED)
@@ -74,6 +68,9 @@ add_library(${PROJECT_NAME}
 		include/uniform_traits.hpp
 		include/vao_traits.hpp
 		include/program_traits.hpp
+		include/texture_traits.hpp
+		
+		include/Texture.hpp
 		
 		include/gl_traits.hpp
 			
@@ -95,6 +92,7 @@ target_link_libraries(${PROJECT_NAME}
 # add INTERFACE_INCLUDE_DIRECTORIES
 target_include_directories(${PROJECT_NAME}
 	PUBLIC
+		$<INSTALL_INTERFACE:include>
 		$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
 		
 		$<BUILD_INTERFACE:${SHADER_SOURCE_PARSER_FOLDER}> # this is a workaround. 
