@@ -1,1 +1,19 @@
-﻿
+﻿language: cpp
+os:
+    - Windows
+    
+dist: trusty
+    
+compiler:
+    - clang
+    - gcc
+   
+addons:
+    apt:
+        
+        packages:
+            - cmake
+            
+script:
+    - mkdir build
+    - cmake -S . -B ./build -A x64
