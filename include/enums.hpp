@@ -5,6 +5,17 @@
 
 namespace glt
 {
+    template <typename T, T ... vals>
+    struct values_list
+    {
+        using value_type = T;
+
+        constexpr static size_t size = sizeof...(vals);
+
+        template <size_t i>
+        constexpr static T get = std::get<i>(std::make_tuple(vals...));
+    };
+
 	enum class glType : int
 	{
 		gl_byte = GL_BYTE,
@@ -76,6 +87,7 @@ namespace glt
 	// texture targets // remove underscore
 	enum class TextureTarget : GLenum
 	{
+        none = 0,
 		//for glBindTexture
 		texture_1d = GL_TEXTURE_1D,							//+
 		texture_1d_array = GL_TEXTURE_1D_ARRAY,				//+
@@ -88,7 +100,7 @@ namespace glt
 		texture_rectangle = GL_TEXTURE_RECTANGLE,			//+	
 		texture_cube_map = GL_TEXTURE_CUBE_MAP,				//?
 		texture_cube_map_array = GL_TEXTURE_CUBE_MAP_ARRAY,	//??
-		texture = GL_TEXTURE_BUFFER,					//??
+		texture_buffer = GL_TEXTURE_BUFFER,					//??
 
 
 		// separate those below into another enum?
@@ -112,6 +124,23 @@ namespace glt
 
 		proxy_texture_2d_multisample_array = GL_PROXY_TEXTURE_2D_MULTISAMPLE_ARRAY
 	};
+
+
+
+    using TextureTargetList = values_list <TextureTarget,
+        TextureTarget::texture_1d,
+        TextureTarget::texture_1d_array,
+        TextureTarget::texture_2d,
+        TextureTarget::texture_2d_array,
+        TextureTarget::texture_2d_multisample,
+        TextureTarget::texture_2d_multisample_array,
+        TextureTarget::texture_3d,
+        TextureTarget::texture_rectangle,
+        TextureTarget::texture_cube_map,
+        TextureTarget::texture_cube_map_array,
+        TextureTarget::texture_buffer>;
+
+   // enum class TexFormat
 
 	enum class ShaderTarget : int
 	{
