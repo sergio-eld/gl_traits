@@ -4,6 +4,18 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
+#include "glt_Common.h"
+#include "glt_CommonValidate.h"
+
+using unif_collect = glt::uniform_collection<std::tuple<model_mat4,
+    view_mat4,
+    projection_mat4,
+    texture1_sampler2D,
+    texture2_sampler2D>>;
+
+const char vertexSrcFile[] = "vshader.vs",
+fragmentSrcFile[] = "fshader.fs";
+
 int main(int argc, char * argv[])
 {
 	fsys::path exePath{ argv[0] };
@@ -15,10 +27,50 @@ int main(int argc, char * argv[])
 	glfw.MakeContextCurrent(window);
 	glfw.LoadOpenGL();
 
+    glt::VertexShader vs{};
+    glt::FragmentShader fs{};
+    glt::Program<VAO_vshader, unif_collect> prog{};
+
+    {
+        std::fstream file{ exePath.parent_path().append(vertexSrcFile), std::fstream::in };
+        if (!file)
+        {
+            std::cerr << "Failed to open " << vertexSrcFile << std::endl;
+            return -1;
+        }
+        std::string vShaderSource{ std::istreambuf_iterator<char>(file),
+        std::istreambuf_iterator<char>() };
+
+        file.close();
+
+        file.open(exePath.parent_path().append(fragmentSrcFile), std::fstream::in);
+        if (!file)
+        {
+            std::cerr << "Failed to open " << fragmentSrcFile << std::endl;
+            return -1;
+        }
+
+        std::string fShaderSource{ std::istreambuf_iterator<char>(file),
+        std::istreambuf_iterator<char>() };
+
+        vs.Compile(vShaderSource);
+        fs.Compile(fShaderSource);
+    }
+
+    assert(vs && "Failed to compile vertex shader!");
+    assert(fs && "Failed to compile fragment shader!");
+
+    prog.Link(vs, fs);
+
+    assert(prog && "Failed to link shader program!");
+
+
+    
 	// build and compile our shader program
 	// ------------------------------------
-	Shader ourShader{ exePath.parent_path().append("vshader.vs").generic_string().c_str(),
-		exePath.parent_path().append("fshader.fs").generic_string().c_str() };
+	Shader ourShader{ exePath.parent_path().append(vertexSrcFile).generic_string().c_str(),
+		exePath.parent_path().append(fragmentSrcFile).generic_string().c_str() };
+        
 
 	glt::VAO<glm::vec3, glm::vec2> vao{};
 	vao.Bind();
@@ -58,17 +110,10 @@ int main(int argc, char * argv[])
 		++posIter;
 	}
 
-	//vboVert().SubData(vertices.data(), vertices.size());
-
 	vboVert.UnBind();
 
 	// TODO: use EnablePointers()
 	vao.EnablePointers();
-
-
-	/////////////////////////////////////////////////////////////////////
-	// The rest part is identical to other use cases
-	/////////////////////////////////////////////////////////////////////
 
 	glEnable(GL_DEPTH_TEST);
 
@@ -110,19 +155,27 @@ int main(int argc, char * argv[])
 			0, GL_RGBA, GL_UNSIGNED_BYTE, tex2.Data());
 		glGenerateMipmap(GL_TEXTURE_2D);
 	}
+    
+    ourShader.use();
+    ourShader.setInt("texture1", 0);
+    ourShader.setInt("texture2", 1);
 
-	ourShader.use();
-	ourShader.setInt("texture1", 0);
-	ourShader.setInt("texture2", 1);
+    // retrieve the matrix uniform locations
+    unsigned int modelLoc = glGetUniformLocation(ourShader.ID, "model");
+    unsigned int viewLoc = glGetUniformLocation(ourShader.ID, "view");
 
-	// retrieve the matrix uniform locations
-	unsigned int modelLoc = glGetUniformLocation(ourShader.ID, "model");
-	unsigned int viewLoc = glGetUniformLocation(ourShader.ID, "view");
+    prog.Use();
+    prog.Set(texture1_sampler2D{ 0 });
+    prog.Set(texture2_sampler2D{ 1 });
+
+    
 
 	// create transformations
 	glm::mat4 model = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
 	glm::mat4 view = glm::mat4(1.0f);
 	glm::mat4 projection = glm::mat4(1.0f);
+
+
 
 	// render loop
 	// -----------
@@ -132,23 +185,43 @@ int main(int argc, char * argv[])
 		// -----
 		processInput(window);
 
+        // bind textures on corresponding texture units
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture1);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, texture2);
+
 		// render
 		// ------
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // also clear the depth buffer now!
 
-		// bind textures on corresponding texture units
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texture1);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, texture2);
+        model = glm::rotate(glm::mat4(1.0f), (float)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f));
+        view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0f));
+        projection = glm::perspective(glm::radians(45.0f), (float)window.Width() / (float)window.Height(), 0.1f, 100.0f);
 
+        {
+            decltype(prog)::ProgGuard guard = prog.Guard();
+
+            guard.Uniforms().Set(glt::glsl_cast<model_mat4>(model));
+            guard.Uniforms().Set(glt::glsl_cast<view_mat4>(view));
+            guard.Uniforms().Set(glt::glsl_cast<projection_mat4>(projection));
+
+            decltype(prog)::uniforms& uniforms = guard.Uniforms();
+
+            assert(uniforms.Uniform(glt::tag_t<model_mat4>()).Get() == model);
+            assert(uniforms.Uniform(glt::tag_t<view_mat4>()).Get() == view);
+            assert(uniforms.Uniform(glt::tag_t<projection_mat4>()).Get() == projection);
+            assert(uniforms.Uniform(glt::tag_t<texture1_sampler2D>()).Get() == 0);
+            assert(uniforms.Uniform(glt::tag_t<texture2_sampler2D>()).Get() == 1);
+
+            guard.DrawTriangles(vao, 0, positions.size());
+
+        }
+
+        /*
 		// activate shader
 		ourShader.use();
-
-		model = glm::rotate(glm::mat4(1.0f), (float)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f));
-		view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0f));
-		projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 
 		// pass them to the shaders (3 different ways)
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
@@ -160,7 +233,7 @@ int main(int argc, char * argv[])
 		//vao.Bind();
 		// glBindVertexArray(vao);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
-
+        */
 
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 		// -------------------------------------------------------------------------------

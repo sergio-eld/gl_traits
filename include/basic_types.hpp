@@ -341,20 +341,6 @@ namespace glt
 			linked_ = linked;
 		}
 
-		void Use()
-		{
-			assert(*this && "Attemplt to use invalid program!");
-			glUseProgram(handle_accessor(handle_));
-			Register(this);
-		}
-
-		void UnUse()
-		{
-			assert(IsActive() && "Attempt to unuse non-active program!");
-			glUseProgram(0);
-			Register();
-		}
-
 	private:
 
 		static void Register(program_base *prog = nullptr)
@@ -363,6 +349,20 @@ namespace glt
 		}
 
 	public:
+
+        void Use()
+        {
+            assert(*this && "Attemplt to use invalid program!");
+            glUseProgram(handle_accessor(handle_));
+            Register(this);
+        }
+
+        void UnUse()
+        {
+            assert(IsActive() && "Attempt to unuse non-active program!");
+            glUseProgram(0);
+            Register();
+        }
 
 		bool IsActive() const
 		{
@@ -398,6 +398,11 @@ namespace glt
             location_ = GetLocation_(prog_, name);
         }
 
+        bool IsValid() const
+        {
+            return location_ >= 0;
+        }
+
     private:
 
 		static GLint GetLocation_(const program_base& prog, const char* name)
@@ -408,9 +413,102 @@ namespace glt
 			assert(ret != -1 && "Failed to get Unifrom location");
 			return ret;
 		}
-
 	};
 
 
+    class texture_base
+    {
+        static std::array<texture_base*, TextureTargetList::size>
+            active_textures_;
+
+        template <class TexTarSeq>
+        struct get_tar_indx;
+
+        template <TextureTarget ... tar>
+        struct get_tar_indx<std::integer_sequence<TextureTarget, tar...>>
+        {
+            constexpr static std::array<TextureTarget, sizeof...(tar)> targets{ tar... };
+
+            template <TextureTarget find>
+            constexpr static size_t get_index()
+            {
+                for (size_t indx = 0; indx != targets.size(); ++indx)
+                    if (find == targets[indx])
+                        return indx;
+                static_assert(false, "Invalid texture target!");
+            }
+        };
+
+
+    protected:
+        HandleTexture handle_;
+        bool bound_ = false;
+        TextureTarget target_ = TextureTarget::none; // until bound first time
+
+        // TODO: store texture attributes? (levels, width, height, depth, etc)
+        unsigned int lod_,
+            width_,
+            height_,
+            depth_;
+
+
+        template <TextureTarget target>
+        static void Register(texture_base *ptr = nullptr)
+        {
+            constexpr size_t indx = get_tar_indx<TextureTargetList>::get_indx<target>();
+
+            if (active_textures_[indx])
+                active_textures_[indx]->bound_ = false;
+
+            active_textures_[indx] = ptr;
+            if (ptr)
+                ptr->bound_ = true;
+        }
+     
+        texture_base(HandleTexture&& handle_, TextureTarget target)
+            : handle_(std::move(handle_)),
+            target_(target)
+        {}
+
+        texture_base(const texture_base&) = delete;
+        texture_base& operator=(const texture_base&) = delete;
+
+        texture_base(texture_base&& other)
+            : handle_(std::move(other.handle_)),
+            bound_(other.bound_),
+            target_(other.target_)
+        {
+            other.bound_ = false;
+            other.target_ = TextureTarget::none;
+        }
+
+        texture_base& operator=(texture_base&& other)
+        {
+            handle_ = std::move(other.handle_);
+            bound_ = other.bound_;
+            target_ = other.target_;
+
+            other.bound_ = false;
+            other.target_ = TextureTarget::none;
+        }
+
+    public:
+
+        bool IsBound() const
+        {
+            return bound_;
+        }
+
+        const HandleTexture& Handle() const
+        {
+            return handle_;
+        }
+        
+        TextureTarget Target() const
+        {
+            return target_;
+        }
+
+    };
 
 }

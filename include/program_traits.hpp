@@ -20,6 +20,11 @@ namespace glt
 
 	public:
 
+        using vao = VAO<Attr...>;
+        using uniforms = uniform_collection<GLSL... >;
+
+        using program_base::operator bool;
+
         using uniform_collection<GLSL...>::Uniform;
         using uniform_collection<GLSL...>::GetLocations;
 
@@ -39,7 +44,6 @@ namespace glt
 			: Program(std::move(handle))
 		{
 			Link(vShader, fShader, otherShaders...);
-            GetLocations();
 		}
 
 		void Use()
@@ -52,17 +56,14 @@ namespace glt
 			program_base::UnUse();
 		}
 
-		operator bool() const
-		{
-			return static_cast<const program_base&>(*this) &&
-				IsActive();
-		}
 
 		template <ShaderTarget ... targets>
 		bool Link(const VertexShader& vShader, const FragmentShader& fShader,
 			const Shader<targets>& ... otherShaders)
 		{
 			SetLinkStatus(Link_(vShader, fShader, otherShaders...));
+            GetLocations();
+            assert(uniforms::AllValid() && "Failed to get uniforms locations!");
 			return Linked();
 		}
 
@@ -93,5 +94,50 @@ namespace glt
 			return (bool)res;
 		}
 
-	};
+    public:
+
+        class ProgGuard
+        {
+            Program *prog_;
+
+        public:
+
+            ProgGuard(Program& prog)
+                : prog_(&prog)
+            {
+                if (!prog_->IsActive())
+                    prog_->Use();
+            }
+
+            Program::uniforms& Uniforms()
+            {
+                return static_cast<Program::uniforms&>(*prog_);
+            }
+
+            template <typename ... attr, class = std::enable_if_t<std::conjunction_v<is_equivalent<Attr, attr>...>>>
+            void DrawTriangles(const VAO<attr...>& vao, size_t first, size_t count)
+            {
+                assert(count > first &&
+                    !((count - first) % 3) && 
+                    "Invalid range for triangles!");
+
+                assert(prog_->IsActive() && "Program is not active during Guard's lifetime!");
+
+                glDrawArrays(GL_TRIANGLES, (GLint)first, (GLint)count);
+            }
+
+            ~ProgGuard()
+            {
+                assert(prog_ && "Program is not supposed to be nullptr!");
+                assert(prog_->IsActive() && "Another program has been activated during Guard's lifetime!");
+                prog_->UnUse();
+            }
+        };
+
+        ProgGuard Guard()
+        {
+            return ProgGuard(*this);
+        }
+	};    
+
 }
