@@ -140,7 +140,53 @@ namespace glt
         TextureTarget::texture_cube_map_array,
         TextureTarget::texture_buffer>;
 
-   // enum class TexFormat
+    enum class TexInternFormat: GLenum
+    {
+        none = 0,
+
+        // internal base
+        red = GL_RED,
+        rg = GL_RG,
+        rgb = GL_RGB,
+        rgba = GL_RGBA,
+        
+        // sized internal formats
+        r8 = GL_R8,
+        r8_snorm = GL_R8_SNORM,
+        r16 = GL_R16,
+        r16_snorm = GL_R16_SNORM,
+        rg8 = GL_RG8,
+        rg8_snorm = GL_RG8_SNORM,
+        rg16 = GL_RG16,
+        rg16_snorm = GL_RG16_SNORM,
+        r3_g3_b2 = GL_R3_G3_B2,
+        rgb4 = GL_RGB4,
+        rgb5 = GL_RGB5,
+        rgb8 = GL_RGB8,
+        rgb8_snorm = GL_RGB8_SNORM,
+        rgb10 = GL_RGB10,
+        rgb12 = GL_RGB12,
+        rgb16_snorm = GL_RGB16_SNORM,
+        rgba2 = GL_RGBA2,
+        rgba4 = GL_RGBA4,
+        rgb5_a1 = GL_RGB5_A1,
+        rgba8 = GL_RGBA8,
+        rgba8_snorm = GL_RGBA8_SNORM,
+        rgb10_a2 = GL_RGB10_A2,
+        rgb10_a2_ui = GL_RGB10_A2UI,
+        rgba12 = GL_RGBA12,
+        rgba16 = GL_RGBA16,
+        srgb8 = GL_SRGB8,
+        srgb8_alpha8 = GL_SRGB8_ALPHA8,
+        r16f = GL_R16F,
+        rg16f = GL_RG16F,
+        rgb16f = GL_RGB16F,
+        rgba16f = GL_RGBA16F,
+        r32f = GL_R32F
+
+        // TODO: complete?
+
+    };
 
 	enum class ShaderTarget : int
 	{

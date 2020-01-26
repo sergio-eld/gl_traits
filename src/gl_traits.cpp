@@ -20,6 +20,10 @@ std::map<BufferTarget, buffer_base*> buffer_base::targets_{ init_map<BufferTarge
 
 vao_base* vao_base::active_vao_ = nullptr;
 program_base *program_base::active_prog_ = nullptr;
+
+std::array<texture_base*, TextureTargetList::size>
+    texture_base::active_textures_{ nullptr };
+
 // 
 
 //const Handle<VAOTarget::vao> *glt_buffers::currentVAO_ = nullptr;

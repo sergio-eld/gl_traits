@@ -316,4 +316,15 @@ namespace glt
 	template <> struct pp_gl_get_uniform_map<int> : glt_constant<&glGetUniformiv> {};
 	template <> struct pp_gl_get_uniform_map<unsigned int> : glt_constant<&glGetUniformuiv> {};
 
+    template <TextureTarget target>
+    struct get_tex_dim;
+
+    template <> struct get_tex_dim<TextureTarget::texture_1d> : std::integral_constant<size_t, 1> {};
+    template <> struct get_tex_dim<TextureTarget::texture_1d_array> : std::integral_constant<size_t, 1> {};
+    template <> struct get_tex_dim<TextureTarget::texture_2d> : std::integral_constant<size_t, 2> {};
+    template <> struct get_tex_dim<TextureTarget::texture_2d_array> : std::integral_constant<size_t, 2> {};
+    template <> struct get_tex_dim<TextureTarget::texture_2d_multisample> : std::integral_constant<size_t, 2> {};
+    template <> struct get_tex_dim<TextureTarget::texture_2d_multisample_array> : std::integral_constant<size_t, 2> {};
+    template <> struct get_tex_dim<TextureTarget::texture_3d> : std::integral_constant<size_t, 3> {};
+
 }

@@ -63,6 +63,12 @@ TODO: analize possible VertexArrayPointer assignment routines
 #include "shader_traits.hpp"
 #include "program_traits.hpp"
 
+// ??
+// sequence
+// uniform
+// program
+#include "Texture.hpp"
+
 
 /////////////////////////
 

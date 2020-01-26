@@ -421,11 +421,11 @@ namespace glt
         static std::array<texture_base*, TextureTargetList::size>
             active_textures_;
 
-        template <class TexTarSeq>
+        template <class TexTarList>
         struct get_tar_indx;
 
         template <TextureTarget ... tar>
-        struct get_tar_indx<std::integer_sequence<TextureTarget, tar...>>
+        struct get_tar_indx<values_list<TextureTarget, tar...>>
         {
             constexpr static std::array<TextureTarget, sizeof...(tar)> targets{ tar... };
 
@@ -435,27 +435,29 @@ namespace glt
                 for (size_t indx = 0; indx != targets.size(); ++indx)
                     if (find == targets[indx])
                         return indx;
-                static_assert(false, "Invalid texture target!");
             }
         };
 
-
+       
     protected:
         HandleTexture handle_;
         bool bound_ = false;
         TextureTarget target_ = TextureTarget::none; // until bound first time
 
         // TODO: store texture attributes? (levels, width, height, depth, etc)
-        unsigned int lod_,
-            width_,
-            height_,
-            depth_;
+        unsigned int lod_ = 0,
+            width_ = 0,
+            height_ = 0,
+            depth_ = 0;
 
 
         template <TextureTarget target>
         static void Register(texture_base *ptr = nullptr)
         {
-            constexpr size_t indx = get_tar_indx<TextureTargetList>::get_indx<target>();
+            constexpr size_t indx = get_tar_indx<TextureTargetList>::get_index<target>();
+
+            static_assert(indx < TextureTargetList::size, "Invalid texture target!");
+
 
             if (active_textures_[indx])
                 active_textures_[indx]->bound_ = false;
@@ -507,6 +509,16 @@ namespace glt
         TextureTarget Target() const
         {
             return target_;
+        }
+
+        bool Initialized() const
+        {
+            return Target() != TextureTarget::none;
+        }
+
+        bool IsValid() const
+        {
+            return handle_;
         }
 
     };

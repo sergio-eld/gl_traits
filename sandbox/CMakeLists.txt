@@ -1,6 +1,8 @@
 ﻿cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 
 # sandbox
+find_package(assimp REQUIRED)
+message(STATUS "assimp found: ${assimp_FOUND}")
 find_package(glfw3 REQUIRED)
 message(STATUS "glfw3 found: ${glfw3_FOUND}")
 
@@ -19,6 +21,7 @@ target_link_libraries(gl_sandbox
 	PUBLIC
 		gl_traits
 		glfw
+		${assimp_LIBRARIES}
 	)
 	
 target_include_directories(gl_sandbox

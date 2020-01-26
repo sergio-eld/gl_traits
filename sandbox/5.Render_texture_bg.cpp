@@ -80,6 +80,10 @@ int main(int argc, const char** argv)
 
     glEnable(GL_DEPTH_TEST);
 
+    Image bgIm{ exePath.parent_path().append("resources/textures/container.jpg").generic_string() };
+
+
+
     while (!glfwWindowShouldClose(window))
     {
         glClearColor(0.258824f, 0.435294f, 0.258824f, 1);
