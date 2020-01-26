@@ -195,8 +195,27 @@ void IHeaderGenerator::WriteShaderTypes(std::basic_ostream<char>& file, const IS
 	file << "\n\n" << std::string(100, '/') <<
 		 "\n//Shader tarits: " << sf.Name().filename().generic_string() << "\n";
 
+    std::string shader_suffix;
+    switch (sf.ShaderType())
+    {
+    case ShaderFileInfo::shader_vertex:
+        shader_suffix = "_vert";
+        break;
+    case ShaderFileInfo::shader_fragment:
+        shader_suffix = "_frag";
+        break;
+    case ShaderFileInfo::shader_geometry:
+        shader_suffix = "_geom";
+        break;
+    case ShaderFileInfo::shader_compute:
+        shader_suffix = "_comp";
+        break;
+    default:
+        break;
+    }
+
 	// write even empty sets?
-	file << "using VarsIn_" << namePredicate << " = std::tuple<";
+	file << "using VarsIn_" << namePredicate << shader_suffix << " = std::tuple<";
     for (const Variable& var : var_In)
         WriteVariableClassName(file, var) << ", ";
 
@@ -205,7 +224,7 @@ void IHeaderGenerator::WriteShaderTypes(std::basic_ostream<char>& file, const IS
 	file << ">;\n";
 
 	// write even empty sets?
-	file << "using VarsOut_" << namePredicate << " = std::tuple<";
+	file << "using VarsOut_" << namePredicate << shader_suffix << " = std::tuple<";
 	for (const Variable& var : var_Out)
 		WriteVariableClassName(file, var) << ", ";
 	pos = file.tellp();
