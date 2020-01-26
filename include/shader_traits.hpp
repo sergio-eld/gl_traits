@@ -3,7 +3,7 @@
 #include "basic_types.hpp"
 
 // what to do with this????
-#include "ParseAlgorithm.h"
+//#include "ParseAlgorithm.h"
 
 #include <algorithm>
 #include <utility>
@@ -14,7 +14,7 @@ namespace glt
 {
 	struct shader_traits
 	{
-		static inline ParseAlgorithm<ShaderFileInfo::text_source> algorithm;
+		//static inline ParseAlgorithm<ShaderFileInfo::text_source> algorithm;
 
 		template <class = void, class = void>
 		struct source_checker
@@ -28,11 +28,12 @@ namespace glt
 		template <typename ... VarsIn, typename ... VarsOut>
 		struct source_checker<std::tuple<VarsIn...>, std::tuple<VarsOut...>>
 		{
-			static inline ParseAlgorithm<ShaderFileInfo::text_source> algorithm;
+            
+			//static inline ParseAlgorithm<ShaderFileInfo::text_source> algorithm;
 
 			static bool check_source(std::string_view source)
 			{
-				std::vector<Variable> vars = algorithm.Parse(source);
+				/*std::vector<Variable> vars = algorithm.Parse(source);
 				std::vector<Variable>::iterator start_remove = 
 					std::remove_if(vars.begin(), vars.end(),
 					[](const Variable& var)
@@ -42,7 +43,7 @@ namespace glt
 						var.type != Variable::var_out;
 				});
 				vars.erase(start_remove, vars.cend());
-
+                */
 				return true;
 			}
 		};
