@@ -163,6 +163,12 @@ namespace glt
 			target_ = target;
 		}
 
+		static bool TargetMapped(BufferTarget target)
+		{
+			// TODO: check if target is valid!
+			return (bool)targets_[target];
+		}
+
 		constexpr BufferTarget Bound() const
 		{
 			return target_;
@@ -450,6 +456,43 @@ namespace glt
             height_ = 0,
             depth_ = 0;
 
+	public:
+
+		class modifier
+		{
+
+			friend class texture_base;
+
+		protected:
+			modifier(texture_base& tex)
+				: state_(tex)
+			{}
+
+		public:
+
+			texture_base& state_;
+
+			void SetLOD(unsigned int lod)
+			{
+				state_.lod_ = lod;
+			}
+
+			void SetSizes(unsigned int width, unsigned int height = 0,
+				unsigned int depth = 0)
+			{
+				state_.width_ = width;
+				state_.height_ = height;
+				state_.depth_ = depth;
+			}
+
+		};
+
+	protected:
+
+		modifier GetModifier()
+		{
+			return modifier(*this);
+		}
 
         template <TextureTarget target>
         static void Register(texture_base *ptr = nullptr)
@@ -520,6 +563,9 @@ namespace glt
         {
             return handle_;
         }
+
+		// TODO: add check if texture has been set (with sizes)
+		
 
     };
 
