@@ -1,4 +1,6 @@
-﻿//#include <Windows.h>
+﻿#include "helpers.hpp"
+#include "helpers.hpp"
+//#include <Windows.h>
 
 #include "helpers.hpp"
 
@@ -214,6 +216,10 @@ Image::Image(const std::string& path)
 	: data_(stbi_load(path.c_str(), &width_, &height_, &nrChannels_, 0))
 {
 }
+
+Image::Image(const std::filesystem::path & p)
+	: Image(p.generic_string())
+{}
 
 const unsigned char * Image::Data() const
 {

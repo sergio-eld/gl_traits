@@ -71,6 +71,7 @@ class Image
 
 public:
 	Image(const std::string& path);
+	Image(const std::filesystem::path& p);
 
 	const unsigned char* Data() const;
 	int Width() const;
