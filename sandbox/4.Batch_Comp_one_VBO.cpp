@@ -105,23 +105,23 @@ int main(int argc, char * argv[])
 
 	vboVert.UnBind();
 
-	// TODO: use EnablePointers()
 	vao.EnablePointers();
 
 	glEnable(GL_DEPTH_TEST);
 
-	// load and create textures 
-	unsigned int texture1, texture2;
+	glt::Texture2D<glt::TexInternFormat::rgba> texture1,
+		texture2;
+
+	// TODO: load one of the textures using glt Buffer
 	{
 		Image tex1{ exePath.parent_path().append("resources/textures/container.jpg").generic_string() },
 			tex2{ exePath.parent_path().append("resources/textures/awesomeface.png").generic_string() };
 
 		assert(tex1.Data() && tex2.Data());
 
-		// texture 1
-		// ---------
-		glGenTextures(1, &texture1);
-		glBindTexture(GL_TEXTURE_2D, texture1);
+		glActiveTexture(GL_TEXTURE0);
+		texture1.Bind();
+
 		// set the texture wrapping parameters
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -129,14 +129,16 @@ int main(int argc, char * argv[])
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex1.Width(), tex1.Height(),
-			0, GL_RGB, GL_UNSIGNED_BYTE, tex1.Data());
-		glGenerateMipmap(GL_TEXTURE_2D);
+		texture1.SetImage(0, tex1.Width(), tex1.Height());
+		texture1.SubImage(0, tex1.Width(), tex1.Height(), glt::TexFormat::rgb,
+			glt::TexType::unsigned_byte, tex1.Data());
 
-		// texture 2
-		// ---------
-		glGenTextures(1, &texture2);
-		glBindTexture(GL_TEXTURE_2D, texture2);
+		texture1.GenerateMipMap();
+
+
+		glActiveTexture(GL_TEXTURE1);
+		texture2.Bind();
+
 		// set the texture wrapping parameters
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -144,9 +146,14 @@ int main(int argc, char * argv[])
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex2.Width(), tex2.Height(),
-			0, GL_RGBA, GL_UNSIGNED_BYTE, tex2.Data());
-		glGenerateMipmap(GL_TEXTURE_2D);
+		texture2.SetImage(0, tex2.Width(), tex2.Height());
+		texture2.SubImage(0, tex2.Width(), tex2.Height(), glt::TexFormat::rgba,
+			glt::TexType::unsigned_byte, tex2.Data());
+
+		texture2.GenerateMipMap();
+
+		glActiveTexture(GL_TEXTURE3);
+		texture2.UnBind();
 	}
     
     prog.Use();
@@ -155,15 +162,10 @@ int main(int argc, char * argv[])
     prog.UnUse();
 
 	// create transformations
-	glm::mat4 model = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+	glm::mat4 model = glm::mat4(1.0f); 
 	glm::mat4 view = glm::mat4(1.0f);
 	glm::mat4 projection = glm::mat4(1.0f);
 
-    // bind textures on corresponding texture units
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture1);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, texture2);
 
 	// render loop
 	// -----------
