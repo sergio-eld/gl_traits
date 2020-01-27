@@ -140,6 +140,49 @@ namespace glt
         TextureTarget::texture_cube_map_array,
         TextureTarget::texture_buffer>;
 
+	enum class TexFormat : GLenum
+	{
+		red = GL_RED,
+		rd = GL_RG,
+		rgb = GL_RGB,
+		bgr = GL_BGR,
+		rgba = GL_RGBA,
+		bgra = GL_BGRA,
+		red_integer = GL_RED_INTEGER,
+		rg_integer = GL_RG_INTEGER,
+		rgb_integer = GL_RGB_INTEGER,
+		bgr_integer = GL_BGR_INTEGER,
+		rgba_integer = GL_RGBA_INTEGER,
+		bgra_integer = GL_BGRA_INTEGER,
+		stencil_index = GL_STENCIL_INDEX,
+		depth_component = GL_DEPTH_COMPONENT,
+		depth_stencil = GL_DEPTH_STENCIL
+	};
+
+	enum class TexType : GLenum
+	{
+		unsigned_byte = GL_UNSIGNED_BYTE,
+		byte = GL_BYTE,
+		unsigned_short = GL_UNSIGNED_SHORT,
+		gl_short = GL_SHORT,
+		unsigned_int = GL_UNSIGNED_INT,
+		gl_int = GL_INT,
+		half_float = GL_HALF_FLOAT,
+		gl_float = GL_FLOAT,
+		unsigned_byte_3_3_2 = GL_UNSIGNED_BYTE_3_3_2,
+		unsigned_byte_2_3_3_rev = GL_UNSIGNED_BYTE_2_3_3_REV,
+		unsigned_short_5_6_5 = GL_UNSIGNED_SHORT_5_6_5,
+		unsigned_short_5_6_5_rev = GL_UNSIGNED_SHORT_5_6_5_REV,
+		unsigned_short_4_4_4_4 = GL_UNSIGNED_SHORT_4_4_4_4,
+		unsigned_short_4_4_4_4_rev = GL_UNSIGNED_SHORT_4_4_4_4_REV,
+		unsigned_short_5_5_5_1 = GL_UNSIGNED_SHORT_5_5_5_1,
+		unsigned_short_1_5_5_5_rev = GL_UNSIGNED_SHORT_1_5_5_5_REV,
+		unsigned_int_8_8_8_8 = GL_UNSIGNED_INT_8_8_8_8,
+		unsigned_int_8_8_8_8_rev = GL_UNSIGNED_INT_8_8_8_8_REV,
+		unsigned_int_10_10_10_2 = GL_UNSIGNED_INT_10_10_10_2,
+		unsigned_int_2_10_10_10_rev = GL_UNSIGNED_INT_2_10_10_10_REV
+	};
+
     enum class TexInternFormat: GLenum
     {
         none = 0,
