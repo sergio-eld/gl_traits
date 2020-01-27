@@ -19,7 +19,8 @@ namespace glt
 
         using tex_base::Bind;
         using tex_base::UnBind;
-        using tex_base::SetStorage;
+		using tex_base::GenerateMipMap;
+//        using tex_base::SetStorage;
 
         using texture_base::Initialized;
 

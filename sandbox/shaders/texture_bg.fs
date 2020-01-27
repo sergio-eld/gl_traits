@@ -7,5 +7,5 @@ uniform sampler2D texBG;
 
 void main(void)
 {
-	color = texture(texBG, tex_coord);
+	color = texture(texBG, tex_coord.x, 1 - tex_coord.y);
 }

@@ -25,8 +25,14 @@ int main()
     glt::Texture2D<glt::TexInternFormat::rgba> tex2D;
 
     tex2D.Bind();
+	tex2D.SetImage(0, 2048, 1024);
 
-    tex2D.SetStorage(8, 2048, 1024);
+	glt::Texture1D<glt::TexInternFormat::rgba> tex1D;
+	tex1D.Bind();
+	tex1D.SetImage(0, 2048);
+
+	GLenum error = glGetError();
+
 
     //tex2D.
 

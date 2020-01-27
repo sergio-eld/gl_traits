@@ -16,10 +16,13 @@ int main(int argc, const char** argv)
     glfw.MakeContextCurrent(window);
     glfw.LoadOpenGL();
 
-    glt::VertexShader vs{};
-    glt::FragmentShader fs{};
+	glt::Program<VAO_texture_bg,
+		glt::uniform_collection<std::tuple<texBG_sampler2D>>> prog{};
 
     {
+		glt::VertexShader vs{};
+		glt::FragmentShader fs{};
+
         std::fstream file{ exePath.parent_path().append(bgVertSrcFile), std::fstream::in };
         if (!file)
         {
@@ -43,23 +46,20 @@ int main(int argc, const char** argv)
 
         vs.Compile(vShaderSource);
         fs.Compile(fShaderSource);
+		assert(vs && "Failed to compile vertex shader!");
+		assert(fs && "Failed to compile fragment shader!");
+
+		prog.Link(vs, fs);
+		assert(prog && "Failed to link shader program!");
+
     }
-
-    assert(vs && "Failed to compile vertex shader!");
-    assert(fs && "Failed to compile fragment shader!");
-
-    glt::Program<VAO_texture_bg,
-        glt::uniform_collection<std::tuple<texBG_sampler2D>>> prog{};
-    prog.Link(vs, fs);
-
-    assert(prog && "Failed to link shader program!");
 
     // vertex_pos_2d and tex_coord
     static std::vector<glm::vec4> bg_texture{
-        {-1.0f, -1.0f,      0.0f, 0.0f},
-        {1.0f, -1.0f,       1.0f, 0.0f},
-        {1.0f, 1.0f,        1.0f, 0.0f},
-        {-1.0f, 1.0f,       0.0f, 0.0f}
+        { -1.0f, -1.0f,      0.0f, 0.0f },
+        { 1.0f, -1.0f,       1.0f, 0.0f },
+		{ 1.0f, 1.0f,        1.0f, 1.0f },// 0.0f },
+		{ -1.0f, 1.0f,       0.0f, 1.0f }//0.0f }
     };
 
     VAO_texture_bg vao{};
@@ -69,20 +69,57 @@ int main(int argc, const char** argv)
     buf_bg_tex_coord.Bind(glt::BufferTarget::array);
     buf_bg_tex_coord.AllocateMemory(bg_texture.size(), glt::BufUsage::static_draw);
 
-    for (glm::vec4& v : glt::MapGuard(buf_bg_tex_coord(), glt::MapAccessBit::read))
+    for (glm::vec4& v : glt::MapGuard(buf_bg_tex_coord(), glt::MapAccessBit::write))
     {
         static std::vector<glm::vec4>::const_iterator iter = bg_texture.cbegin();
         v = *iter++;
     }
+
+	for (const glm::vec4& v : glt::MapGuard(buf_bg_tex_coord(), glt::MapAccessBit::read))
+	{
+		static std::vector<glm::vec4>::const_iterator iter = bg_texture.cbegin();
+
+		assert(v == *iter && "Failed to load vertex data!");
+		++iter;
+	}
 
     vao.AttributePointer(glt::tag_s<0>(), buf_bg_tex_coord()());
     vao.EnablePointers();
 
     glEnable(GL_DEPTH_TEST);
 
-    Image bgIm{ exePath.parent_path().append("resources/textures/container.jpg").generic_string() };
+	glt::Texture2D<glt::TexInternFormat::rgba> tex;
 
+	{
+		Image bgIm{ exePath.parent_path().append("resources/textures/waves.jpg") };
 
+		assert(bgIm.Data() && "Failed to load the texture!");
+
+		glActiveTexture(GL_TEXTURE0);
+		tex.Bind();
+
+		tex.SetImage(0, bgIm.Width(), bgIm.Height());
+
+		switch (bgIm.NumChannels())
+		{
+		case 3:
+			tex.SubImage(0, bgIm.Width(), bgIm.Height(), glt::TexFormat::rgb,
+				glt::TexType::unsigned_byte, bgIm.Data());
+			break;
+		case 4:
+			tex.SubImage(0, bgIm.Width(), bgIm.Height(), glt::TexFormat::rgba,
+				glt::TexType::unsigned_byte, bgIm.Data());
+			break;
+		default:
+			break;
+		}
+
+		tex.GenerateMipMap();
+		//tex.UnBind();
+	}
+
+	prog.Use();
+	prog.Set(texBG_sampler2D{ 0 });
 
     while (!glfwWindowShouldClose(window))
     {
@@ -93,9 +130,12 @@ int main(int argc, const char** argv)
             auto drawGuard = prog.Guard();
             auto& uniforms = drawGuard.Uniforms();
 
-            drawGuard.DrawTriangles(vao, 0, bg_texture.size());
+            drawGuard.DrawTriangleFan(vao, 0, bg_texture.size());
 
         }
+
+		GLenum error = glGetError();
+		assert(!error);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
