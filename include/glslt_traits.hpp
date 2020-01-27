@@ -173,6 +173,7 @@ namespace glt
 	template <class T>
 	constexpr inline int variable_traits_location = variable_traits<T>::location;
 
+	// TODO: rename? (equiv_cast?)
 	template <class GLSLT, class T>
 	GLSLT & glsl_cast(T& val)
 	{

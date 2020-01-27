@@ -19,22 +19,13 @@ namespace glt
 	template <> struct c_to_gl<GLfloat> : glt_constant<glType::gl_float> {};
 	template <> struct c_to_gl<GLdouble> : glt_constant<glType::gl_double> {};
 
-	template <typename cType>
-	struct c_to_gl_find
-	{
-		constexpr static glType value = c_to_gl<cType>();
-	};
-
 	template <glm::length_t L, typename T, glm::qualifier Q>
-	struct c_to_gl_find<glm::vec<L, T, Q>>
-	{
-		constexpr static glType value = c_to_gl<T>();
-	};
+	struct c_to_gl<glm::vec<L, T, Q>> : c_to_gl<T> {};
 
 	// get glsl enum value from c type
 	// TODO: add glm types recognition
 	template <typename cType>
-	constexpr inline glType c_to_gl_v = c_to_gl_find<cType>::value;
+	constexpr inline glType c_to_gl_v = c_to_gl<cType>::value;
 
 
 	/*
