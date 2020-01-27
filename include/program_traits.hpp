@@ -63,7 +63,7 @@ namespace glt
 		{
 			SetLinkStatus(Link_(vShader, fShader, otherShaders...));
             GetLocations();
-            assert(uniforms::AllValid() && "Failed to get uniforms locations!");
+           // assert(uniforms::AllValid() && "Failed to get uniforms locations!");
 			return Linked();
 		}
 
@@ -114,17 +114,36 @@ namespace glt
                 return static_cast<Program::uniforms&>(*prog_);
             }
 
+			void DrawTriangles(const Program::vao& vao, size_t first, size_t count)
+			{
+				assert(count > first &&
+					!((count - first) % 3) &&
+					"Invalid range for triangles!");
+
+				assert(prog_->IsActive() && "Program is not active during Guard's lifetime!");
+
+				glDrawArrays(GL_TRIANGLES, (GLint)first, (GLint)count);
+			}
+
             template <typename ... attr, class = std::enable_if_t<std::conjunction_v<is_equivalent<Attr, attr>...>>>
-            void DrawTriangles(const VAO<attr...>& vao, size_t first, size_t count)
-            {
-                assert(count > first &&
-                    !((count - first) % 3) && 
-                    "Invalid range for triangles!");
+			void DrawTriangles(const VAO<attr...>& vao, size_t first, size_t count)
+			{
+				DrawTriangles(reinterpret_cast<const Program::vao&>(vao), first, count);
+			}
 
-                assert(prog_->IsActive() && "Program is not active during Guard's lifetime!");
+			void DrawTriangleFan(const Program::vao& vao, size_t first, size_t count)
+			{
+				assert(prog_->IsActive() && "Program is not active during Guard's lifetime!");
 
-                glDrawArrays(GL_TRIANGLES, (GLint)first, (GLint)count);
-            }
+				glDrawArrays(GL_TRIANGLE_FAN, (GLint)first, (GLint)count);
+			}
+
+			template <typename ... attr, class = std::enable_if_t<std::conjunction_v<is_equivalent<Attr, attr>...>>>
+			void DrawTriangleFan(const VAO<attr...>& vao, size_t first, size_t count)
+			{
+				DrawTriangleFan(reinterpret_cast<const Program::vao&>(vao), first, count);
+			}
+			
 
             ~ProgGuard()
             {
