@@ -112,8 +112,6 @@ else()
 	ExternalProject_Add(glfw_external
 		GIT_REPOSITORY
 			https://github.com/glfw/glfw.git
-		GIT_TAG
-			0.9.9.5
 		CMAKE_ARGS
 			-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
 			-DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}
