@@ -34,9 +34,8 @@ message(STATUS "glm found: ${glm_FOUND}")
 find_package(glfw3 QUIET)
 message(STATUS "glfw found: ${glfw3_FOUND}")
 
-set(FOUND_DEPENDENCIES BOOL ${glm_FOUND} AND ${glad_FOUND} AND ${glfw3_FOUND})
 
-if(FOUND_DEPENDENCIES)
+if(${glm_FOUND} AND ${glad_FOUND} AND ${glfw3_FOUND})
 	add_custom_target(Rescan)
 else()
 
