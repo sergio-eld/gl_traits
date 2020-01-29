@@ -17,5 +17,5 @@ addons:
 script:
     - mkdir build
     - cmake -S . -B ./build -A x64
-    # - cmake --build ./build --target Rescan
+    - cmake --build ./build --target Rescan
     - cmake --build ./build
