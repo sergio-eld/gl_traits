@@ -22,25 +22,21 @@ find_package(OpenGL REQUIRED)
 message(STATUS "OpenGL found: ${OpenGL_FOUND}")
 message(STATUS ${OPENGL_LIBRARIES})
 
-foreach(path ${CMAKE_PREFIX_PATH})
-	message(WARNING "Prefix path: ${path}")
-endforeach(path)
-
-#find_package(glt_parser PATHS ${CMAKE_PREFIX_PATH})
-find_package(glt_parser)
+find_package(glt_parser QUIET)
 message(STATUS "glt_parser found: ${glt_parser_FOUND}")
 
-#find_package(glad PATHS ${CMAKE_PREFIX_PATH})
-find_package(glad)
+find_package(glad QUIET)
 message(STATUS "glad found: ${glad_FOUND}")
 
-#find_package(glm PATHS ${CMAKE_PREFIX_PATH})
-find_package(glm)
+find_package(glm QUIET)
 message(STATUS "glm found: ${glm_FOUND}")
 
-set(FOUND_DEPENDENCIES BOOL ${glm_FOUND} AND ${glad_FOUND})
+find_package(glfw3 QUIET)
+message(STATUS "glfw found: ${glfw3_FOUND}")
 
-if(${glm_FOUND} AND ${glad_FOUND})# AND ${glt_parser_FOUND})
+set(FOUND_DEPENDENCIES BOOL ${glm_FOUND} AND ${glad_FOUND} AND ${glfw3_FOUND})
+
+if(FOUND_DEPENDENCIES)
 	add_custom_target(Rescan)
 else()
 
@@ -64,13 +60,7 @@ else()
 			True
 		)
 
-	if (NOT ${GLM_SOURCE_DIR})
-		set(GLM_SOURCE_DIR "${CMAKE_BINARY_DIR}/subprojects/Source/glm_external/")
-	endif()
-
 	ExternalProject_Add(glm_external
-		#SOURCE_DIR
-		#	${GLM_SOURCE_DIR}
 		GIT_REPOSITORY
 			https://github.com/g-truc/glm.git
 		GIT_TAG
@@ -100,8 +90,6 @@ else()
 	ExternalProject_Add(glad_external
 		GIT_REPOSITORY
 			https://github.com/Dav1dde/glad.git
-		#SOURCE_DIR
-		#	${GLAD_SOURCE_DIR}
 		CMAKE_ARGS
 			-DGLAD_PROFILE="core"
 			-DGLAD_API=""
@@ -122,6 +110,36 @@ else()
 			True
 		)
 
+	ExternalProject_Add(glfw_external
+		GIT_REPOSITORY
+			https://github.com/glfw/glfw.git
+		GIT_TAG
+			0.9.9.5
+		CMAKE_ARGS
+			-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+			-DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}
+			-DCMAKE_CXX_STANDARD_REQUIRED=${CMAKE_CXX_STANDARD_REQUIRED}
+			
+			-DGLFW_BUILD_DOCS=False
+			-DGLFW_BUILD_EXAMPLES=False
+			-DGLFW_BUILD_TESTS=False
+			-DGLFW_INSTALL=True
+			
+			-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+			
+			-DCMAKE_C_COMPILER_WORKS=1
+			-DCMAKE_CXX_COMPILER_WORKS=1
+			
+		CMAKE_CACHE_ARGS
+			-DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
+		BUILD_COMMAND
+			""
+		INSTALL_COMMAND
+			""${CMAKE_COMMAND} --build . --target install# --config Release
+		BUILD_ALWAYS
+			True
+		)
+
 	ExternalProject_Get_Property(glt_parser_external INSTALL_DIR)
 	set(glt_parser_DIR "${INSTALL_DIR}/lib/cmake/glt_parser/")
 
@@ -130,11 +148,14 @@ else()
 	
 	ExternalProject_Get_Property(glad_external INSTALL_DIR)
 	set(glad_DIR "${INSTALL_DIR}/lib/cmake/glad/")
+	
+	ExternalProject_Get_Property(glfw_external INSTALL_DIR)
+	set(glfw3_DIR "${INSTALL_DIR}/lib/cmake/glad/")
 
-	set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${glt_parser_DIR};${glm_DIR};${glad_DIR}")
+	set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${glt_parser_DIR};${glm_DIR};${glad_DIR};${glfw3_DIR}")
 
-	message(STATUS "Dependend packages not found! Build Rescan")
-	add_custom_target(Rescan ${CMAKE_COMMAND} ${CMAKE_SOURCE_DIR} -DCMAKE_PREFIX_PATH:STRING="${CMAKE_PREFIX_PATH}" -Dglt_parser_DIR="${glt_parser_DIR}" -Dglm_DIR="${glm_DIR}" -Dglad_DIR="${glad_DIR}" DEPENDS glt_parser_external glm_external glad_external)
+	message(STATUS "Dependend packages not found! Build Rescan or provide paths to installed dependencies.")
+	add_custom_target(Rescan ${CMAKE_COMMAND} ${CMAKE_SOURCE_DIR} -DCMAKE_PREFIX_PATH:STRING="${CMAKE_PREFIX_PATH}" -Dglt_parser_DIR="${glt_parser_DIR}" -Dglm_DIR="${glm_DIR}" -Dglad_DIR="${glad_DIR}" -Dglfw3_DIR="${glfw3_DIR}" DEPENDS glt_parser_external glm_external glad_external glfw_external)
 endif()
 
 
