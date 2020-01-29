@@ -132,7 +132,7 @@ else()
 		BUILD_COMMAND
 			""
 		INSTALL_COMMAND
-			""${CMAKE_COMMAND} --build . --target install# --config Release
+			${CMAKE_COMMAND} --build . --target install --config Release
 		BUILD_ALWAYS
 			True
 		)
