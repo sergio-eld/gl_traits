@@ -222,7 +222,7 @@ configure_package_config_file(
 		${PROJECT_SOURCE_DIR}/config/${PROJECT_NAME}Config.cmake.in
 		${project_config}
 	INSTALL_DESTINATION
-		${config_install_dir}
+		${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 	)
 	
 install(TARGETS
@@ -255,12 +255,12 @@ install(FILES
 install(EXPORT
 		${targets_export_name}
 	DESTINATION
-		${config_install_dir}
+		${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 	)
 
 install(FILES
 		${project_config}
 		#${version_config}
 	DESTINATION
-		${config_install_dir}
+		${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 	)
