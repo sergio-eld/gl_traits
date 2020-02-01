@@ -6,6 +6,8 @@ set(BUILD_ASSIMP_EXAMPLES OFF CACHE BOOL "Build examples using assimp library")
 find_package(glfw3 REQUIRED)
 message(STATUS "glfw3 found: ${glfw3_FOUND}")
 
+find_package(glt_parser REQUIRED)
+
 set(HELPER_LIBS $<TARGET_FILE:glfw>)
 
 if (${BUILD_ASSIMP_EXAMPLES})
