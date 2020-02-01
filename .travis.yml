@@ -1,22 +1,31 @@
 ﻿dist: trusty
 
 language: cpp
-os:
-    - Windows
-    - Linux
-    - osx
-        
 compiler:
     - clang
     - gcc
-   
+    
 addons:
     apt:
-        
         packages:
             - cmake
-            
-script:
-    - mkdir build
-    - cmake -S . -B ./build -A x64
-    - cmake --build ./build --config Release
+
+matrix:
+    include:
+    - os: Windows
+        script:
+        - mkdir build
+        - cmake -S ./ -B ./build -A x64
+        - cmake --build ./build --config Release
+        
+    - os: Linux
+        script:
+        - mkdir build
+        - cmake -S ./ -B ./build -A x64
+        - cmake --build ./build --config Release
+
+    - os: osx
+        script:
+        - mkdir build
+        - cmake -S ./ -B ./build
+        - cmake --build ./build --config Release
