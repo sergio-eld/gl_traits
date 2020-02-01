@@ -1,12 +1,13 @@
 ﻿language: cpp
-
+compiler:
+    - clang
+    - gcc
+    
 jobs:
   include:
   - stage: build
     os: Windows
-    compiler:
-        - clang
-        - gcc
+
     dist: trusty
     addons:
         apt:
