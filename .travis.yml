@@ -1,20 +1,18 @@
-﻿dist: trusty
+﻿language: cpp
 
-language: cpp
-os:
-    - Windows
-        
-compiler:
-    - clang
-    - gcc
-   
-addons:
-    apt:
-        
-        packages:
-            - cmake
-            
-script:
-    - mkdir build
-    - cmake -S ./ -B ./build -A x64
-    - cmake --build ./build --config Release
+jobs:
+  include:
+  - stage: build
+    os: Windows
+    compiler:
+        - clang
+        - gcc
+    dist: trusty
+    addons:
+        apt:
+            packages:
+                - cmake
+    script:
+        - mkdir build
+        - cmake -S ./ -B ./build -A x64
+        - cmake --build ./build --config Release
