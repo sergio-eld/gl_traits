@@ -4,12 +4,8 @@ language: cpp
 compiler:
     - clang
     - gcc
-    
 
-
-jobs:
-    include:
-    - os: Windows
+- os: Windows
         addons:
             apt:
                packages:
@@ -19,22 +15,22 @@ jobs:
         - cmake -S ./ -B ./build -A x64
         - cmake --build ./build --config Release
         
-    - os: Linux
-        addons:
-            apt:
-                packages:
-                    - cmake
-        script:
-        - mkdir build
-        - cmake -S ./ -B ./build -A x64
-        - cmake --build ./build --config Release
+- os: Linux
+    addons:
+        apt:
+            packages:
+                - cmake
+    script:
+    - mkdir build
+    - cmake -S ./ -B ./build -A x64
+    - cmake --build ./build --config Release
 
-    - os: osx
-        addons:
-            apt:
-                packages:
-                    - cmake
-        script:
-        - mkdir build
-        - cmake -S ./ -B ./build
-        - cmake --build ./build --config Release
+- os: osx
+    addons:
+        apt:
+            packages:
+                - cmake
+    script:
+    - mkdir build
+    - cmake -S ./ -B ./build
+    - cmake --build ./build --config Release
