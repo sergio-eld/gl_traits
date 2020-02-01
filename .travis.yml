@@ -1,15 +1,15 @@
 ﻿
 language: cpp
 
-compiler:
-    - clang
-    - gcc
 
 jobs:
     include:
     - stage: build
         os: Windows
         dist: trusty
+        compiler:
+            - clang
+            - gcc
         addons:
             apt:
                packages:
@@ -22,6 +22,9 @@ jobs:
     - stage: build
         os: Linux
         dist: trusty
+        compiler:
+            - clang
+            - gcc
         addons:
             apt:
                packages:
@@ -34,6 +37,9 @@ jobs:
     - stage: build
         os: osx
         dist: trusty
+        compiler:
+            - clang
+            - gcc
         addons:
             apt:
                packages:
