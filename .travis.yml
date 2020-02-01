@@ -3,6 +3,8 @@
 language: cpp
 os:
     - Windows
+    - Linux
+    - osx
         
 compiler:
     - clang
