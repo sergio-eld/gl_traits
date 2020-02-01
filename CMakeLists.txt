@@ -6,6 +6,7 @@ project(gl_traits_sbuild LANGUAGES CXX)
 #set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 set(BUILD_TESTS ON CACHE BOOL "Build and run tests and examples for gl_traits")
+set(BUILD_ASSIMP_EXAMPLES OFF CACHE BOOL "Build examples using assimp library")
 
 set_property(DIRECTORY PROPERTY EP_BASE ${CMAKE_BINARY_DIR}/subprojects)
 include(ExternalProject)
@@ -155,47 +156,49 @@ if(${BUILD_TESTS})
 
 	endif()
 
-	find_package(assimp)
-	message(STATUS "assimp found: ${assimp_FOUND}")
-	
-	if(NOT ${assimp_FOUND})
-
-		ExternalProject_Add(assimp_external
-			GIT_REPOSITORY
-				https://github.com/assimp/assimp.git
-			GIT_TAG
-				v.5.0.0.rc2
-			CMAKE_ARGS
-				-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-				#-DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}
-				#-DCMAKE_CXX_STANDARD_REQUIRED=${CMAKE_CXX_STANDARD_REQUIRED}
-				-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
-				
-				-DCMAKE_C_COMPILER_WORKS=1
-				-DCMAKE_CXX_COMPILER_WORKS=1
-				
-				-DASSIMP_BUILD_TESTS=False
-				-DASSIMP_BUILD_ASSIMP_TOOLS=False
-				-DHUNTER_STATUS_PRINT=False
-				-DHUNTER_TLS_VERIFY=False
-				
-			CMAKE_CACHE_ARGS
-				-DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
-			BUILD_COMMAND
-				""
-			#INSTALL_COMMAND
-				#${CMAKE_COMMAND} --build . --target install --config Release
-			BUILD_ALWAYS
-				True
-			)
+	if (${BUILD_ASSIMP_EXAMPLES})
+		find_package(assimp)
+		message(STATUS "assimp found: ${assimp_FOUND}")
 		
-		ExternalProject_Get_Property(assimp_external INSTALL_DIR)
-		message(STATUS "Assimp will be installed to: ${INSTALL_DIR}")
-		set(assimp_DIR "${INSTALL_DIR}/lib/cmake/assimp-5.0/") # TODO: modify not to use explicit version suffix
-		set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${assimp_DIR}")
+		if(NOT ${assimp_FOUND})
 
-	endif()
+			ExternalProject_Add(assimp_external
+				GIT_REPOSITORY
+					https://github.com/assimp/assimp.git
+				GIT_TAG
+					v.5.0.0.rc2
+				CMAKE_ARGS
+					-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+					#-DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}
+					#-DCMAKE_CXX_STANDARD_REQUIRED=${CMAKE_CXX_STANDARD_REQUIRED}
+					-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+					
+					-DCMAKE_C_COMPILER_WORKS=1
+					-DCMAKE_CXX_COMPILER_WORKS=1
+					
+					-DASSIMP_BUILD_TESTS=False
+					-DASSIMP_BUILD_ASSIMP_TOOLS=False
+					-DHUNTER_STATUS_PRINT=False
+					-DHUNTER_TLS_VERIFY=False
+					
+				CMAKE_CACHE_ARGS
+					-DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
+				BUILD_COMMAND
+					""
+				#INSTALL_COMMAND
+					#${CMAKE_COMMAND} --build . --target install --config Release
+				BUILD_ALWAYS
+					True
+				)
+			
+			ExternalProject_Get_Property(assimp_external INSTALL_DIR)
+			message(STATUS "Assimp will be installed to: ${INSTALL_DIR}")
+			set(assimp_DIR "${INSTALL_DIR}/lib/cmake/assimp-5.0/") # TODO: modify not to use explicit version suffix
+			set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${assimp_DIR}")
 
+		endif()
+	endif(${BUILD_ASSIMP_EXAMPLES})
+	
 endif()
 
 ExternalProject_Add(gl_traits_src
@@ -212,6 +215,8 @@ ExternalProject_Add(gl_traits_src
 		-Dglad_DIR=${glad_DIR}
 		-Dglfw3_DIR=${glfw3_DIR}
 		-Dassimp_DIR=${assimp_DIR}
+		
+		-DBUILD_ASSIMP_EXAMPLES=${BUILD_ASSIMP_EXAMPLES}
 		
 	CMAKE_CACHE_ARGS
 		-DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}

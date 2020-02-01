@@ -3,8 +3,8 @@
 #include "glt_Common.h"
 #include "glt_CommonValidate.h"
 
-const char bgVertSrcFile[] = "texture_bg.vs",
-bgFragSrcFile[] = "texture_bg.fs";
+const char bgVertSrcFile[] = "shaders/texture_bg.vs",
+bgFragSrcFile[] = "shaders/texture_bg.fs";
 
 int main(int argc, const char** argv)
 {

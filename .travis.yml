@@ -17,4 +17,4 @@ addons:
 script:
     - mkdir build
     - cmake -S . -B ./build -A x64
-    - cmake --build ./build
+    - cmake --build ./build --config Release

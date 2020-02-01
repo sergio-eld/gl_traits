@@ -17,8 +17,8 @@ int main(int argc, char * argv[])
 
 	// build and compile our shader program
 	// ------------------------------------
-    Shader ourShader{ exePath.parent_path().append("vshader.vs").generic_string().c_str(),
-        exePath.parent_path().append("fshader.fs").generic_string().c_str() };
+    Shader ourShader{ exePath.parent_path().append("shaders/vshader.vs").generic_string().c_str(),
+        exePath.parent_path().append("shaders/fshader.fs").generic_string().c_str() };
 
 	auto posCoords = glm_cube_positions();
 	auto texCoords = glm_cube_texCoords();	// for batched 1st array

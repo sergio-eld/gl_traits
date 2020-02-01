@@ -10,6 +10,7 @@ namespace fsys = std::filesystem;
 #define GL_TRAITS_STATIC
 #include "gl_traits.hpp"
 
+
 #include "GLFW/glfw3.h"
 #include "learnopengl/shader_m.h"
 

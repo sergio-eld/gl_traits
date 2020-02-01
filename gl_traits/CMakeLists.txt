@@ -10,6 +10,12 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 
+foreach(CONFIG_TYPE ${CMAKE_CONFIGURATION_TYPES})
+    string(TOUPPER ${CONFIG_TYPE} OUTPUTCONFIG)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
+endforeach()
 
 find_package(OpenGL REQUIRED)
 message(STATUS "OpenGL found: ${OpenGL_FOUND}")
@@ -31,7 +37,7 @@ message(STATUS "glfw found: ${glfw3_FOUND}")
 
 # TODO: header-only library?
 add_library(${PROJECT_NAME}
-	OBJECT
+	STATIC
 		# basic types
 		include/enums.hpp
 		include/gltHandle.hpp
@@ -59,6 +65,10 @@ add_library(${PROJECT_NAME}
 		src/gl_traits.cpp
 	)
 	
+set_target_properties(${PROJECT_NAME}
+	PROPERTIES
+		DEBUG_POSTFIX "_d"
+	)
 
 target_link_libraries(${PROJECT_NAME}
 	PUBLIC

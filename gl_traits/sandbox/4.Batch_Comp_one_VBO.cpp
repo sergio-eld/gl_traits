@@ -13,8 +13,8 @@ using unif_collect = glt::uniform_collection<std::tuple<model_mat4,
     texture1_sampler2D,
     texture2_sampler2D>>;
 
-const char vertexSrcFile[] = "vshader.vs",
-fragmentSrcFile[] = "fshader.fs";
+const char vertexSrcFile[] = "shaders/vshader.vs",
+fragmentSrcFile[] = "shaders/fshader.fs";
 
 int main(int argc, char * argv[])
 {

@@ -1,36 +1,73 @@
 ﻿cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 
+set(BUILD_ASSIMP_EXAMPLES OFF CACHE BOOL "Build examples using assimp library")
+
 # sandbox
-find_package(assimp REQUIRED)
-message(STATUS "assimp found: ${assimp_FOUND}")
 find_package(glfw3 REQUIRED)
 message(STATUS "glfw3 found: ${glfw3_FOUND}")
 
-# TODO: remove PlatformPath from here! Get path from command line input
-#find_package(PlatformPath REQUIRED)
-#message(STATUS "PlatformPath found: ${PlatformPath_FOUND}")
+set(HELPER_LIBS $<TARGET_FILE:glfw>)
 
-add_library(gl_sandbox
+if (${BUILD_ASSIMP_EXAMPLES})
+	find_package(assimp REQUIRED)
+	message(STATUS "assimp found: ${assimp_FOUND}")
+	
+	list(APPEND HELPER_LIBS $<TARGET_FILE:assimp>)
+endif()
+
+
+# how to make this copy to bin/Release|Debug?
+add_custom_target(COPY_DEPENDENCIES
+	COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+	COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/include
+	
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:glfw> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+	COMMAND ${CMAKE_COMMAND} -E  copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/shaders 
+		${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders
+	COMMAND ${CMAKE_COMMAND} -E  copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/resources ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/resources 
+	)
+	
+add_custom_target(PARSE_SHADERS
+	COMMAND $<TARGET_FILE:glt_parser> 
+		-s ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders 
+		-d ${CMAKE_CURRENT_BINARY_DIR}/include
+		--vert ".vs .vshader"
+		--frag ".fs .fshader"
+		--geom ".gs .gshader"
+		--comp ".cs .cshader"
+	)
+
+
+if (${BUILD_ASSIMP_EXAMPLES})
+#	add_custom_command(TARGET COPY_DEPENDENCIES POST_BUILD
+#		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:assimp> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+#		)
+endif()
+# VBO cases
+
+add_library(Helpers
 	STATIC
-		$<TARGET_OBJECTS:gl_traits>
 		helpers.hpp
 		helpers.cpp
 	)
 	
-target_link_libraries(gl_sandbox
-	PUBLIC
-		gl_traits
-		glfw
-		${assimp_LIBRARIES}
+set_target_properties(Helpers
+	PROPERTIES
+		DEBUG_POSTFIX "_d"
 	)
 	
-target_include_directories(gl_sandbox
+target_include_directories(Helpers
 	PUBLIC
 		${CMAKE_CURRENT_SOURCE_DIR}
 		${CMAKE_CURRENT_BINARY_DIR}/include # created via add_custom_command
 	)
 	
-# VBO cases
+target_link_libraries(Helpers
+	PUBLIC
+		gl_traits
+		#${HELPER_LIBS}
+		glfw
+	)
 
 set(TEST_CASES
 	"traits_equivalence"
@@ -60,28 +97,29 @@ foreach(USE_CASE ${TEST_CASES})
 		${USE_CASE}.cpp
 	)
 	
-target_link_libraries(${USE_CASE}
-	PRIVATE
-		gl_sandbox
-#		PlatformPath
-	)
+	target_link_libraries(${USE_CASE}
+		PRIVATE
+			Helpers
+		)
+	
+	set_target_properties(${USE_CASE}
+		PROPERTIES
+			DEBUG_POSTFIX "_d"
+		)
+
+	add_dependencies(${USE_CASE} COPY_DEPENDENCIES PARSE_SHADERS)
+	
 endforeach()
 
 
-add_custom_command(TARGET gl_sandbox POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E  copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/shaders 
-		$<TARGET_PROPERTY:gl_sandbox,RUNTIME_OUTPUT_DIRECTORY>/$(ConfigurationName)
-	COMMAND ${CMAKE_COMMAND} -E  copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/resources $<TARGET_PROPERTY:gl_sandbox,RUNTIME_OUTPUT_DIRECTORY>/$(ConfigurationName)/resources
+#add_custom_command(TARGET gl_sandbox POST_BUILD
+#	COMMAND ${CMAKE_COMMAND} -E  copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/shaders 
+#		$<TARGET_PROPERTY:gl_sandbox,RUNTIME_OUTPUT_DIRECTORY>/$(ConfigurationName)
+#	COMMAND ${CMAKE_COMMAND} -E  copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/resources $<TARGET_PROPERTY:gl_sandbox,RUNTIME_OUTPUT_DIRECTORY>/$(ConfigurationName)/resources
 
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:glfw> $<TARGET_PROPERTY:gl_sandbox,RUNTIME_OUTPUT_DIRECTORY>/$(ConfigurationName)
 	
-	COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/include
 	
-	COMMAND $<TARGET_FILE:glt_parser> # ${GLT_GENERATOR} 
-		-s ${CMAKE_CURRENT_SOURCE_DIR}/shaders 
-		-d ${CMAKE_CURRENT_BINARY_DIR}/include
-		--vert ".vs .vshader"
-		--frag ".fs .fshader"
-		--geom ".gs .gshader"
-		--comp ".cs .cshader"
-	)	
+#	COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/include
+	
+#	
+#	)	
