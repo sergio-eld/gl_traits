@@ -5,8 +5,7 @@ jobs:
   - stage: build
     os: Windows
     sudo: false
-    compiler:
-        - clang
+    compiler: clang
     dist: trusty
     addons:
         apt:
@@ -20,8 +19,7 @@ jobs:
   - stage: build
     os: Windows
     sudo: false
-    compiler:
-        - gcc
+    compiler: gcc
     dist: trusty
     addons:
         apt:
@@ -35,8 +33,7 @@ jobs:
   - stage: build
     os: Linux
     sudo: false
-    compiler:
-        - clang
+    compiler: clang
     dist: trusty
     addons:
         apt:
@@ -44,14 +41,14 @@ jobs:
                 - cmake
     script:
         - mkdir build
-        - cmake -S ./ -B ./build -A x64
-        - cmake --build ./build --config Release
+        - cd ./build
+        - cmake .. -A x64
+        - cmake --build . --config Release
         
   - stage: build
     os: Linux
     sudo: false
-    compiler:
-        - gcc
+    compiler: gcc
     dist: trusty
     addons:
         apt:
@@ -59,15 +56,15 @@ jobs:
                 - cmake
     script:
         - mkdir build
-        - cmake -S ./ -B ./build -A x64
-        - cmake --build ./build --config Release
+        - cd ./build
+        - cmake .. -A x64
+        - cmake --build . --config Release
         
   - stage: build
     os: osx
     sudo: false
-    compiler:
-        - clang
-    dist: trusty
+    compiler: clang
+    osx_image: xcode11.3
     addons:
         apt:
             packages:
@@ -80,9 +77,8 @@ jobs:
   - stage: build
     os: osx
     sudo: false
-    compiler:
-        - gcc
-    dist: trusty
+    compiler: gcc
+    osx_image: xcode11.3
     addons:
         apt:
             packages:
