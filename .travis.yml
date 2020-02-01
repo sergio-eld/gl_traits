@@ -7,6 +7,20 @@ jobs:
     sudo: false
     compiler:
         - clang
+    dist: trusty
+    addons:
+        apt:
+            packages:
+                - cmake
+    script:
+        - mkdir build
+        - cmake -S ./ -B ./build -A x64
+        - cmake --build ./build --config Release
+        
+  - stage: build
+    os: Windows
+    sudo: false
+    compiler:
         - gcc
     dist: trusty
     addons:
@@ -16,4 +30,64 @@ jobs:
     script:
         - mkdir build
         - cmake -S ./ -B ./build -A x64
+        - cmake --build ./build --config Release
+        
+  - stage: build
+    os: Linux
+    sudo: false
+    compiler:
+        - clang
+    dist: trusty
+    addons:
+        apt:
+            packages:
+                - cmake
+    script:
+        - mkdir build
+        - cmake -S ./ -B ./build -A x64
+        - cmake --build ./build --config Release
+        
+  - stage: build
+    os: Linux
+    sudo: false
+    compiler:
+        - gcc
+    dist: trusty
+    addons:
+        apt:
+            packages:
+                - cmake
+    script:
+        - mkdir build
+        - cmake -S ./ -B ./build -A x64
+        - cmake --build ./build --config Release
+        
+  - stage: build
+    os: osx
+    sudo: false
+    compiler:
+        - clang
+    dist: trusty
+    addons:
+        apt:
+            packages:
+                - cmake
+    script:
+        - mkdir build
+        - cmake -S ./ -B ./build
+        - cmake --build ./build --config Release
+        
+  - stage: build
+    os: osx
+    sudo: false
+    compiler:
+        - gcc
+    dist: trusty
+    addons:
+        apt:
+            packages:
+                - cmake
+    script:
+        - mkdir build
+        - cmake -S ./ -B ./build
         - cmake --build ./build --config Release
