@@ -134,6 +134,7 @@ namespace glt
 			void DrawTriangleFan(const Program::vao& vao, size_t first, size_t count)
 			{
 				assert(prog_->IsActive() && "Program is not active during Guard's lifetime!");
+                assert(vao.IsBound() && "VAO is not bound!");
 
 				glDrawArrays(GL_TRIANGLE_FAN, (GLint)first, (GLint)count);
 			}
@@ -144,6 +145,20 @@ namespace glt
 				DrawTriangleFan(reinterpret_cast<const Program::vao&>(vao), first, count);
 			}
 			
+            // TODO: add VAO as parameter to ensure that it is active during the drawing call
+            void DrawElements(const glt::Buffer<unsigned int>& elemBuffer, RenderMode mode, size_t count, size_t indexStart = 0)
+            {
+                assert(prog_->IsActive() && "Program is not active during Guard's lifetime!");
+                assert(elemBuffer().Allocated() > indexStart + count && "Element indices are out of range!");
+
+                if (!elemBuffer.IsBound())
+                    elemBuffer.Bind(BufferTarget::element_array);
+
+                glDrawElements((GLenum)mode, (GLsizei)count, GL_UNSIGNED_INT, (void*)indexStart);
+                elemBuffer.UnBind();
+            }
+
+
 
             ~ProgGuard()
             {

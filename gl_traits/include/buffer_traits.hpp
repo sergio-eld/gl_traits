@@ -171,8 +171,24 @@ namespace glt
         
         // TODO: add allocating constructor
 
-		using buffer_base::Bind;
-		using buffer_base::IsBound;
+        void Bind(BufferTarget target)
+        {
+            using A = std::tuple_element_t<0, std::tuple<attribs...>>;
+            using TA = typename sequence_traits<A>::first_type;
+
+            if constexpr (seq_count != 1 ||
+                is_compound_seq_v<A> ||
+                !std::is_same_v<TA, GLubyte> &&
+                !std::is_same_v<TA, GLushort> &&
+                !std::is_same_v<TA, GLuint>)
+                assert(target != BufferTarget::element_array &&
+                    "Invalid buffer type for element array target!");
+
+
+            buffer_base::Bind(target);
+        }
+
+        using buffer_base::IsBound;
 		using buffer_base::UnBind;
 		using buffer_base::IsMapped;
 
