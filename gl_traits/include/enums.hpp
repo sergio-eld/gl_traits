@@ -336,4 +336,20 @@ namespace glt
 		bgra = GL_BGRA
 	};
 
+    enum class RenderMode : GLenum
+    {
+        points = GL_POINTS,
+        line_strip = GL_LINE_STRIP,
+        line_loop = GL_LINE_LOOP,
+        lines = GL_LINES,
+        triangle_strip = GL_TRIANGLE_STRIP,
+        triangle_fan = GL_TRIANGLE_FAN,
+        triangles = GL_TRIANGLES,
+        lines_adjacency = GL_LINES_ADJACENCY,
+        line_strip_adjacency = GL_LINE_STRIP_ADJACENCY,
+        triangles_adjacency = GL_TRIANGLES_ADJACENCY,
+        triangle_strip_adjacency = GL_TRIANGLE_STRIP_ADJACENCY,
+        patches = GL_PATCHES
+    };
+
 }
