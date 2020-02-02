@@ -157,7 +157,7 @@ if(${BUILD_TESTS})
 	endif()
 
 	if (${BUILD_ASSIMP_EXAMPLES})
-		find_package(assimp)
+		find_package(assimp QUIET)
 		message(STATUS "assimp found: ${assimp_FOUND}")
 		
 		if(NOT ${assimp_FOUND})

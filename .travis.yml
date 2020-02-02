@@ -4,7 +4,6 @@ jobs:
   include:
   - stage: build
     os: Windows
-    sudo: false
     compiler: clang
     dist: trusty
     addons:
@@ -18,7 +17,6 @@ jobs:
         
   - stage: build
     os: Windows
-    sudo: false
     compiler: gcc
     dist: trusty
     addons:
@@ -32,7 +30,6 @@ jobs:
         
   - stage: build
     os: Linux
-    sudo: false
     compiler: clang
     dist: trusty
     addons:
@@ -47,7 +44,6 @@ jobs:
         
   - stage: build
     os: Linux
-    sudo: false
     compiler: gcc
     dist: trusty
     addons:
@@ -62,7 +58,6 @@ jobs:
         
   - stage: build
     os: osx
-    sudo: false
     compiler: clang
     osx_image: xcode11.3
     addons:
@@ -76,7 +71,6 @@ jobs:
         
   - stage: build
     os: osx
-    sudo: false
     compiler: gcc
     osx_image: xcode11.3
     addons:

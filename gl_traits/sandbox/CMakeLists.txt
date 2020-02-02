@@ -14,7 +14,9 @@ if (${BUILD_ASSIMP_EXAMPLES})
 	find_package(assimp REQUIRED)
 	message(STATUS "assimp found: ${assimp_FOUND}")
 	
-	list(APPEND HELPER_LIBS $<TARGET_FILE:assimp>)
+	string(FIND ${ASSIMP_LIBRARY_DIRS}/${ASSIMP_LIBRARIES} ".dll" EXT_FOUND)
+	string(SUBSTRING ${ASSIMP_LIBRARY_DIRS}/${ASSIMP_LIBRARIES} 0 ${EXT_FOUND} assimp_lib)
+
 endif()
 
 
@@ -113,6 +115,41 @@ foreach(USE_CASE ${TEST_CASES})
 	
 endforeach()
 
+set(ASSIMP_EXAMPLES
+		nanosuit_simple
+	)
+
+if(${BUILD_ASSIMP_EXAMPLES})
+
+# this is shit!
+add_custom_command(TARGET COPY_DEPENDENCIES POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_LINKER_FILE:assimp::assimp> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+
+	foreach(ex ${ASSIMP_EXAMPLES})
+		add_executable(${ex}
+				${ex}.cpp 
+			)
+		
+		target_link_libraries(${ex}
+			PRIVATE
+				Helpers 
+				${assimp_lib}.lib
+			) 
+		 
+		set_target_properties(${ex}
+			PROPERTIES
+				DEBUG_POSTFIX "_d"
+			)
+		
+		target_include_directories(${ex}
+			PRIVATE
+				${ASSIMP_INCLUDE_DIRS}
+			)
+		
+		add_dependencies(${ex} COPY_DEPENDENCIES PARSE_SHADERS)
+		
+	endforeach()
+endif()
 
 #add_custom_command(TARGET gl_sandbox POST_BUILD
 #	COMMAND ${CMAKE_COMMAND} -E  copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/shaders 
