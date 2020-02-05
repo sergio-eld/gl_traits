@@ -212,6 +212,7 @@ namespace glt
 				(GLenum)usage);
 
 			// TODO: debug check for opengl errors
+            assert(AssertGL());
 
 			currentUsage_ = usage;
 		}

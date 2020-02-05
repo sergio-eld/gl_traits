@@ -23,6 +23,9 @@ TODO: add configuration-driven implementation either using a MACRO of if constex
 
 namespace glt
 {
+    // debug workaround
+    bool AssertGL();
+
 	template <class Attr>
 	struct sequence_traits
 	{
@@ -159,6 +162,9 @@ namespace glt
 		void Bind(BufferTarget target)
 		{
 			glBindBuffer((GLenum)target, handle_accessor(handle_));
+
+            assert(AssertGL());
+
 			Register(target, this);
 			target_ = target;
 		}
@@ -271,6 +277,8 @@ namespace glt
         void Bind()
         {
             glBindVertexArray(handle_accessor(handle_));
+            assert(AssertGL());
+
             Register(this);
         }
 
@@ -283,6 +291,8 @@ namespace glt
         {
             assert(IsBound() && "Unbinding non-bound VAO!");
             glBindVertexArray(0);
+            assert(AssertGL());
+
             Register();
         }
 

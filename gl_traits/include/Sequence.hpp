@@ -161,7 +161,7 @@ namespace glt
 	
     // template wrapper accessor for template iterators
     template <typename ... attr>
-    class SeqIteratorOut
+    class SeqIterator
     {
         using cl_tuple = std::tuple<attr...>;
 
@@ -178,16 +178,16 @@ namespace glt
         using reference = value_type & ;
         using iterator_category = std::random_access_iterator_tag;
 
-        explicit SeqIteratorOut(pointer ptr = nullptr)
+        explicit SeqIterator(pointer ptr = nullptr)
             : ptr_(ptr)
         {}
 
         template <class T, class = std::enable_if_t<is_equivalent_v<T, value_type>>>
-        explicit SeqIteratorOut(T *ptr = nullptr)
-            : SeqIteratorOut(reinterpret_cast<pointer>(ptr))
+        explicit SeqIterator(T *ptr = nullptr)
+            : SeqIterator(reinterpret_cast<pointer>(ptr))
         {}
 
-        SeqIteratorOut& operator++()
+        SeqIterator& operator++()
         {
             assert(*this);
             //std::next(ptr_); // why this doesn't work???
@@ -196,19 +196,19 @@ namespace glt
         }
 
         // does std::next use this?
-        SeqIteratorOut& operator+=(difference_type sz)
+        SeqIterator& operator+=(difference_type sz)
         {
             assert(*this);
             // std::next(ptr_, sz);
             return *this;
         }
 
-        SeqIteratorOut operator++(int)
+        SeqIterator operator++(int)
         {
             value_type *ptr = ptr_;
             //std::next(ptr_); // why this doesn't work???
             ++ptr_;
-            return SeqIteratorOut(ptr);
+            return SeqIterator(ptr);
         }
 
         operator bool() const
@@ -216,12 +216,12 @@ namespace glt
             return (bool)ptr_;
         }
 
-        bool operator==(const SeqIteratorOut& other) const
+        bool operator==(const SeqIterator& other) const
         {
             return ptr_ == other.ptr_;
         }
 
-        bool operator!=(const SeqIteratorOut& other) const
+        bool operator!=(const SeqIterator& other) const
         {
             return !((*this) == other);
         }
@@ -251,18 +251,19 @@ namespace glt
             return reinterpret_cast<const T&>(**this)
         }
 
+
     };
 
     template <typename ... Attrs>
     class MapGuard
     {
     public:
-        using iterator_out = SeqIteratorOut<Attrs...>;
+        using iterator = SeqIterator<Attrs...>;
 
     private:
 
         Sequence<Attrs...>& seq_;
-        iterator_out start_,
+        iterator start_,
             end_;
 
     public:
@@ -275,8 +276,8 @@ namespace glt
 
             seq_.MapRange(start, accessBit, seq_.Allocated());
 
-            start_ = iterator_out(start);
-            end_ = iterator_out(std::next(start, seq_.Allocated()));
+            start_ = iterator(start);
+            end_ = iterator(std::next(start, seq_.Allocated()));
         }
 
     public:
@@ -289,12 +290,12 @@ namespace glt
 
 
         // TODO: const_iterator?
-        iterator_out begin()
+        iterator begin()
         {
             return start_;
         }
 
-        iterator_out end()
+        iterator end()
         {
             return end_;
         }
@@ -304,6 +305,8 @@ namespace glt
             assert(seq_.IsMapped() &&
                 "Sequence has been unmapped before guard's destruction!");
             seq_.UnMap();
+
+            assert(AssertGL());
         }
     };
 
