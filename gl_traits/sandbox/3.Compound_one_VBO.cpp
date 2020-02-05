@@ -26,8 +26,8 @@ int main(int argc, char * argv[])
 	glt::Buffer<glt::compound<glm::vec3, glm::vec2>> vboVert{};
 
 	vboVert.Bind(glt::BufferTarget::array);
-	vao.AttributePointer(glt::tag_s<0>(), vboVert().AttribPointer());
-	vao.AttributePointer(glt::tag_s<1>(), vboVert().AttribPointer(glt::tag_s<1>()));
+	vao.AttributePointer(glt::tag_s<0>(), vboVert()());
+	vao.AttributePointer(glt::tag_s<1>(), vboVert()(glt::tag_s<1>()));
 
 	std::vector<vertex> vertices = cube_vertices();
 

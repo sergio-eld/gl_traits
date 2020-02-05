@@ -1,5 +1,7 @@
 #include "gl_traits.hpp"
 
+#include <iostream>
+
 using namespace glt;
 
 //template class MapStatus_<BufferTargetList>;
@@ -31,3 +33,15 @@ std::map<FrameBufTarget, framebuffer_base*> framebuffer_base::bound_{
 };
 
 renderbuffer_base * renderbuffer_base::bound_ = nullptr;
+
+bool glt::AssertGL()
+{
+    GLenum error = glGetError();
+
+    if (!error)
+        return true;
+
+    std::cerr << error << std::endl;
+    return false;
+}
+
