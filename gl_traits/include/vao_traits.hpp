@@ -43,6 +43,13 @@ namespace glt
                 (GLsizei)attrib.stride,
                 (void*)attrib.offset);
         }
+        
+        template <typename T, typename = std::enable_if_t<is_equivalent_v<T, Attrib>>>
+        void AttributePointer(tag_s<indx>, AttribPtr<T>&& attrib, bool normalize = false)
+        {
+            AttributePointer(tag_s<indx>(), 
+                std::forward<AttribPtr<Attrib>>(reinterpret_cast<AttribPtr<Attrib>&&>(attrib)), normalize);
+        }
 
     protected:
         vao_attrib_modify(const vao_base& rVao)
