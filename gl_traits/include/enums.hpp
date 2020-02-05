@@ -82,7 +82,6 @@ namespace glt
 		uniform_buffer_binding = GL_UNIFORM_BUFFER_BINDING
 	};
 
-	enum class FrameBufferTarget : int;
 
 	// texture targets // remove underscore
 	enum class TextureTarget : GLenum
@@ -251,7 +250,12 @@ namespace glt
 
 	enum class VAOTarget : int;       // empty
 	enum class ProgramPipeLineTarget : int;   // empty
-	enum class RenderBufferTarget : int;      // empty
+
+	enum class RenderBufferTarget : GLenum
+	{
+		renderbuffer = GL_RENDERBUFFER
+	};
+
 	enum class SamplerTarget : int;           // empty
 
 	enum class BufUsage : GLenum
@@ -351,5 +355,14 @@ namespace glt
         triangle_strip_adjacency = GL_TRIANGLE_STRIP_ADJACENCY,
         patches = GL_PATCHES
     };
+
+	enum class FrameBufTarget : GLenum
+	{
+		none = 0,
+		draw = GL_DRAW_FRAMEBUFFER,
+		read = GL_READ_FRAMEBUFFER,
+		framebuffer = GL_FRAMEBUFFER
+	};
+
 
 }

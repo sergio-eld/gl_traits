@@ -137,9 +137,11 @@ namespace glt
 	using HandleShader = Handle<ShaderTarget>;
 	using HandleProg = Handle<ProgramTarget>;
     using HandleTexture = Handle<TextureTarget>;
+	using HandleFrameBuffer = Handle<FrameBufTarget>;
+	using HandleRenderBuffer = Handle<RenderBufferTarget>;
 
 	using TargetTypes = std::tuple<BufferTarget,
-		FrameBufferTarget,
+		FrameBufTarget,
 		TextureTarget,
 		VAOTarget,
 		TransformFeedBackTarget,

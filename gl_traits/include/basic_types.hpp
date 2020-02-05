@@ -569,4 +569,122 @@ namespace glt
 
     };
 
+
+	class framebuffer_base
+	{
+
+		static std::map<FrameBufTarget, framebuffer_base*> bound_;
+
+	protected:
+		HandleFrameBuffer handle_;
+		FrameBufTarget target_ = FrameBufTarget::none;
+
+		framebuffer_base(HandleFrameBuffer&& handle)
+			: handle_(std::move(handle))
+		{}
+
+		framebuffer_base(const framebuffer_base&) = delete;
+		framebuffer_base& operator=(const framebuffer_base&) = delete;
+
+		framebuffer_base(framebuffer_base&& other)
+			: handle_(std::move(other.handle_)),
+			target_(FrameBufTarget::none)
+		{
+			if (other.IsBound())
+				Register(other.Target(), this);
+		}
+
+		framebuffer_base& operator=(framebuffer_base&& other)
+		{
+			// does opengl implicitly unbind buffer on deleting?
+			if (IsBound())
+				UnBind();
+
+			handle_ = std::move(other.handle_);
+			if (other.IsBound())
+				Register(other.Target(), this);
+
+			return *this;
+		}
+
+		void Bind(FrameBufTarget target)
+		{
+			glBindFramebuffer((GLenum)target, handle_accessor(handle_));
+			Register(target, this);
+		}
+
+		FrameBufTarget Target() const
+		{
+			return target_;
+		}
+
+		bool IsBound() const
+		{
+			return Target() != FrameBufTarget::none;
+		}
+
+		void UnBind()
+		{
+			assert(IsBound() && "Attempt to unbind non-active FrameBuffer!");
+			glBindFramebuffer((GLenum)target_, 0);
+			Register(target_);
+		}
+
+	private:
+
+		void Register(FrameBufTarget target, framebuffer_base *fbuf = nullptr)
+		{
+			framebuffer_base *&bound = bound_[target];
+
+			if (bound)
+				bound->target_ = FrameBufTarget::none;
+
+			bound = fbuf;
+
+			if (fbuf)
+				fbuf->target_ = target;
+		}
+	};
+
+	class renderbuffer_base
+	{
+
+		static renderbuffer_base *bound_;
+
+	protected:
+		HandleRenderBuffer handle_;
+
+		renderbuffer_base(HandleRenderBuffer&& handle)
+			: handle_(std::move(handle))
+		{}
+
+		void Bind()
+		{
+			glBindRenderbuffer((GLenum)RenderBufferTarget::renderbuffer,
+				handle_accessor(handle_));
+
+			Register(this);
+		}
+
+		bool IsBound() const
+		{
+			return this == bound_;
+		}
+
+		void UnBind()
+		{
+			assert(IsBound() && "Attempt to unbind non-active renderbuffer!");
+			glBindRenderbuffer((GLenum)RenderBufferTarget::renderbuffer, 0);
+			Register();
+		}
+
+	private:
+
+		void Register(renderbuffer_base *rbuffer = nullptr)
+		{
+			bound_ = rbuffer;
+		}
+
+	};
+
 }

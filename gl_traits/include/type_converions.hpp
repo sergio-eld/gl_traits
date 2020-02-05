@@ -58,7 +58,7 @@ namespace glt
 	struct pp_gl_allocator;
 
 	template <> struct pp_gl_allocator<BufferTarget> : glt_constant<&glGenBuffers> {};
-	template <> struct pp_gl_allocator<FrameBufferTarget> : glt_constant<&glGenFramebuffers> {};
+	template <> struct pp_gl_allocator<FrameBufTarget> : glt_constant<&glGenFramebuffers> {};
 	template <> struct pp_gl_allocator<TextureTarget> : glt_constant<&glGenTextures> {};
 	template <> struct pp_gl_allocator<VAOTarget> : glt_constant<&glGenVertexArrays> {};
 
@@ -82,7 +82,7 @@ namespace glt
 	struct pp_gl_deleter;
 
 	template <> struct pp_gl_deleter<BufferTarget> : glt_constant<&glDeleteBuffers> {};
-	template <> struct pp_gl_deleter<FrameBufferTarget> : glt_constant<&glDeleteFramebuffers> {};
+	template <> struct pp_gl_deleter<FrameBufTarget> : glt_constant<&glDeleteFramebuffers> {};
 	template <> struct pp_gl_deleter<TextureTarget> : glt_constant<&glDeleteTextures> {};
 	template <> struct pp_gl_deleter<VAOTarget> : glt_constant<&glDeleteVertexArrays> {};
 
@@ -114,7 +114,7 @@ namespace glt
 	struct pp_gl_binder;
 
 	template <> struct pp_gl_binder<BufferTarget> : glt_constant<&glBindBuffer> {};
-	template <> struct pp_gl_binder<FrameBufferTarget> : glt_constant<&glBindFramebuffer> {};
+	template <> struct pp_gl_binder<FrameBufTarget> : glt_constant<&glBindFramebuffer> {};
 	template <> struct pp_gl_binder<TextureTarget> : glt_constant<&glBindTexture> {};
 	template <> struct pp_gl_binder<TransformFeedBackTarget> : glt_constant<&glBindTransformFeedback> {};
 
