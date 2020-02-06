@@ -146,16 +146,18 @@ namespace glt
 			}
 			
             // TODO: add VAO as parameter to ensure that it is active during the drawing call
-            void DrawElements(const glt::Buffer<unsigned int>& elemBuffer, RenderMode mode, size_t count, size_t indexStart = 0)
+            void DrawElements(glt::Buffer<unsigned int>& elemBuffer, RenderMode mode, size_t count, size_t indexStart = 0)
             {
                 assert(prog_->IsActive() && "Program is not active during Guard's lifetime!");
-                assert(elemBuffer().Allocated() > indexStart + count && "Element indices are out of range!");
+                assert(elemBuffer().Allocated() >= indexStart + count && "Element indices are out of range!");
 
                 if (!elemBuffer.IsBound())
                     elemBuffer.Bind(BufferTarget::element_array);
 
                 glDrawElements((GLenum)mode, (GLsizei)count, GL_UNSIGNED_INT, (void*)indexStart);
-                elemBuffer.UnBind();
+				assert(AssertGL());
+
+				elemBuffer.UnBind();
             }
 
 

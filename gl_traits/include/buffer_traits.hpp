@@ -168,7 +168,13 @@ namespace glt
             aggr_sequences(static_cast<buffer_base&>(*this))
 		{}
 
-        
+#pragma message("Need to check implementation for Buffer move constructor!")
+		Buffer(Buffer&& other)
+			: buffer_base(std::move(static_cast<buffer_base&&>(other))),
+            aggr_sequences(static_cast<buffer_base&>(*this))
+		{
+			aggr_sequences::offsets_ = std::move(other.offsets_);
+		}        
         // TODO: add allocating constructor
 
         void Bind(BufferTarget target)

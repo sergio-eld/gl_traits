@@ -97,6 +97,8 @@ namespace glt
 				current->target_ = BufferTarget::none;
 
 			current = ptr;
+			if (current)
+				current->target_ = target;
 		}
 
 
@@ -122,11 +124,16 @@ namespace glt
 
 		constexpr buffer_base(buffer_base&& other)
 			: handle_(std::move(other.handle_)),
+			target_(other.target_),
+			currentUsage_(other.currentUsage_),
 			mapAccess_(other.mapAccess_),
 			mapAccessBit_(other.mapAccessBit_)
 		{
-			if (other.Bound() != BufferTarget::none)
-				Bind(other.Bound());
+			if (other.IsBound())
+				Register(other.Bound(), this);
+
+			other.target_ = BufferTarget::none;
+			other.currentUsage_ = BufUsage::none;
 			other.mapAccess_ = MapAccess::none;
 			other.mapAccessBit_ = MapAccessBit::none;
 		}
@@ -134,11 +141,16 @@ namespace glt
 		buffer_base& operator=(buffer_base&& other)
 		{
 			handle_ = std::move(other.handle_);
+			target_ = other.target_;
+			currentUsage_ = other.currentUsage_;
 			mapAccess_ = other.mapAccess_;
 			mapAccessBit_ = other.mapAccessBit_;
 
-			if (other.Bound() != BufferTarget::none)
-				Bind(other.Bound());
+			if (other.IsBound())
+				Register(other.Bound(), this);
+
+			other.target_ = BufferTarget::none;
+			other.currentUsage_ = BufUsage::none;
 			other.mapAccess_ = MapAccess::none;
 			other.mapAccessBit_ = MapAccessBit::none;
 
@@ -153,7 +165,7 @@ namespace glt
 				UnMap();
 
 			if (IsBound())
-				Register(Bound());
+				UnBind();
 
 		}
 	public:
@@ -166,7 +178,6 @@ namespace glt
             assert(AssertGL());
 
 			Register(target, this);
-			target_ = target;
 		}
 
 		static bool TargetMapped(BufferTarget target)
@@ -190,6 +201,9 @@ namespace glt
 			assert(IsBound() && "Buffer is alraedy not bound");
 			if (Bound() == BufferTarget::none)
 				throw std::exception("Trying to unbind non-bound buffer!");
+
+			glBindBuffer((GLenum)target_, 0);
+			assert(AssertGL());
 			Register(target_);
 		}
 
