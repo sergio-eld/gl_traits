@@ -1,4 +1,6 @@
 ﻿
+#include <vector>
+
 #include "equivalence.hpp" //"basic_types.hpp"
 #include "glm/glm.hpp"
 
@@ -39,16 +41,7 @@ int main()
     static_assert(glt::is_equivalent_v<glt::compound<glm::vec3>, glm::vec3>);
     static_assert(glt::is_equivalent_v<glt::compound<int>, glt::compound<int>>);
 
-    
-    // this must work due to glt::compound implementation
-    // static_assert(glt::is_aggregate_initializable_v<glm::vec3, glt::compound<glm::vec3>>);
-    // static_assert(glt::is_aggregate_initializable_v<int, glt::compound<int>>);
-
-
-    // this does not work even in buffer_test.cpp
-
-
-
+   
     using LayoutCompound = glt::compound<char, char, float, glm::vec2, char, char, glm::vec3>;
     using LayoutCompound1 = glt::compound<char, glm::vec3, char>;
 
@@ -85,5 +78,39 @@ int main()
     static_assert(!glt::is_equivalent_v<Layout, Layout2, char, glm::vec3, char>);
     
 
-    return 0;
+	std::vector<Layout> testLayout{ 42, 
+		Layout{'a', 'b',
+		4.0f,
+		glm::vec2(8, 15), 
+		'c', 'd', 
+		glm::vec3(16, 23, 42)} };
+
+	size_t errors = 0;
+
+	for (const Layout& l : testLayout)
+	{
+		const LayoutCompound& lcomp = reinterpret_cast<const LayoutCompound&>(l);
+
+		const char& a = lcomp.Get(glt::tag_s<0>()),
+			b = lcomp.Get(glt::tag_s<1>());
+
+		const float& f = lcomp.Get(glt::tag_s<2>());
+		const glm::vec2& v2 = lcomp.Get(glt::tag_s<3>());
+
+		const char& c = lcomp.Get(glt::tag_s<4>()),
+			d = lcomp.Get(glt::tag_s<5>());
+
+		const glm::vec3& v3 = lcomp.Get(glt::tag_s<6>());
+
+		errors += a != 'a' ||
+			b != 'b' ||
+			c != 'c' ||
+			d != 'd' ||
+			f != 4.0f ||
+			v2 != glm::vec2(8, 15) ||
+			v3 != glm::vec3(16, 23, 42);
+
+	}
+
+    return errors;
 }

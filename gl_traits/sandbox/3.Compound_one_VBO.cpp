@@ -11,7 +11,7 @@ int main(int argc, char * argv[])
 
 	SmartGLFW glfw{ 3, 3 };
 	SmartGLFWwindow window{ SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL" };
-
+	
 	glfw.MakeContextCurrent(window);
 	glfw.LoadOpenGL();
 
@@ -33,12 +33,29 @@ int main(int argc, char * argv[])
 
 	vboVert.AllocateMemory(vertices.size(), glt::BufUsage::static_draw);
 
+	// this works
 	for (vertex& v : glt::MapGuard(vboVert(), glt::MapAccessBit::write))
 	{
 		static std::vector<vertex>::const_iterator vIter = vertices.cbegin();
-
 		v = *vIter++;
 	}
+
+	/* this does not! 
+	for (glt::compound<glm::vec3, glm::vec2>& v : glt::MapGuard(vboVert(), glt::MapAccessBit::write))
+	{
+		static std::vector<vertex>::const_iterator vIter = vertices.cbegin();
+
+		glm::vec3& pos = v.Get(glt::tag_s<0>());
+		glm::vec2& tex = v.Get(glt::tag_s<1>());
+
+		pos = vIter->posCoords;
+		tex = vIter->textureCoords;
+
+		++vIter;
+		//v = *vIter++;
+	}
+	*/
+
 
 	for (const vertex& v : glt::MapGuard(vboVert(), glt::MapAccessBit::read))
 	{

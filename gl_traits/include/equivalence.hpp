@@ -168,6 +168,12 @@ namespace glt
 
         std::aligned_storage_t<get_class_size_v<T...>, 4> storage;
 
+		template <size_t n>
+		std::ptrdiff_t get_offset() const
+		{
+			return (std::ptrdiff_t)&storage + get_member_offset_v<n, T...>;
+		}
+
     public:
         constexpr static size_t elems_count = sizeof...(T);
 
@@ -177,14 +183,14 @@ namespace glt
         template <size_t n, class = std::enable_if_t<(n < sizeof...(indx))>>
             nth_type<n>& Get(tag_s<n>)
             {
-                return reinterpret_cast<nth_type<n>&>(*(std::next(&storage, get_member_offset_v<n, T...>)));
+                return reinterpret_cast<nth_type<n>&>(*(nth_type<n>*)get_offset<n>());
             }
 
             
             template <size_t n, class = std::enable_if_t<(n < sizeof...(indx))>>
                 constexpr const nth_type<n>& Get(tag_s<n>) const
                 {
-                    return reinterpret_cast<nth_type<n>&>(*(std::next(&storage, get_member_offset_v<n, T...>)));
+                    return reinterpret_cast<const nth_type<n>&>(*(const nth_type<n>*)get_offset<n>());
                 }
 
     protected:
