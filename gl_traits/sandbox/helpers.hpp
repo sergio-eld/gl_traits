@@ -67,7 +67,10 @@ public:
 
 class Image
 {
-	int width_, height_, nrChannels_;
+	int width_ = 0, 
+		height_ = 0, 
+		nrChannels_ = 0;
+
 	unsigned char *data_;
 
 public:
