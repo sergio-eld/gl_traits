@@ -4,6 +4,9 @@ This example is supposed to load a nanosuit model using one compound buffer for 
 
 #include "helpers.hpp"
 
+#include "glm/matrix.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+
 #include "glt_Common.h"
 
 #include "assimp/Importer.hpp"
@@ -35,44 +38,236 @@ using VertexData = glt::compound<attrPosXYZ_vec3, attrNormals_vec3, attrTexCoord
 using ProgModel = glt::Program<VAO_nanosuit_simple, Uniforms>;
 using BufferMesh = glt::Buffer<VertexData>;
 using BufferElems = glt::Buffer<unsigned int>;
+using BufferTexture = glt::Buffer<unsigned char>;
 
 bool InitProgram(ProgModel& prog, const fsys::path& path);
 
 
+struct Texture
+{
+	fsys::path path_;
+	glt::Texture2D<glt::TexInternFormat::rgba> texture;
+};
 
 struct Mesh
 {
     std::string name;
+	
+	BufferMesh bufMesh;
+	BufferElems bufElems;
 
-    size_t startIndex,
-        elemsCount;
+	ProgModel::vao vao;
+
+	Mesh(const Mesh&) = delete;
+	Mesh& operator=(const Mesh&) = delete;
+
+	Mesh(Mesh&& other)
+		: name(std::move(other.name)),
+		bufMesh(std::move(other.bufMesh)),
+		bufElems(std::move(other.bufElems)),
+		vao(std::move(other.vao))
+	{}
+
+
+	Mesh(const aiMesh& mesh)
+		: name({ mesh.mName.C_Str(), mesh.mName.length })
+	{
+		LoadMesh(mesh);
+		assert(check_loaded_mesh(mesh));
+
+		LoadElements(mesh);
+		assert(check_load_elems(mesh));
+
+		assert(glt::AssertGL());
+	}
+
+	void Draw(ProgModel::ProgGuard &pg)
+	{
+		// TODO: setup textures?
+		vao.Bind();
+		pg.DrawElements(bufElems, glt::RenderMode::triangles, bufElems().Allocated());
+		vao.UnBind();
+	}
+
+	void LoadMesh(const aiMesh& mesh)
+	{
+		vao.Bind();
+
+		bufMesh.Bind(glt::BufferTarget::array);
+		bufMesh.AllocateMemory(mesh.mNumVertices, glt::BufUsage::static_draw);
+
+		assert(bufMesh().Allocated() == mesh.mNumVertices && "Ranges mismatch!");
+
+		size_t vertIndx = 0;
+
+		for (VertexData& vD : glt::MapGuard(bufMesh(), glt::MapAccessBit::write))
+		{
+
+			attrPosXYZ_vec3& posXYZ = vD.Get(glt::tag_s<0>());
+			attrNormals_vec3& norm = vD.Get(glt::tag_s<1>());
+			attrTexCoords_vec3& texCoord = vD.Get(glt::tag_s<2>());
+
+			const aiVector3D &aiPosXYZ = mesh.mVertices[vertIndx],
+				&aiNorm = mesh.mNormals[vertIndx];
+
+			posXYZ.glt_value.x = aiPosXYZ.x;
+			posXYZ.glt_value.y = aiPosXYZ.y;
+			posXYZ.glt_value.z = aiPosXYZ.z;
+
+			norm.glt_value.x = aiNorm.x;
+			norm.glt_value.y = aiNorm.y;
+			norm.glt_value.z = aiNorm.z;
+
+			assert(glt::AssertGL());
+
+			if (!mesh.mTextureCoords[0])
+			{
+				texCoord.glt_value.x = 0;
+				texCoord.glt_value.y = 0;
+				texCoord.glt_value.z = 0;
+
+				++vertIndx;
+				continue;
+			}
+
+			texCoord.glt_value.x = mesh.mTextureCoords[0][vertIndx].x;
+			texCoord.glt_value.y = mesh.mTextureCoords[0][vertIndx].y;
+			texCoord.glt_value.z = mesh.mTextureCoords[0][vertIndx].z;
+
+			++vertIndx;
+		}
+
+		vao.AttributePointer(bufMesh()());
+		vao.AttributePointer(bufMesh()(glt::tag_s<1>()));
+		vao.AttributePointer(bufMesh()(glt::tag_s<2>()));
+
+		vao.EnablePointers();
+
+		bufMesh.UnBind();
+		vao.UnBind();
+	}
+
+	void LoadElements(const aiMesh& mesh)
+	{
+		std::vector<std::reference_wrapper<aiFace>> faces{ mesh.mFaces,
+			std::next(mesh.mFaces, mesh.mNumFaces) };
+
+		bufElems.Bind(glt::BufferTarget::element_array);
+		bufElems.AllocateMemory(mesh.mNumFaces * 3, glt::BufUsage::static_draw);
+
+		assert(bufElems().Allocated() == mesh.mNumFaces * 3 && "Elements ranges mismatch!");
+		{
+			glt::MapGuard elemsMap{ bufElems(), glt::MapAccessBit::write };
+
+			decltype(elemsMap)::iterator elIter = elemsMap.begin();
+
+			for (const aiFace& f : faces)
+				for (size_t i = 0; i != f.mNumIndices; ++i)
+				{
+					unsigned int& elem = *elIter;
+					elem = f.mIndices[i];
+					++elIter;
+				}
+
+			assert(elIter == elemsMap.end() && "Elements range mismatch!");
+		}
+
+		bufElems.UnBind();
+	}
+
+	private:
+
+	bool check_loaded_mesh(const aiMesh& mesh)
+	{
+		bufMesh.Bind(glt::BufferTarget::array);
+
+		assert(bufMesh().Allocated() == mesh.mNumVertices && "Ranges mismatch!");
+
+		size_t vertIndx = 0;
+
+		for (const VertexData& vD : glt::MapGuard(bufMesh(), glt::MapAccessBit::read))
+		{
+			const attrPosXYZ_vec3& posXYZ = vD.Get(glt::tag_s<0>());
+			const attrNormals_vec3& norm = vD.Get(glt::tag_s<1>());
+			const attrTexCoords_vec3& texCoord = vD.Get(glt::tag_s<2>());
+
+			const aiVector3D &aiPosXYZ = mesh.mVertices[vertIndx],
+				&aiNorm = mesh.mNormals[vertIndx];
+
+			if (posXYZ.glt_value.x != aiPosXYZ.x ||
+				posXYZ.glt_value.y != aiPosXYZ.y ||
+				posXYZ.glt_value.z != aiPosXYZ.z ||
+
+				norm.glt_value.x != aiNorm.x ||
+				norm.glt_value.y != aiNorm.y ||
+				norm.glt_value.z != aiNorm.z)
+					return false;
+			
+			++vertIndx;
+		}
+
+		bufMesh.UnBind();
+
+		return true;
+	}
+
+	bool check_load_elems(const aiMesh& mesh)
+	{
+		std::vector<std::reference_wrapper<aiFace>> faces{ mesh.mFaces,
+			std::next(mesh.mFaces, mesh.mNumFaces) };
+
+		bufElems.Bind(glt::BufferTarget::element_array);
+
+		assert(bufElems().Allocated() == mesh.mNumFaces * 3 && "Elements ranges mismatch!");
+		{
+			glt::MapGuard elemsMap{ bufElems(), glt::MapAccessBit::read };
+
+			decltype(elemsMap)::iterator elIter = elemsMap.begin();
+
+			for (const aiFace& f : faces)
+				for (size_t i = 0; i != f.mNumIndices; ++i)
+				{
+					const unsigned int& elem = *elIter;
+					if (elem != f.mIndices[i])
+						return false;
+					++elIter;
+				}
+
+			assert(elIter == elemsMap.end() && "Elements range mismatch!");
+		}
+
+		bufElems.UnBind();
+		return true;
+	}
 };
 
 // model with compound buffer
 struct Model
 {
-    fsys::path path_;
+	fsys::path path_;
+	std::string name_;
 
-    std::string name_;
+	std::vector<Mesh> meshes_;
+	std::map<fsys::path, BufferTexture> texBuffers_;
 
-    BufferMesh bufMeshes;
-    BufferElems bufElems;
+	std::vector<Texture> textures_;
 
-    ProgModel::vao vao;
-
-    std::vector<Mesh> meshes;
-
-    Model(const fsys::path& path)
-        : path_(path)
+	Model(const fsys::path& path)
+		: path_(path)
     {
-
     }
 
-    static void LoadModelMesh(Model& model, const aiScene& scene);
+	void Draw(ProgModel::ProgGuard &pg)
+	{
+		for (Mesh& m : meshes_)
+			m.Draw(pg);
+	}
 
+	static void LoadMaterials(Model& model, const aiScene& scene);
+    static void LoadModelMesh(Model& model, const aiScene& scene);
+	static void LoadModelTextures(Model& model, const aiScene& scene);
 };
 
-void LoadModelMesh(Model& model, const fsys::path& path);
 
 int main(int argc, const char **argv)
 {
@@ -91,7 +286,6 @@ int main(int argc, const char **argv)
     if (!InitProgram(program, path))
         return -1;
 
-
     Model mNanosuit{ fsys::path(path).append(nanosuit) };
 
     {
@@ -105,11 +299,17 @@ int main(int argc, const char **argv)
             return -1;
         }
 
+		Model::LoadMaterials(mNanosuit, *scene);
         Model::LoadModelMesh(mNanosuit, *scene);
+		Model::LoadModelTextures(mNanosuit, *scene);
 
     } 
    
     glt::is_equivalent_v<attrPosXYZ_vec3, glm::vec3>;
+
+	glm::mat4 model = glm::mat4(1.0f),
+		view = glm::mat4(1.0f),
+		projection = glm::mat4(1.0f);
 
 
     while (!glfwWindowShouldClose(window))
@@ -118,6 +318,22 @@ int main(int argc, const char **argv)
         
         glClearColor(0.258824f, 0.435294f, 0.258824f, 1);
         glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
+		{
+			view = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -3));
+			projection = glm::perspective(glm::radians(45.0f),
+				(float)window.Width() / (float)window.Height(),
+				0.1f, 100.0f);
+
+			ProgModel::ProgGuard pg = program.Guard();
+			ProgModel::uniforms& Uniforms = pg.Uniforms();
+
+			Uniforms.Set(glt::glsl_cast<view_mat4>(view));
+			Uniforms.Set(glt::glsl_cast<projection_mat4>(projection));
+
+			mNanosuit.Draw(pg);
+
+		}
 
 
         glfwSwapBuffers(window);
@@ -172,162 +388,36 @@ bool InitProgram(ProgModel & prog, const fsys::path& path)
     return prog.Link(vs, fs);;
 }
 
-void LoadModelMesh(Model& model, const fsys::path& path)
+void Model::LoadMaterials(Model & model, const aiScene & scene)
 {
-    
-    /*
-    std::vector<aiMaterial*> materials{ scene->mMaterials, std::next(scene->mMaterials, scene->mNumMaterials) };
-    std::vector<aiNode*> childNodes{ scene->mRootNode->mChildren, 
-        std::next(scene->mRootNode->mChildren, scene->mRootNode->mNumChildren) };
+	for (size_t t = 0; t != scene.mNumMaterials; ++t)
+	{
+		const aiMaterial& mat = *scene.mMaterials[t];
 
-    size_t vertices = 0,
-        texCoords = 0,
-        indices = 0;
+		std::vector<aiMaterialProperty*> props{ mat.mProperties,
+			std::next(mat.mProperties, mat.mNumProperties) };
 
-    GLenum(GL_OUT_OF_MEMORY);
-
-    vertices = std::accumulate(meshes.cbegin(), meshes.cend(), vertices,
-        [](size_t first, aiMesh *mesh)
-    {
-        return first + mesh->mNumVertices;
-    });
-
-    texCoords = std::accumulate(meshes.cbegin(), meshes.cend(), texCoords,
-        [](size_t first, aiMesh *mesh)
-    {
-        return first + mesh->mNumUVComponents[0];
-    });
-
-    for (aiMesh *mesh : meshes)
-    {
-        Mesh m{ indices, mesh->mNumFaces * 3 };
-        indices += m.elemsCount;
-        model.meshes.push_back(m);
-
-        // all are triangles
-        // std::vector<std::reference_wrapper<aiFace>> faces{ mesh->mFaces, std::next(mesh->mFaces, mesh->mNumFaces) };
-    }
-
-    model.bufMeshes.Bind(glt::BufferTarget::array);
-    model.bufElems.Bind(glt::BufferTarget::element_array);
-
-    model.bufMeshes.AllocateMemory(vertices, vertices, texCoords, glt::BufUsage::static_draw);
-    model.bufElems.AllocateMemory(indices, glt::BufUsage::static_draw);
-    
-    GLenum error = glGetError();
-
-    assert(!error && "OpenGL error received!");
-    if (error)
-        throw std::exception(std::to_string(error).c_str());
-
-*/
-
+	}
 }
 
 void Model::LoadModelMesh(Model& model, const aiScene& scene)
 {
-    std::vector<aiMesh*> meshes{ scene.mMeshes, std::next(scene.mMeshes, scene.mNumMeshes) };
+	model.name_ = std::string(scene.mRootNode->mName.C_Str(), 
+		scene.mRootNode->mName.length);
 
-    size_t vertices = 0,
-        elems = 0;
+	std::vector<aiMesh*> meshes{ scene.mMeshes,
+		std::next(scene.mMeshes, scene.mNumMeshes) };
 
-    for (aiMesh * const m : meshes)
-    {
-        vertices += m->mNumVertices;
+	for (aiMesh *m : meshes)
+		model.meshes_.emplace_back(*m);
+		
+}
 
-        size_t elemsTemp = elems;
-        elems += m->mNumFaces * 3;
+void Model::LoadModelTextures(Model & model, const aiScene & scene)
+{
 
-        model.meshes.push_back(Mesh{ 
-            std::string(m->mName.C_Str(), m->mName.length), 
-            elemsTemp,
-            elems 
-            });
-
-    }
-
-    ProgModel::vao& vao = model.vao;
-    vao.Bind();
-
-    BufferMesh& bufMesh = model.bufMeshes;
-    BufferElems& bufElems = model.bufElems;
-
-    bufMesh.Bind(glt::BufferTarget::array);
-    bufMesh.AllocateMemory(vertices, glt::BufUsage::static_draw);
-
-    bufElems.Bind(glt::BufferTarget::element_array);
-    bufElems.AllocateMemory(elems, glt::BufUsage::static_draw);
-
-    {
-        glt::MapGuard mapBufMesh{ bufMesh(), glt::MapAccessBit::write };
-        glt::MapGuard mapBufElems{ bufElems(), glt::MapAccessBit::write };
-
-        decltype(mapBufMesh)::iterator iterBufMesh = mapBufMesh.begin();
-        decltype(mapBufElems)::iterator iterBufElems = mapBufElems.begin();
-
-        for (aiMesh * mesh : meshes)
-        {
-            for (size_t v = 0; v != mesh->mNumVertices; ++v)
-            {
-                attrPosXYZ_vec3& posXYZ = (*iterBufMesh).Get(glt::tag_s<0>());
-                attrNormals_vec3& normal = (*iterBufMesh).Get(glt::tag_s<1>());
-                attrTexCoords_vec3& texture = (*iterBufMesh).Get(glt::tag_s<2>());
-
-                posXYZ.glt_value.x = mesh->mVertices[v].x;
-                posXYZ.glt_value.y = mesh->mVertices[v].y;
-                posXYZ.glt_value.z = mesh->mVertices[v].z;
-
-                normal.glt_value.x = mesh->mNormals[v].x;
-                normal.glt_value.y = mesh->mNormals[v].y;
-                normal.glt_value.z = mesh->mNormals[v].z;
-
-                if (mesh->mTextureCoords[0])
-                {
-                    texture.glt_value.x = mesh->mTextureCoords[0]->x;
-                    texture.glt_value.y = mesh->mTextureCoords[0]->y;
-                    texture.glt_value.z = mesh->mTextureCoords[0]->z;
-                }
-                else
-                {
-                    texture.glt_value.x = 0;
-                    texture.glt_value.y = 0;
-                    texture.glt_value.z = 0;
-                }
-
-                ++iterBufMesh;
-                assert(glt::AssertGL());
-            }
-
-            std::vector<std::reference_wrapper<aiFace>> faces{ mesh->mFaces, 
-                std::next(mesh->mFaces, mesh->mNumFaces) };
-
-            for (const aiFace& f : faces)
-            {
-                for (size_t i = 0; i != f.mNumIndices; ++i)
-                {
-                    unsigned int& elemIndx = *iterBufElems;
-                    elemIndx = f.mIndices[i]; // add model's Mesh offset (starting index)
-
-                    ++iterBufElems;
-                }
-            }
-        }
-
-        // ranges eqal
-        assert(iterBufMesh == mapBufMesh.end());
-        assert(iterBufElems == mapBufElems.end());
-    }
+	
 
 
-    vao.AttributePointer(bufMesh()());
-    vao.AttributePointer(bufMesh()(glt::tag_s<1>()));
-    vao.AttributePointer(bufMesh()(glt::tag_s<2>()));
-
-    vao.EnablePointers();
-
-    bufMesh.UnBind();
-    bufElems.UnBind();
-
-    vao.UnBind();
 
 }
