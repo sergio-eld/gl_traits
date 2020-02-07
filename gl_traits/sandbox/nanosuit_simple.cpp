@@ -4,6 +4,8 @@ This example is supposed to load a nanosuit model using one compound buffer for 
 
 #include "helpers.hpp"
 
+
+
 #include "glm/matrix.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
@@ -14,6 +16,7 @@ This example is supposed to load a nanosuit model using one compound buffer for 
 #include "assimp/postprocess.h"
 
 #include <numeric>
+#include <optional>
 
 constexpr const char nanosuit[]{ "resources/objects/nanosuit/nanosuit.obj" },
 vshader[]{ "shaders/nanosuit_simple.vs" },
@@ -40,18 +43,178 @@ using BufferMesh = glt::Buffer<VertexData>;
 using BufferElems = glt::Buffer<unsigned int>;
 using BufferTexture = glt::Buffer<unsigned char>;
 
+using RefTexture2Drgba = std::reference_wrapper<glt::Texture2Drgba>;
+
+glt::TexFormat translate_texture_format(const Image& im);
+
 bool InitProgram(ProgModel& prog, const fsys::path& path);
 
-
-struct Texture
+template <aiTextureType ... types>
+class types_list
 {
-	fsys::path path_;
-	glt::Texture2D<glt::TexInternFormat::rgba> texture;
+public:
+	constexpr static size_t size = sizeof...(types);
+
+	template <size_t n>
+	constexpr static aiTextureType nth_type = get_nth<n, types...>();
+
+private:
+
+	template <size_t n, aiTextureType cur, aiTextureType ... next>
+	constexpr static aiTextureType get_nth()
+	{
+		static_assert(n < size, "n is out of range!");
+		if constexpr ((bool)n)
+			return get_nth<n - 1, next...>();
+		else
+			return cur;
+	}
+};
+
+
+// TODO: use hash for path
+struct TexturesCached
+{
+	std::map<fsys::path, glt::Texture2Drgba> textures_;
+
+
+	std::optional<RefTexture2Drgba> FindTexture(fsys::path p)
+	{
+		std::map<fsys::path, glt::Texture2Drgba>::iterator found =
+			textures_.find(p);
+
+		if (found == textures_.cend())
+			return std::nullopt;
+
+		return RefTexture2Drgba(found->second);
+	}
+
+};
+
+class Material
+{
+
+	template <aiTextureType type>
+	class tex_ref
+	{
+		std::vector<fsys::path> textures_;
+
+	public:
+
+		void AppendRef(glt::tag_v<type>, fsys::path&& p)
+		{
+			textures_.emplace_back(std::move(p));
+		}
+
+		void ClearRefs(glt::tag_v<type>)
+		{
+			textures_.clear();
+		}
+
+		size_t Count(glt::tag_v<type>) const
+		{
+			return textures_.size();
+		}
+
+		const fsys::path& RefPath(glt::tag_v<type>, size_t indx) const
+		{
+			assert(indx < Count(glt::tag_v<type>()) && "Index out of range!");
+			return textures_[indx];
+		}
+
+	};
+
+	template <class texTypes, class = decltype(std::make_index_sequence<texTypes::size>())>
+	class texture_refs;
+
+	template <aiTextureType ... types, size_t ... indx>
+	class texture_refs<types_list<types...>,
+		std::index_sequence<indx...>> : protected tex_ref<types> ...
+	{
+		using t_list = types_list<types...>;
+
+		template <size_t n>
+		using tex_base = tex_ref<t_list::nth_type<n>>;
+
+	public:
+
+		using tex_base<indx>::AppendRef...;
+		using tex_base<indx>::ClearRefs...;
+		using tex_base<indx>::Count...;
+		using tex_base<indx>::RefPath...;
+
+
+	};
+
+	using assimp_tex_types = types_list<aiTextureType_DIFFUSE,
+		aiTextureType_SPECULAR,
+		aiTextureType_AMBIENT,
+		aiTextureType_EMISSIVE,
+		aiTextureType_HEIGHT,
+		aiTextureType_NORMALS,
+		aiTextureType_SHININESS,
+		aiTextureType_OPACITY,
+		aiTextureType_DISPLACEMENT,
+		aiTextureType_LIGHTMAP,
+		aiTextureType_REFLECTION>;
+
+
+public:
+
+	texture_refs<assimp_tex_types> tex_refs_;
+
+
+	Material(const aiMaterial& mat, TexturesCached& cached, const fsys::path& absFolder)
+	{
+		LoadTextures(mat, cached, absFolder, assimp_tex_types());
+	}
+
+private:
+
+	template <aiTextureType type>
+	void LoadTexture_t(const aiMaterial& mat, TexturesCached& cached, const fsys::path& absFolder)
+	{
+		aiString path;
+		for (unsigned int i = 0; i != mat.GetTextureCount(type); ++i)
+		{
+			mat.GetTexture(type, i, &path);
+
+			fsys::path p{ absFolder };
+			p.append(path.C_Str());
+
+			std::optional<RefTexture2Drgba> loaded = cached.FindTexture(p);
+			if (loaded)
+				continue;
+
+			Image im{ p };
+
+			glt::Texture2Drgba tex;
+			tex.Bind();
+
+			tex.SetImage(0, im.Width(), im.Height());
+			tex.SubImage(0, im.Width(), im.Height(), translate_texture_format(im),
+				glt::TexType::unsigned_byte, im.Data());
+
+			tex.GenerateMipMap();
+			tex.UnBind();
+
+			cached.textures_.emplace(std::make_pair(p, std::move(tex)));
+			tex_refs_.AppendRef(glt::tag_v<type>(), std::move(p));
+		}
+	}
+
+	template <aiTextureType ... types>
+	void LoadTextures(const aiMaterial& mat, TexturesCached& cached, const fsys::path& absFolder, types_list<types...>)
+	{
+		(LoadTexture_t<types>(mat, cached, absFolder), ...);
+	}
+
 };
 
 struct Mesh
 {
     std::string name;
+	size_t materialIndx_;
 	
 	BufferMesh bufMesh;
 	BufferElems bufElems;
@@ -63,6 +226,7 @@ struct Mesh
 
 	Mesh(Mesh&& other)
 		: name(std::move(other.name)),
+		materialIndx_(other.materialIndx_),
 		bufMesh(std::move(other.bufMesh)),
 		bufElems(std::move(other.bufElems)),
 		vao(std::move(other.vao))
@@ -72,6 +236,8 @@ struct Mesh
 	Mesh(const aiMesh& mesh)
 		: name({ mesh.mName.C_Str(), mesh.mName.length })
 	{
+		materialIndx_ = mesh.mMaterialIndex;
+
 		LoadMesh(mesh);
 		assert(check_loaded_mesh(mesh));
 
@@ -81,6 +247,7 @@ struct Mesh
 		assert(glt::AssertGL());
 	}
 
+	// TODO: add material?
 	void Draw(ProgModel::ProgGuard &pg)
 	{
 		// TODO: setup textures?
@@ -244,13 +411,13 @@ struct Mesh
 // model with compound buffer
 struct Model
 {
+	static inline TexturesCached cached_textures_{};
+
 	fsys::path path_;
 	std::string name_;
 
 	std::vector<Mesh> meshes_;
-	std::map<fsys::path, BufferTexture> texBuffers_;
-
-	std::vector<Texture> textures_;
+	std::vector<Material> materials_;
 
 	Model(const fsys::path& path)
 		: path_(path)
@@ -260,12 +427,38 @@ struct Model
 	void Draw(ProgModel::ProgGuard &pg)
 	{
 		for (Mesh& m : meshes_)
+		{
+			// TODO: set up textures (for now only texture diffuse)
+			assert(m.materialIndx_ < materials_.size() && "Invalid material index!");
+			Material& mat = materials_[m.materialIndx_];
+
+			// no diffuse textures???
+			if (!mat.tex_refs_.Count(glt::tag_v<aiTextureType_DIFFUSE>()))
+			{
+				m.Draw(pg);
+				continue;
+			}
+
+			std::optional<RefTexture2Drgba> refTexture =
+				cached_textures_.FindTexture(
+					mat.tex_refs_.RefPath(glt::tag_v<aiTextureType_DIFFUSE>(), 0));
+
+			assert(refTexture && "Texture is not cached!");
+			glt::Texture2Drgba& texture = *refTexture;
+
+			glActiveTexture(GL_TEXTURE0);
+			pg.Uniforms().Set(texture_diffuse_sampler2D{ 0 });
+
+			texture.Bind();
+
 			m.Draw(pg);
+
+			texture.UnBind();
+		}
 	}
 
 	static void LoadMaterials(Model& model, const aiScene& scene);
     static void LoadModelMesh(Model& model, const aiScene& scene);
-	static void LoadModelTextures(Model& model, const aiScene& scene);
 };
 
 
@@ -301,15 +494,17 @@ int main(int argc, const char **argv)
 
 		Model::LoadMaterials(mNanosuit, *scene);
         Model::LoadModelMesh(mNanosuit, *scene);
-		Model::LoadModelTextures(mNanosuit, *scene);
-
     } 
    
+	auto& cachedTextures = Model::cached_textures_;
+
     glt::is_equivalent_v<attrPosXYZ_vec3, glm::vec3>;
 
 	glm::mat4 model = glm::mat4(1.0f),
 		view = glm::mat4(1.0f),
 		projection = glm::mat4(1.0f);
+
+
 
 
     while (!glfwWindowShouldClose(window))
@@ -320,7 +515,7 @@ int main(int argc, const char **argv)
         glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
 		{
-			view = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -3));
+			view = glm::translate(glm::mat4(1.0f), glm::vec3(0, -10, -20));
 			projection = glm::perspective(glm::radians(45.0f),
 				(float)window.Width() / (float)window.Height(),
 				0.1f, 100.0f);
@@ -328,6 +523,7 @@ int main(int argc, const char **argv)
 			ProgModel::ProgGuard pg = program.Guard();
 			ProgModel::uniforms& Uniforms = pg.Uniforms();
 
+			Uniforms.Set(glt::glsl_cast<model_mat4>(model));
 			Uniforms.Set(glt::glsl_cast<view_mat4>(view));
 			Uniforms.Set(glt::glsl_cast<projection_mat4>(projection));
 
@@ -341,6 +537,27 @@ int main(int argc, const char **argv)
 
 
     return 0;
+}
+
+glt::TexFormat translate_texture_format(const Image & im)
+{
+	switch (im.NumChannels())
+	{
+	case 1:
+		// this case should be handled inside a frag shader
+		assert(false && "Unhandled case");
+		return glt::TexFormat::red;
+	case 2:
+		// this case should be handled inside a frag shader (need to check return value)
+		assert(false && "Unhandled case");
+		return glt::TexFormat::rd;
+	case 3: 
+		return glt::TexFormat::rgb;
+	case 4:
+		return glt::TexFormat::rgba;
+	default:
+		throw std::exception("Unhandled case!");
+	}
 }
 
 bool InitProgram(ProgModel & prog, const fsys::path& path)
@@ -394,9 +611,8 @@ void Model::LoadMaterials(Model & model, const aiScene & scene)
 	{
 		const aiMaterial& mat = *scene.mMaterials[t];
 
-		std::vector<aiMaterialProperty*> props{ mat.mProperties,
-			std::next(mat.mProperties, mat.mNumProperties) };
-
+		model.materials_.emplace_back(
+			Material(mat, Model::cached_textures_, model.path_.parent_path()));
 	}
 }
 
@@ -411,13 +627,4 @@ void Model::LoadModelMesh(Model& model, const aiScene& scene)
 	for (aiMesh *m : meshes)
 		model.meshes_.emplace_back(*m);
 		
-}
-
-void Model::LoadModelTextures(Model & model, const aiScene & scene)
-{
-
-	
-
-
-
 }
