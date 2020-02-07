@@ -121,9 +121,33 @@ set(ASSIMP_EXAMPLES
 
 if(${BUILD_ASSIMP_EXAMPLES})
 
-# this is shit!
-add_custom_command(TARGET COPY_DEPENDENCIES POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_LINKER_FILE:assimp::assimp> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+
+	# this is shit (regarding managing assimp dependency)!
+	add_custom_command(TARGET COPY_DEPENDENCIES POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_LINKER_FILE:assimp::assimp> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+	
+	# assimp model library depends on a shader type info
+	add_library(AssimpModel
+		STATIC
+			assimp_model.h
+			assimp_model.cpp
+		)
+		
+	target_link_libraries(AssimpModel
+		PRIVATE
+			Helpers
+			${assimp_lib}.lib
+		)
+	
+	target_include_directories(AssimpModel
+			PUBLIC 	# TODO: make private
+				${ASSIMP_INCLUDE_DIRS}
+			)
+	
+	set_target_properties(AssimpModel
+		PROPERTIES
+			DEBUG_POSTFIX "_d"
+		)
 
 	foreach(ex ${ASSIMP_EXAMPLES})
 		add_executable(${ex}
@@ -133,17 +157,13 @@ add_custom_command(TARGET COPY_DEPENDENCIES POST_BUILD
 		target_link_libraries(${ex}
 			PRIVATE
 				Helpers 
-				${assimp_lib}.lib
+				${assimp_lib}.lib # TODO: remove
+				AssimpModel
 			) 
 		 
 		set_target_properties(${ex}
 			PROPERTIES
 				DEBUG_POSTFIX "_d"
-			)
-		
-		target_include_directories(${ex}
-			PRIVATE
-				${ASSIMP_INCLUDE_DIRS}
 			)
 		
 		add_dependencies(${ex} COPY_DEPENDENCIES PARSE_SHADERS)
