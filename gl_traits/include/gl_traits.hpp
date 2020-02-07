@@ -70,6 +70,7 @@ TODO: analize possible VertexArrayPointer assignment routines
 #include "Texture.hpp"
 
 
+
 /////////////////////////
 
 #include <thread>

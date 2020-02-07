@@ -145,8 +145,6 @@ namespace glt
         using sequence_i<indx>::SeqN...;
         using sequence_i<indx>::operator()...;
 
-//		using sequence_indexed<0, wrap_attr_t<seq_attribs>, true>::operator sequence_i<0>&;
-//		using sequence_indexed<0, wrap_attr_t<seq_attribs>, true>::operator const sequence_i<0>&;
 
 	};
 
@@ -163,6 +161,7 @@ namespace glt
 
 
 	public:
+
         constexpr Buffer(HandleBuffer&& handle = Allocator::Allocate(BufferTarget()))
 			: buffer_base(std::move(handle)),
             aggr_sequences(static_cast<buffer_base&>(*this))
@@ -234,5 +233,20 @@ namespace glt
         // - user-defined conversion to the first attribute of the first sequence
 	};
 
+	template <class Buf1, class Buf2>
+	struct buffers_equivalent : std::false_type {};
+
+	template <class ... attr1, class ... attr2>
+	struct buffers_equivalent<Buffer<attr1...>, Buffer<attr2...>> :
+		std::bool_constant<(is_equivalent_v<attr1, attr2> && ...)> {};
+
+#pragma message("Need proper implementation for equivalent casts!")
+	template <class bufferTo, class bufferFrom>
+	bufferTo&& buffer_cast(bufferFrom&& buf)
+	{
+		static_assert(buffers_equivalent<bufferTo, bufferFrom>(),
+			"Buffers are not equivalent!");
+		return reinterpret_cast<bufferTo&&>(buf);
+	}
 
 }

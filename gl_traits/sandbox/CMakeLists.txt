@@ -129,12 +129,14 @@ if(${BUILD_ASSIMP_EXAMPLES})
 	# assimp model library depends on a shader type info
 	add_library(AssimpModel
 		STATIC
+			assimp_model_impl.h
+			assimp_model_impl.cpp
 			assimp_model.h
 			assimp_model.cpp
 		)
 		
 	target_link_libraries(AssimpModel
-		PRIVATE
+		PUBLIC 	# TODO: make private
 			Helpers
 			${assimp_lib}.lib
 		)
@@ -156,8 +158,7 @@ if(${BUILD_ASSIMP_EXAMPLES})
 		
 		target_link_libraries(${ex}
 			PRIVATE
-				Helpers 
-				${assimp_lib}.lib # TODO: remove
+				Helpers
 				AssimpModel
 			) 
 		 
