@@ -195,10 +195,11 @@ namespace glt
         {}
 
         texture_base_target(texture_base_target&& other)
-            : texture_base(std::move(other))
+            : texture_base(std::move(other)),
+			texture_image(texture_base::GetModifier())
         {
             if (IsBound())
-                Register(this);
+                Register<target>(this);
 
             other.pBind_ = &texture_base_target::bind_before_init;
         }
@@ -218,48 +219,6 @@ namespace glt
 
 		using tex_image::SetImage;
 		using tex_image::SubImage;
-
-/*
-        template <class = std::enable_if_t<get_tex_dim<target>() == 1>>
-        void SetStorage(unsigned int levelsOfDetail, unsigned int width)
-        {
-            assert(IsBound() && "Attempt to set storage for non-bound texture!");
-            glTexStorage1D((GLenum)target, (GLsizei)levelsOfDetail, 
-                (GLenum)intFormat, (GLsizei)width);
-
-            lod_ = levelsOfDetail;
-            width_ = width;
-
-        }
-
-        template <class = std::enable_if_t<get_tex_dim<target>() == 2>>
-        void SetStorage(unsigned int levelsOfDetail, unsigned int width,
-            unsigned int height)
-        {
-            assert(IsBound() && "Attempt to set storage for non-bound texture!");
-            glTexStorage2D((GLenum)target, (GLsizei)levelsOfDetail,
-                (GLenum)intFormat, (GLsizei)width, (GLsizei)height);
-
-            lod_ = levelsOfDetail;
-            width_ = width;
-            height_ = height;
-        }
-
-		
-        template <class = std::enable_if_t<get_tex_dim<target>() == 3>>
-        void SetStorage(unsigned int levelsOfDetail, unsigned int width,
-            unsigned int height, unsigned int depth)
-        {
-            assert(IsBound() && "Attempt to set storage for non-bound texture!");
-            glTexStorage2D((GLenum)target, (GLsizei)levelsOfDetail,
-                (GLenum)intFormat, (GLsizei)width, (GLsizei)height, (GLsizei)depth);
-
-            lod_ = levelsOfDetail;
-            width_ = width;
-            height_ = height;
-            depth_ = depth;
-        }
-		*/
 
     };
 

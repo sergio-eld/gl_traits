@@ -30,8 +30,11 @@ namespace glt
     using Texture1D = Texture<TextureTarget::texture_1d, internalFormat>;
 
     template <TexInternFormat internalFormat>
-    using Texture2D = Texture<TextureTarget::texture_2d, internalFormat>;    
+    using Texture2D = Texture<TextureTarget::texture_2d, internalFormat>;   
 
     template <TexInternFormat internalFormat>    
     using Texture3D = Texture<TextureTarget::texture_3d, internalFormat>;
+
+	using Texture2Drgba = Texture2D<TexInternFormat::rgba>;
+
 }
