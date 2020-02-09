@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 
-project(gl_traits LANGUAGES CXX)
-
+project(gl_traits VERSION 0.1.1 LANGUAGES CXX) # https://semver.org/ how to auto-increment utilizing git commands?
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -10,6 +9,9 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+# TODO: this is for examples and tests
 foreach(CONFIG_TYPE ${CMAKE_CONFIGURATION_TYPES})
     string(TOUPPER ${CONFIG_TYPE} OUTPUTCONFIG)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
@@ -17,84 +19,61 @@ foreach(CONFIG_TYPE ${CMAKE_CONFIGURATION_TYPES})
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
 endforeach()
 
-find_package(OpenGL REQUIRED)
-message(STATUS "OpenGL found: ${OpenGL_FOUND}")
-message(STATUS ${OPENGL_LIBRARIES})
+message (STATUS "gl_tratis will be installed to ${CMAKE_INSTALL_PREFIX}")
 
-find_package(glad REQUIRED)
-message(STATUS "glad found: ${glad_FOUND}")
+if(NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
 
-find_package(glm REQUIRED)
-message(STATUS "glm found: ${glm_FOUND}")
+message(STATUS "Build type set to ${CMAKE_BUILD_TYPE}")
 
-find_package(glt_parser QUIET)
-message(STATUS "glt_parser found: ${glt_parser_FOUND}")
+include(GNUInstallDirs)
 
-# this is for tests
-find_package(glfw3 QUIET)
-message(STATUS "glfw found: ${glfw3_FOUND}")
+# revisit this
+#set(CMAKE_ARCHIVE_OUPTUT_DIRECTORY ${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+#set(CMAKE_LIBRARY_OUPTUT_DIRECTORY ${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+#set(CMAKE_RUNTIME_OUPTUT_DIRECTORY ${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
 
+set(INSTALL_LIBDIR ${CMAKE_INSTALL_LIBDIR} CACHE PATH "Installation directory for libraries")
+set(INSTALL_BINDIR ${CMAKE_INSTALL_BINDIR} CACHE PATH "Installation directory for executables")
+set(INSTALL_INCLUDEDIR ${CMAKE_INSTALL_INCLUDEDIR} CACHE PATH "Installation directory for headers")
+if(WIN32 AND NOT CYGWIN)
+	set(DEF_INSTALL_CMAKEDIR cmake/${PROJECT_NAME})
+else()
+	set(DEF_INSTALL_CMAKEDIR share/cmake/${PROJECT_NAME})
+endif()
+set(INSTALL_CMAKEDIR ${DEF_INSTALL_CMAKEDIR} CACHE PATH "Installation directory for cmake module")
 
-# TODO: header-only library?
-add_library(${PROJECT_NAME}
-	STATIC
-		# basic types
-		include/enums.hpp
-		include/gltHandle.hpp
-		include/glslt_traits.hpp
-		include/type_converions.hpp
-		include/basic_types.hpp
-		include/equivalence.hpp
-		##############
-		
-		#${SHADER_SOURCE_PARSER_HEADER}
-		include/sequence_layout.hpp
-		include/Sequence.hpp
+foreach(p LIB BIN INCLUDE CMAKE)
+	file(TO_NATIVE_PATH "${CMAKE_INSTALL_PREFIX}/${INSTALL_${p}DIR}" _path)
+	message(STATUS "Installing ${p} components to ${_path}")
+	unset(_path)
+endforeach()
 
-		include/buffer_traits.hpp
-		include/shader_traits.hpp
-		include/uniform_traits.hpp
-		include/vao_traits.hpp
-		include/program_traits.hpp
-		include/texture_traits.hpp
-		
-		include/Texture.hpp
-		
-		include/gl_traits.hpp
-			
-		src/gl_traits.cpp
-	)
-	
-set_target_properties(${PROJECT_NAME}
-	PROPERTIES
-		DEBUG_POSTFIX "_d"
-	)
+set(BUILD_TESTS OFF CACHE BOOL "Build general test")
+set(BUILD_EXAMPLES OFF CACHE BOOL "Enable to build examples")
+set(BUILD_EXAMPLES_ASSIMP OFF CACHE BOOL "Enable to build examples with assimp models loading")
 
-target_link_libraries(${PROJECT_NAME}
-	PUBLIC
-		glm
-		glad::glad
-		
-		#${SHADER_SOURCE_PARSER}
-		#ParseAlgorithmPublic
-	PRIVATE
-		${OPENGL_LIBRARIES}
-	)
-	
+add_subdirectory(src)
+add_subdirectory(Helpers)
 
-# add INTERFACE_INCLUDE_DIRECTORIES
-target_include_directories(${PROJECT_NAME}
-	PUBLIC
-		$<INSTALL_INTERFACE:include>
-		$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-		
-		#$<BUILD_INTERFACE:${SHADER_SOURCE_PARSER_FOLDER}> # this is a workaround. 
-		#$<BUILD_INTERFACE:${SHADER_SOURCE_STUPID_INCLUDE_FOLDER}> # even more stupid workaround!
-	PRIVATE
-		$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
-	)
-	
-add_subdirectory(sandbox)
+if (${BUILD_TESTS} OR ${BUILD_EXAMPLES})
+	add_subdirectory(test_assets)
+endif()
+
+if(${BUILD_TESTS})
+	enable_testing()
+	add_subdirectory(tests)
+endif()
+
+if(${BUILD_EXAMPLES})
+	add_subdirectory(examples)
+endif()
+
+if(${BUILD_EXAMPLES_ASSIMP})
+	add_subdirectory(examples_assimp)
+endif()
+
 
 
 
