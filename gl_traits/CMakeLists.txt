@@ -55,9 +55,9 @@ set(BUILD_EXAMPLES OFF CACHE BOOL "Enable to build examples")
 set(BUILD_EXAMPLES_ASSIMP OFF CACHE BOOL "Enable to build examples with assimp models loading")
 
 add_subdirectory(src)
-add_subdirectory(Helpers)
 
-if (${BUILD_TESTS} OR ${BUILD_EXAMPLES})
+if (${BUILD_TESTS} OR ${BUILD_EXAMPLES} OR ${BUILD_EXAMPLES_ASSIMP})
+	add_subdirectory(Helpers)
 	add_subdirectory(test_assets)
 endif()
 
