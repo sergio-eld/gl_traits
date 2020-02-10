@@ -46,8 +46,9 @@ endif()
 
 find_package(glad QUIET)
 message(STATUS "glad found: ${glad_FOUND}")
-
-if(NOT ${glad_FOUND})
+if (${glad_FOUND})
+	add_custom_target(glad_external)
+else()
 	ExternalProject_Add(glad_external
 		GIT_REPOSITORY
 			https://github.com/Dav1dde/glad.git
@@ -81,8 +82,9 @@ endif()
 find_package(glm QUIET)
 message(STATUS "glm found: ${glm_FOUND}")
 
-if(NOT ${glm_FOUND})
-
+if(${glm_FOUND})
+	add_custom_target(glm_external)
+else()
 	ExternalProject_Add(glm_external
 		GIT_REPOSITORY
 			https://github.com/g-truc/glm.git
@@ -118,8 +120,9 @@ if(${BUILD_TESTS})
 	message(STATUS "glfw found: ${glfw3_FOUND}")
 
 	# Download and install external dependencies if not found
-	if(NOT ${glfw3_FOUND})
-
+	if(${glfw3_FOUND})
+		add_custom_target(glfw_external)
+	else()
 		ExternalProject_Add(glfw_external
 			GIT_REPOSITORY
 				https://github.com/glfw/glfw.git
@@ -157,8 +160,9 @@ if(${BUILD_TESTS})
 		find_package(assimp QUIET)
 		message(STATUS "assimp found: ${assimp_FOUND}")
 		
-		if(NOT ${assimp_FOUND})
-
+		if(${assimp_FOUND})
+			add_custom_target(assimp_external)
+		else()
 			ExternalProject_Add(assimp_external
 				GIT_REPOSITORY
 					https://github.com/assimp/assimp.git
