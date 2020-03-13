@@ -1,8 +1,0 @@
-No, these are not C++20 concepts, but general ideas to stick to when wrapping Legacy libraries.
-
-Enforce types. //Here a link is needed
-When obvious that a value represents a type of an object, function should be wrapped.
-- Generate a bunch of template functions taking the object type as a template argument.
-
-Example: 
-//here example for Handles

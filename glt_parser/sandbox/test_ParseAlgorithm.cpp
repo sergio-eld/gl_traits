@@ -1,4 +1,4 @@
-﻿#include "ParseAlgorithm.h"
+﻿#include "ParseAlgorithm/ParseAlgorithm.h"
 
 #include <iostream>
 #include <string_view>
@@ -10,7 +10,7 @@ int main(int argc, const char* argv[])
 		std::cout << "Usage: ./*.exe \"path_to_shader_file\"" << std::endl;
 		return -1;
 	}
-	std::string filePath{ argv[1] };
+	fsys::path filePath{ argv[1] };
 
 	try
 	{

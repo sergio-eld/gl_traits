@@ -3,7 +3,7 @@
 #include "ISourceFile.h"
 #include "IVariable.h"
 
-#include "IParseAlgorithm.h"
+#include "ParseAlgorithm/IParseAlgorithm.h"
 
 #include <vector>
 #include <string_view>

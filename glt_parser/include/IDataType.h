@@ -19,6 +19,8 @@ struct ShaderFileInfo
 
 		shader_compute,
 
+		// TODO: add other types
+
 		none = std::numeric_limits<unsigned char>::max()
 	};
 
@@ -30,11 +32,6 @@ struct ShaderFileInfo
 		unknown = std::numeric_limits<unsigned char>::max()
 	};
 
-	static inline std::vector<ShaderType> list_types{ shader_vertex,
-		shader_fragment,
-		shader_geometry,
-		shader_compute};
-
 	struct ShaderExtensionInfo
 	{
 		std::string extension;
@@ -42,8 +39,7 @@ struct ShaderFileInfo
 
 		bool operator<(const ShaderExtensionInfo& other) const
 		{
-			return extension < other.extension
-				|| type < other.type;
+			return std::tie(type, extension) < std::tie(other.type, other.extension);
 		}
 	};
 
@@ -60,6 +56,8 @@ struct ShaderFileInfo
 	ShaderType shaderType;
 	SourceType sourceType;
 };
+
+// TODO: udate implementation according to https://www.khronos.org/opengl/wiki/Layout_Qualifier_(GLSL)
 
 struct Variable
 {
@@ -101,14 +99,28 @@ struct Variable
 	Variable(const Variable&) = default;
 	Variable(Variable&&) = default;
 
+	Variable& operator=(const Variable&) = default;
+
 	bool operator<(const Variable& other) const;
+	bool operator==(const Variable& other) const
+	{
+		return !(*this < other) && !(other < *this);
+	}
     bool Valid() const;
     operator bool() const
     {
         return Valid();
     }
 
+	std::string CppGlslType() const;
+
     static GLSLDataType get_glsl_type(const std::string& rawtypeGLSL);
     static std::string cpp_glsl_type(GLSLDataType, const std::string& rawtypeGLSL);
 
 };
+
+using RefShaderFileInfo = std::reference_wrapper<ShaderFileInfo>;
+using CRefShaderFileInfo = std::reference_wrapper<const ShaderFileInfo>;
+
+using RefVariable = std::reference_wrapper<Variable>;
+using CRefVariable = std::reference_wrapper<const Variable>;

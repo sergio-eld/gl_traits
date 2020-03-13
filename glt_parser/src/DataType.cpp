@@ -79,6 +79,11 @@ bool Variable::Valid() const
 4. user-defined structs
 */
 
+std::string Variable::CppGlslType() const
+{
+	return cpp_glsl_type(glslDataType, typeGLSL);
+}
+
 Variable::GLSLDataType Variable::get_glsl_type(const std::string & rawtypeGLSL)
 {
     static std::regex patt{ R"((bool|int|uint|float|double)|)" // scalar

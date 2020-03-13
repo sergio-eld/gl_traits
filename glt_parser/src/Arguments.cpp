@@ -19,7 +19,7 @@ descr_name_pred[] = "Name predicates that shader source files contain."
 descr_extension[] = "Shader source files' Extensions to be considered.",
 descr_severity[] = "Error severity level";
 
-class Argument : public IArgument
+class Argument : public IArgumentOld
 {
     std::string tag_;
 	std::string name_;
@@ -40,7 +40,7 @@ public:
 		description_(descr)
 	{}
 
-	// Inherited via IArgument
+	// Inherited via IArgumentOld
 	const std::string & Name() const override
 	{
 		return name_;
@@ -75,13 +75,13 @@ public:
 
 };
 
-class PathArgument : public Argument
+class PathArgumentOld : public Argument
 {
 	std::regex regPath{ R"(((?:[a-zA-Z]:)|.*)?([\\|/][\w|\s]*)+)" };
     Severity sev_ = none;
 
 public:
-	PathArgument(const std::string& tag,
+	PathArgumentOld(const std::string& tag,
         const std::string& name,
 		const std::string& descr)
 		: Argument(tag, name, descr)
@@ -180,37 +180,97 @@ public:
 
 
 template <class ... Args>
-std::vector<std::unique_ptr<IArgument>> init_args(std::unique_ptr<Args>&& ... args)
+std::vector<std::unique_ptr<IArgumentOld>> init_args(std::unique_ptr<Args>&& ... args)
 {
-	static_assert((std::is_base_of_v<IArgument, Args> && ...), 
+	static_assert((std::is_base_of_v<IArgumentOld, Args> && ...), 
 		"Args must inherit from IArgument");
 
-	std::vector<std::unique_ptr<IArgument>> out{ sizeof...(args) };
+	std::vector<std::unique_ptr<IArgumentOld>> out{ sizeof...(args) };
 	size_t indx = 0;
 	((out[indx++] = std::move(args)),...);
 
 	return out;
 }
 
-const std::vector<std::unique_ptr<IArgument>> IArgument::defaultArgs =
-	init_args(std::make_unique<PathArgument>("-s", "Source Directory", descr_source_dir),
-		std::make_unique<PathArgument>("-d", "Output Directory", descr_outout_dir),
+const std::vector<std::unique_ptr<IArgumentOld>> IArgumentOld::defaultArgs =
+	init_args(std::make_unique<PathArgumentOld>("-s", "Source Directory", descr_source_dir),
+		std::make_unique<PathArgumentOld>("-d", "Output Directory", descr_outout_dir),
 		//std::make_unique<Argument>("-n", descr_file_name),
 		std::make_unique<Argument>("-p", "Name predicates", descr_name_pred),
 		std::make_unique<Argument>("-e", "Shader source file extensions", descr_extension),
 		std::make_unique<WarningsArgument>());
 
 
-std::optional<rIArgument> IArgument::Find(const std::string& tag)
+std::optional<rIArgumentOld> IArgumentOld::Find(const std::string& tag)
 {
-	auto found = std::find_if(IArgument::defaultArgs.cbegin(), IArgument::defaultArgs.cend(),
-		[&](const std::unique_ptr<IArgument>& ptr)
+	auto found = std::find_if(IArgumentOld::defaultArgs.cbegin(), IArgumentOld::defaultArgs.cend(),
+		[&](const std::unique_ptr<IArgumentOld>& ptr)
 	{
 		return ptr->Tag() == tag;
 	});
 
-	if (found == IArgument::defaultArgs.cend())
+	if (found == IArgumentOld::defaultArgs.cend())
 		return std::nullopt;
 
-	return rIArgument(*found->get());
+	return rIArgumentOld(*found->get());
 }
+
+////////////////////////////////////////////////////////
+//// new impl
+////////////////////////////////////////////////////////
+
+#include <map>
+
+
+class PathArgument : public IArgument
+{
+	static inline std::regex regPath{ R"(((?:[a-zA-Z]:)|.*)?([\\|/][\w|\s]*)+)" };
+
+public:
+
+	static bool ValidatePath(std::string_view p)
+	{
+		std::match_results<std::string_view::iterator> sm;
+
+		// TODO: set corresponding error messages
+		if (!std::regex_match(p.begin(), p.end(), sm, regPath) ||
+			!fsys::exists(p))
+			return false;
+
+		return true;
+	}
+
+	PathArgument(const char *tag,
+		const char *name,
+		const char *descr)
+		: IArgument(tag, name)
+	{
+		IArgument::SetDescription(descr);
+		IArgument::SetValiator(std::bind(&ValidatePath, std::placeholders::_1));
+	}
+
+	std::any SpecificValue() const override
+	{
+		return fsys::path(IArgument::Value());
+	}
+
+};
+
+
+#include "ArgShaderExtensions.h"
+
+/// Set arguments
+
+bool argsset = ComLineParser::InitAndSetArgs(
+	std::make_unique<PathArgument>("-s", "Source Directory", descr_source_dir),
+	std::make_unique<PathArgument>("-d", "Output Directory", descr_outout_dir),
+	std::make_unique<ArgShaderExtensions>("--vert", "Vertex Shader extensions", 
+		"Source file extension for vertex shaders", ShaderFileInfo::shader_vertex),
+	std::make_unique<ArgShaderExtensions>("--frag", "Fragment Shader extensions",
+		"Source file extension for fragment shaders", ShaderFileInfo::shader_fragment),
+	std::make_unique<ArgShaderExtensions>("--geom", "Geometry Shader extensions",
+		"Source file extension for geometry shaders", ShaderFileInfo::shader_geometry),
+	std::make_unique<ArgShaderExtensions>("--comp", "Compute Shader extensions",
+		"Source file extension for compute shaders", ShaderFileInfo::shader_compute)
+);
+

@@ -20,3 +20,6 @@ struct ISourceFile
 	virtual const Variable& GetVariable(size_t indx) const = 0;
 
 };
+
+using RefISourceFile = std::reference_wrapper<ISourceFile>;
+using CRefISourceFile = std::reference_wrapper<const ISourceFile>;

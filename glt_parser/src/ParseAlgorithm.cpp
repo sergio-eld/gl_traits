@@ -1,5 +1,4 @@
-﻿#include "..\include\IParseAlgorithm.h"
-#include "ParseAlgorithm.h"
+﻿#include "ParseAlgorithm/ParseAlgorithm.h"
 
 #include <filesystem>
 
@@ -104,6 +103,29 @@ template <>
 std::vector<Variable>
 ParseAlgorithm<ShaderFileInfo::text_source>::ParseImpl(const fsys::path& filePath)
 {
+
+	std::fstream f{ filePath, std::fstream::in };
+	if (!f.is_open())
+		throw std::exception(std::string("Failed to open for parsing: " +
+			filePath.generic_string()).data());
+
+	std::string fileLoaded{ std::istreambuf_iterator<char>(f),
+			std::istreambuf_iterator<char>() };
+
+	return ParseImpl(std::string_view(fileLoaded));
+}
+
+
+template <>
+std::vector<Variable>
+ParseAlgorithm<ShaderFileInfo::header_common>::ParseImpl(const fsys::path& filePath)
+{
+	return std::vector<Variable>();
+}
+
+template<>
+std::vector<Variable> ParseAlgorithm<ShaderFileInfo::text_source>::ParseImpl(std::string_view shaderSource)
+{
 	std::vector<Variable> out;
 	static std::regex regVarGLSL
 	{
@@ -116,18 +138,8 @@ ParseAlgorithm<ShaderFileInfo::text_source>::ParseImpl(const fsys::path& filePat
 
 	static size_t subs = regVarGLSL.mark_count() + 1;
 
-	std::fstream f{ filePath, std::fstream::in };
-	if (!f.is_open())
-		throw std::exception(std::string("Failed to open for parsing: " +
-			filePath.generic_string()).data());
-
-	std::string fileLoaded{ std::istreambuf_iterator<char>(f),
-			std::istreambuf_iterator<char>() };
-
-	// TODO: do not load huge files. Load file only up to "void main()"
-
-	std::sregex_iterator start{ fileLoaded.cbegin(),
-		fileLoaded.cend(),
+	std::regex_iterator<std::string_view::iterator> start{ shaderSource.cbegin(),
+		shaderSource.cend(),
 		regVarGLSL },
 		end{};
 
@@ -139,7 +151,7 @@ ParseAlgorithm<ShaderFileInfo::text_source>::ParseImpl(const fsys::path& filePat
 	{
 		bool pat[glsl_variable_info::layout_slots];
 
-		const std::smatch& sm = *start;
+		const std::match_results<std::string_view::const_iterator>& sm = *start;
 		auto iter = ++sm.cbegin();
 
 		for (size_t i = 0; i != glsl_variable_info::layout_slots; ++i)
@@ -176,12 +188,13 @@ ParseAlgorithm<ShaderFileInfo::text_source>::ParseImpl(const fsys::path& filePat
 	return out;
 }
 
-template <>
-std::vector<Variable>
-ParseAlgorithm<ShaderFileInfo::header_common>::ParseImpl(const fsys::path& filePath)
+
+template<>
+std::vector<Variable> ParseAlgorithm<ShaderFileInfo::header_common>::ParseImpl(std::string_view shaderSource)
 {
 	return std::vector<Variable>();
 }
+
 
 std::unique_ptr<IParseAlgorithm> IParseAlgorithm::GetAlgorithm(ShaderFileInfo::SourceType sourceType)
 {

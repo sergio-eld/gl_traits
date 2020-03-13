@@ -12,9 +12,6 @@ namespace fsys = std::filesystem;
 
 class FolderScanner
 {
-	friend struct PrivateImpl;
-	struct PrivateImpl;
-
 	std::set<ShaderFileInfo::ShaderExtensionInfo> extensions_;
 	std::list<ShaderFileInfo> locatedSources_;
 
@@ -24,7 +21,7 @@ public:
 
 	void SetExtension(ShaderFileInfo::ShaderType t, std::string_view ext);
 
-	bool ExtensionAssigned(ShaderFileInfo::ShaderType t) const;
+	//bool ExtensionAssigned(ShaderFileInfo::ShaderType t) const;
 
 	std::optional<ShaderFileInfo> FetchSourceFile();
 
@@ -34,6 +31,12 @@ public:
 
 	static std::list<ShaderFileInfo> SearchSources(const fsys::path& sourceFolder,
 		const std::set<ShaderFileInfo::ShaderExtensionInfo>& extensions);
+
+private:
+
+    using RefExt = std::reference_wrapper<ShaderFileInfo::ShaderExtensionInfo>;
+    using CRefExt = std::reference_wrapper<const ShaderFileInfo::ShaderExtensionInfo>;
+
 
 
 };

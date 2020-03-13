@@ -5,102 +5,16 @@
 
 #include <cassert>
 
-template <ShaderFileInfo::ShaderType ... types>
-struct source_types {};
-
-using ExtensionsList = source_types<
-	ShaderFileInfo::shader_vertex,
-	ShaderFileInfo::shader_fragment,
-	ShaderFileInfo::shader_geometry,
-	ShaderFileInfo::shader_compute>;
-
-
-struct FolderScanner::PrivateImpl
-{
-	template <ShaderFileInfo::ShaderType ... types>
-	constexpr static std::set<ShaderFileInfo::ShaderExtensionInfo>
-		init_extensions(source_types<types...>)
-	{
-		std::set<ShaderFileInfo::ShaderExtensionInfo> out;
-		(out.emplace(ShaderFileInfo::ShaderExtensionInfo{ std::string(), types }), ...);
-		return out;
-	}
-
-	using RefExt = std::reference_wrapper<ShaderFileInfo::ShaderExtensionInfo>;
-	using CRefExt = std::reference_wrapper<const ShaderFileInfo::ShaderExtensionInfo>;
-
-	template <class Iter>
-	static std::optional<RefExt> FindType(ShaderFileInfo::ShaderType t, Iter first, Iter last)
-	{
-		Iter found = std::find_if(first, last,
-			[&](const ShaderFileInfo::ShaderExtensionInfo& ext)
-		{
-			return ext.type == t;
-		});
-
-		if (found->type != t)
-			return std::nullopt;
-
-		return RefExt((ShaderFileInfo::ShaderExtensionInfo&)*found);
-	}
-
-	template <class Iter>
-	static std::optional<RefExt> FindType(const std::string& strExtension, Iter first, Iter last)
-	{
-		Iter found = std::find_if(first, last,
-			[&](const ShaderFileInfo::ShaderExtensionInfo& ext)
-		{
-			return ext.extension == strExtension;
-		});
-
-		if (found->extension != strExtension)
-			return std::nullopt;
-
-		return RefExt((ShaderFileInfo::ShaderExtensionInfo&)*found);
-	}
-
-};
-
-
 FolderScanner::FolderScanner()
-	: extensions_(PrivateImpl::init_extensions(ExtensionsList()))
 {
-	/*
-	std::optional<PrivateImpl::RefExt> found =
-		PrivateImpl::FindType(ShaderFileInfo::header_common, 
-			extensions_.begin(), 
-			extensions_.end());
 
-	assert(found && "Failed to find extension type for header on FolderScanner initialization");
-
-	ShaderFileInfo::ShaderExtensionInfo& eHeader = *found;
-	eHeader.extension = ".h";*/
 }
 
 
 void FolderScanner::SetExtension(ShaderFileInfo::ShaderType t, std::string_view ext)
 {
-	std::optional<PrivateImpl::RefExt> found =
-		PrivateImpl::FindType(t, extensions_.begin(), extensions_.end());
+    extensions_.emplace(ShaderFileInfo::ShaderExtensionInfo{ std::string(ext), t });
 
-	if (!found)
-		throw std::invalid_argument("FolderScanner::SetExtension::Invalid shader type!");
-
-	ShaderFileInfo::ShaderExtensionInfo& extType = *found;
-	extType.extension = ext;
-}
-
-bool FolderScanner::ExtensionAssigned(ShaderFileInfo::ShaderType t) const
-{
-	std::optional<PrivateImpl::RefExt> found =
-		PrivateImpl::FindType(t, extensions_.begin(), extensions_.end());
-
-	if (!found)
-		throw std::invalid_argument("FolderScanner::SetExtension::Shader type not registered!");
-
-	ShaderFileInfo::ShaderExtensionInfo& extType = *found;
-
-	return !extType.extension.empty();
 }
 
 
@@ -133,6 +47,7 @@ void FolderScanner::operator()(std::string_view folderPath)
 	return SearchSources(folderPath);
 }
 
+#pragma message("FolderScanner::SearchSources() does not support searching for .h sources (CommonTypes)")
 std::list<ShaderFileInfo> FolderScanner::SearchSources(const fsys::path& sourceFolder, 
 	const std::set<ShaderFileInfo::ShaderExtensionInfo>& extensions)
 {
@@ -141,7 +56,8 @@ std::list<ShaderFileInfo> FolderScanner::SearchSources(const fsys::path& sourceF
 	if (extensions.empty())
 		throw std::invalid_argument("FolderScanner::SearchSources() list of extensions is empty!");
 
-	std::vector<PrivateImpl::CRefExt> exts;
+    std::vector<ShaderFileInfo::ShaderType> exts;
+
 	std::string extCollection;
 
 	int invalidExtensions = 0;
@@ -155,13 +71,14 @@ std::list<ShaderFileInfo> FolderScanner::SearchSources(const fsys::path& sourceF
 			continue;
 		}
 
-		exts.push_back(e);
+		exts.push_back(e.type);
 		extCollection += "(" + e.extension + "$)|";
 	}
 	
 	if (invalidExtensions == extensions.size())
 		throw std::invalid_argument("FolderScanner::SearchSources() all extensions are invalid!");
 
+    // remove last '|' char
 	extCollection.resize(extCollection.size() - 1);
 
 	std::regex extPattern{ extCollection };
@@ -186,7 +103,9 @@ std::list<ShaderFileInfo> FolderScanner::SearchSources(const fsys::path& sourceF
 
 		assert(extTypeIndex != exts.size() && "Regex extension index is out of range!");
 
-		out.push_back(ShaderFileInfo(std::move(path), exts[extTypeIndex]));
+       
+		out.push_back(ShaderFileInfo(std::move(path), exts[extTypeIndex],
+            ShaderFileInfo::text_source));
 	}
 
 	return out;

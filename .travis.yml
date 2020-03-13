@@ -1,0 +1,29 @@
+﻿language: cpp
+
+jobs:
+  include:
+  - stage: build
+    os: Windows
+    compiler: clang
+    dist: trusty
+    addons:
+        apt:
+            packages:
+                - cmake
+    script:
+        - mkdir build
+        - cmake -S ./ -B ./build -A x64 -DBUILD_TESTS=ON
+        - cmake --build ./build --config Release
+        
+  - stage: build
+    os: Windows
+    compiler: gcc
+    dist: trusty
+    addons:
+        apt:
+            packages:
+                - cmake
+    script:
+        - mkdir build
+        - cmake -S ./ -B ./build -A x64 -DBUILD_TESTS=ON
+        - cmake --build ./build --config Release
